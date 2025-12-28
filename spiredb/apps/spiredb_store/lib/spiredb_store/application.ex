@@ -24,7 +24,10 @@ defmodule SpiredbStore.Application do
       {Store.Supervisor, []},
 
       # RESP server
-      {Store.API.RESP.Supervisor, [port: resp_port]}
+      {Store.API.RESP.Supervisor, [port: resp_port]},
+
+      # DataAccess gRPC server
+      {GRPC.Server.Supervisor, endpoint: Store.API.DataAccess, port: 50052, start_server: true}
     ]
 
     opts = [strategy: :one_for_one, name: SpiredbStore.Supervisor]

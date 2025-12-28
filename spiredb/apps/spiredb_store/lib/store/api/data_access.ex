@@ -10,7 +10,7 @@ defmodule Store.API.DataAccess do
   Returns Apache Arrow RecordBatches for zero-copy transfer to SpireSQL.
   """
 
-  # use GRPC.Server, service: Spiredb.Data.DataAccess.Service
+  use GRPC.Server, service: Spiredb.Data.DataAccess.Service
 
   require Logger
   alias Store.KV.Engine
