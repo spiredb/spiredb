@@ -23,8 +23,11 @@ defmodule SpiredbPd.Application do
 
     # Start isolated Ra system for PD
     # Correction: Use start/1 with full config including derived names
-    base_dir = "/var/lib/spiredb/ra"
-    pd_dir = Path.join(base_dir, "pd")
+    base_dir =
+      Application.get_env(:ra, :data_dir) ||
+        String.to_charlist(System.get_env("SPIRE_RA_DATA_DIR", "/tmp/spiredb/ra"))
+
+    pd_dir = Path.join(List.to_string(base_dir), "pd")
     File.mkdir_p!(pd_dir)
     pd_dir_charlist = String.to_charlist(pd_dir)
 

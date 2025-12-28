@@ -3,7 +3,7 @@ import Config
 # Configure RA data directory from Environment
 # This is critical for persistence and performance (avoiding /tmp)
 # CRITICAL: Create node directory BEFORE Ra application starts (DETS needs it)
-ra_base_dir = System.get_env("SPIRE_RA_DATA_DIR", "/var/lib/spiredb/ra")
+ra_base_dir = System.get_env("SPIRE_RA_DATA_DIR", "/tmp/spiredb/ra")
 node_name = to_string(node())
 
 # Ra appends node name to data_dir, so pre-create that directory

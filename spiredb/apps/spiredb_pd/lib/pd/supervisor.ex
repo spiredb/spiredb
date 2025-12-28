@@ -12,7 +12,7 @@ defmodule PD.Supervisor do
 
   @impl true
   def init(_opts) do
-    node_name = Node.self()
+    _node_name = Node.self()
 
     children =
       if Application.get_env(:spiredb_pd, :start_raft, true) do

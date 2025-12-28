@@ -10,7 +10,6 @@ defmodule PD.Scheduler.LoadMonitor do
   """
 
   require Logger
-  alias PD.Server
 
   @doc """
   Collect current cluster metrics.

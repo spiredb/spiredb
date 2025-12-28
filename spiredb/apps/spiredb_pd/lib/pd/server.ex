@@ -408,11 +408,6 @@ defmodule PD.Server do
     end
   end
 
-  defp debug_raft_process(_uid) do
-    # Debug code disabled
-    :ok
-  end
-
   defp resolve_seed_node_dns do
     # 2. Try to resolve seed DNS name (K8s) as backup
     service = System.get_env("SPIRE_SERVICE_NAME", "spiredb-headless")

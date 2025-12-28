@@ -101,6 +101,27 @@ defmodule PD.Scheduler do
      }}
   end
 
+  @impl true
+  def handle_info({:operations_complete, results}, state) do
+    Logger.info("Operations completed", results: length(results))
+
+    # Count successes and failures
+    {successes, failures} =
+      Enum.split_with(results, fn
+        {:ok, _} -> true
+        _ -> false
+      end)
+
+    updated_stats = %{
+      state.stats
+      | successful_operations: state.stats.successful_operations + length(successes),
+        failed_operations: state.stats.failed_operations + length(failures)
+    }
+
+    # Clear active operations
+    {:noreply, %{state | active_operations: [], stats: updated_stats}}
+  end
+
   defp log_node_state_changes(stores, known_states) do
     Enum.reduce(stores, known_states, fn store, acc ->
       current_status = if store.is_alive, do: :up, else: :down
@@ -126,27 +147,6 @@ defmodule PD.Scheduler do
 
       Map.put(acc, store.node, current_status)
     end)
-  end
-
-  @impl true
-  def handle_info({:operations_complete, results}, state) do
-    Logger.info("Operations completed", results: length(results))
-
-    # Count successes and failures
-    {successes, failures} =
-      Enum.split_with(results, fn
-        {:ok, _} -> true
-        _ -> false
-      end)
-
-    updated_stats = %{
-      state.stats
-      | successful_operations: state.stats.successful_operations + length(successes),
-        failed_operations: state.stats.failed_operations + length(failures)
-    }
-
-    # Clear active operations
-    {:noreply, %{state | active_operations: [], stats: updated_stats}}
   end
 
   ## Private Functions
