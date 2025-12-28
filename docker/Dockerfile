@@ -40,7 +40,7 @@ COPY config config
 
 # Initialize git to avoid hook failures
 RUN git init && \
-    git config user.email "build@spiredb.local" && \
+    git config user.email "build@spire.zone" && \
     git config user.name "SpireDB Build"
 
 # Compile dependencies (cached layer)

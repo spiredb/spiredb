@@ -65,7 +65,7 @@ defmodule SpiredbStore.Application do
           [
             strategy: Cluster.Strategy.DNSPoll,
             config: [
-              query: System.get_env("SPIRE_DNS_QUERY", "spiredb.local"),
+              query: System.get_env("SPIRE_DNS_QUERY", "spire.zone"),
               interval: 5_000
             ]
           ]
