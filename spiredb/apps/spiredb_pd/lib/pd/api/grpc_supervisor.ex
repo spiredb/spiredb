@@ -18,7 +18,7 @@ defmodule PD.API.GRPCServerSupervisor do
 
     children = [
       # gRPC server for PD metadata service
-      {GRPC.Server.Supervisor, endpoint: PD.API.GRPC, port: port, start_server: true}
+      {GRPC.Server.Supervisor, endpoint: PD.API.Endpoint, port: port, start_server: true}
     ]
 
     Supervisor.init(children, strategy: :one_for_one)

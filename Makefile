@@ -39,7 +39,7 @@ clean:
 
 proto:
 	cd spiredb/apps/spiredb_common && \
-	protoc --elixir_out=plugins=grpc:./lib/generated --elixir_opt=package_prefix=spire_db \
+	protoc --elixir_out=plugins=grpc:./lib/generated --elixir_opt=package_prefix=spire_db,gen_descriptors=true \
 	-I priv/proto priv/proto/*.proto
 
 format:

@@ -30,7 +30,8 @@ defmodule SpiredbCommon.MixProject do
       {:grpc, "~> 0.7"},
       {:jason, "~> 1.4"},
       {:telemetry, "~> 1.2"},
-      {:logger_json, "~> 5.1"}
+      {:logger_json, "~> 5.1"},
+      {:grpc_reflection, "~> 0.3.0"}
     ]
   end
 end

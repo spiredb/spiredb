@@ -6,7 +6,7 @@ defmodule PD.API.GRPC do
   to enable distributed scan operations.
   """
 
-  use GRPC.Server, service: Spiredb.Pd.PlacementDriver.Service
+  use GRPC.Server, service: SpireDb.Spiredb.Pd.PlacementDriver.Service
 
   require Logger
   alias PD.Server

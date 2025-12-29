@@ -364,7 +364,27 @@ defmodule PD.Server do
         String.to_atom(name)
 
       _ ->
-        find_seed_in_cluster()
+        # 2. Check discovery mode to decide strategy
+        case System.get_env("SPIRE_DISCOVERY", "epmd") do
+          "epmd" ->
+            # Single node or static list.
+            # If explicit list is provided, take the first one.
+            case System.get_env("SPIRE_CLUSTER_NODES") do
+              list when is_binary(list) and list != "" ->
+                list
+                |> String.split(",", trim: true)
+                |> List.first()
+                |> String.to_atom()
+
+              _ ->
+                # Fallback to local node silently (single node mode)
+                node()
+            end
+
+          _ ->
+            # k8sdns, gossip -> search via POD_NAME + DNS fallback
+            find_seed_in_cluster()
+        end
     end
   end
 

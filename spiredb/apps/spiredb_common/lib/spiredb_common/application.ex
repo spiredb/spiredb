@@ -10,6 +10,7 @@ defmodule SpiredbCommon.Application do
     children = [
       # Starts a worker by calling: SpiredbCommon.Worker.start_link(arg)
       # {SpiredbCommon.Worker, arg}
+      GrpcReflection
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html

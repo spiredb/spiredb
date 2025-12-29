@@ -27,7 +27,7 @@ defmodule SpiredbStore.Application do
       {Store.API.RESP.Supervisor, [port: resp_port]},
 
       # DataAccess gRPC server
-      {GRPC.Server.Supervisor, endpoint: Store.API.DataAccess, port: 50052, start_server: true}
+      {GRPC.Server.Supervisor, endpoint: Store.API.Endpoint, port: 50052, start_server: true}
     ]
 
     opts = [strategy: :one_for_one, name: SpiredbStore.Supervisor]
@@ -65,7 +65,7 @@ defmodule SpiredbStore.Application do
           [
             strategy: Cluster.Strategy.DNSPoll,
             config: [
-              query: System.get_env("SPIRE_DNS_QUERY", "spire.zone"),
+              query: System.get_env("SPIRE_DNS_QUERY", "spiredb.local"),
               interval: 5_000
             ]
           ]
