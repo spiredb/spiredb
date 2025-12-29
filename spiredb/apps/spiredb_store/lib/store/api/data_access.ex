@@ -35,13 +35,22 @@ defmodule Store.API.DataAccess do
     # Route to region-specific engine via Store.Server
     engine = get_engine_for_key(request.start_key, Map.get(request, :engine))
 
+    batch_size = if request.batch_size == 0, do: @default_batch_size, else: request.batch_size
+
     opts = [
-      batch_size: request.batch_size || @default_batch_size,
+      batch_size: batch_size,
       limit: request.limit
     ]
 
     case Engine.scan_range(engine, request.start_key, request.end_key, opts) do
       {:ok, batches} ->
+        Logger.info("Scan found #{length(batches)} batches")
+
+        if length(batches) > 0 do
+          {rows, _} = hd(batches)
+          Logger.info("First batch has #{length(rows)} rows: #{inspect(rows)}")
+        end
+
         stream_batches_to_client(stream, batches, start_time)
 
       {:error, reason} ->
@@ -59,14 +68,14 @@ defmodule Store.API.DataAccess do
 
     case Engine.get(engine, request.key) do
       {:ok, value} ->
-        %{value: value, found: true}
+        %SpireDb.Spiredb.Data.GetResponse{value: value, found: true}
 
       {:error, :not_found} ->
-        %{value: "", found: false}
+        %SpireDb.Spiredb.Data.GetResponse{value: "", found: false}
 
       {:error, reason} ->
         Logger.error("Get failed", key: request.key, reason: inspect(reason))
-        %{value: "", found: false}
+        %SpireDb.Spiredb.Data.GetResponse{value: "", found: false}
     end
   end
 
@@ -97,7 +106,7 @@ defmodule Store.API.DataAccess do
       |> Enum.flat_map(fn {:ok, batch_results} -> batch_results end)
 
     arrow_batch = Encoder.encode_batch_get_result(results)
-    %{arrow_batch: arrow_batch}
+    %SpireDb.Spiredb.Data.BatchGetResponse{arrow_batch: arrow_batch}
   end
 
   # Private helpers
@@ -131,10 +140,10 @@ defmodule Store.API.DataAccess do
 
       arrow_batch = Encoder.encode_scan_batch(rows)
 
-      response = %{
+      response = %SpireDb.Spiredb.Data.ScanResponse{
         arrow_batch: arrow_batch,
         has_more: has_more,
-        stats: %{
+        stats: %SpireDb.Spiredb.Data.ScanStats{
           rows_returned: stats.rows_returned,
           bytes_read: stats.bytes_read,
           scan_time_ms: stats.scan_time_ms

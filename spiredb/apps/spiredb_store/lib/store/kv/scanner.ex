@@ -78,9 +78,8 @@ defmodule Store.KV.Scanner do
       {:ok, batches}
     rescue
       e ->
-        Logger.error("Scan failed",
-          error: inspect(e),
-          stacktrace: Exception.format_stacktrace(__STACKTRACE__)
+        Logger.error(
+          "Scan failed with error: #{inspect(e)}\nStacktrace: #{inspect(__STACKTRACE__)}"
         )
 
         {:error, :scan_failed}
