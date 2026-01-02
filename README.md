@@ -5,7 +5,7 @@
 
 <h1 align="center">SpireDB</h1>
 <p align="center">
-  <b>Distributed all-in-one database</b>
+  <b>Distributed all-in-one OLTP database</b>
 </p>
 
 <br>
