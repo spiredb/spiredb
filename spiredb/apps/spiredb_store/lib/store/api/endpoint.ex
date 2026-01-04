@@ -3,6 +3,12 @@ defmodule Store.API.Endpoint do
 
   intercept(GRPC.Server.Interceptors.Logger)
 
+  # gRPC services
   run(Store.API.DataAccess)
+  run(Store.API.GRPC.Transaction)
+  run(Store.API.GRPC.Vector)
+
+  # gRPC reflection (v1 and v1alpha for compatibility)
   run(Store.API.Reflection)
+  run(Store.API.ReflectionV1Alpha)
 end
