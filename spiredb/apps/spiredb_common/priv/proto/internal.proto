@@ -1,0 +1,191 @@
+syntax = "proto3";
+
+package spiredb.internal;
+
+option java_package = "com.spiredb.internal";
+option go_package = "spiredb/internal";
+
+// =============================================================================
+// Internal Services (Port 50053) - Node-to-Node Only
+// =============================================================================
+
+// Raft consensus between region replicas
+service RaftService {
+  rpc AppendEntries(AppendEntriesRequest) returns (AppendEntriesResponse);
+  rpc RequestVote(RequestVoteRequest) returns (RequestVoteResponse);
+  rpc InstallSnapshot(stream SnapshotChunk) returns (InstallSnapshotResponse);
+  rpc TransferLeader(TransferLeaderRequest) returns (Empty);
+}
+
+// Heartbeat between Store nodes and PD
+service HeartbeatService {
+  rpc StoreHeartbeat(StoreHeartbeatRequest) returns (StoreHeartbeatResponse);
+  rpc RegionHeartbeat(RegionHeartbeatRequest) returns (RegionHeartbeatResponse);
+}
+
+// Region management
+service RegionService {
+  rpc SplitRegion(SplitRegionRequest) returns (SplitRegionResponse);
+  rpc MergeRegion(MergeRegionRequest) returns (MergeRegionResponse);
+  rpc TransferRegion(TransferRegionRequest) returns (TransferRegionResponse);
+  rpc GetRegionInfo(GetRegionInfoRequest) returns (GetRegionInfoResponse);
+}
+
+// =============================================================================
+// Raft Messages
+// =============================================================================
+
+message AppendEntriesRequest {
+  uint64 region_id = 1;
+  uint64 term = 2;
+  uint64 leader_id = 3;
+  uint64 prev_log_index = 4;
+  uint64 prev_log_term = 5;
+  repeated bytes entries = 6;     // Serialized log entries
+  uint64 leader_commit = 7;
+}
+
+message AppendEntriesResponse {
+  uint64 term = 1;
+  bool success = 2;
+  uint64 match_index = 3;
+}
+
+message RequestVoteRequest {
+  uint64 region_id = 1;
+  uint64 term = 2;
+  uint64 candidate_id = 3;
+  uint64 last_log_index = 4;
+  uint64 last_log_term = 5;
+}
+
+message RequestVoteResponse {
+  uint64 term = 1;
+  bool vote_granted = 2;
+}
+
+message SnapshotChunk {
+  uint64 region_id = 1;
+  uint64 term = 2;
+  uint64 leader_id = 3;
+  uint64 last_included_index = 4;
+  uint64 last_included_term = 5;
+  uint64 offset = 6;
+  bytes data = 7;
+  bool done = 8;
+}
+
+message InstallSnapshotResponse {
+  uint64 term = 1;
+  bool success = 2;
+}
+
+message TransferLeaderRequest {
+  uint64 region_id = 1;
+  uint64 target_store_id = 2;
+}
+
+// =============================================================================
+// Heartbeat Messages
+// =============================================================================
+
+message StoreHeartbeatRequest {
+  uint64 store_id = 1;
+  uint64 capacity = 2;
+  uint64 available = 3;
+  uint32 region_count = 4;
+  uint64 sending_rate = 5;      // Bytes/s
+  uint64 receiving_rate = 6;    // Bytes/s
+}
+
+message StoreHeartbeatResponse {
+  // Scheduled operations from PD
+  repeated ScheduledTask tasks = 1;
+}
+
+enum TaskType {
+  TASK_SPLIT_REGION = 0;
+  TASK_MERGE_REGION = 1;
+  TASK_TRANSFER_LEADER = 2;
+  TASK_ADD_PEER = 3;
+  TASK_REMOVE_PEER = 4;
+}
+
+message ScheduledTask {
+  TaskType type = 1;
+  uint64 region_id = 2;
+  bytes params = 3;             // Task-specific params
+}
+
+message RegionHeartbeatRequest {
+  uint64 region_id = 1;
+  uint64 store_id = 2;
+  uint64 term = 3;
+  bool is_leader = 4;
+  uint64 approximate_size = 5;
+  uint64 approximate_keys = 6;
+  uint64 region_epoch = 7;
+}
+
+message RegionHeartbeatResponse {
+  // Region-specific scheduled tasks
+  repeated ScheduledTask tasks = 1;
+}
+
+// =============================================================================
+// Region Management Messages
+// =============================================================================
+
+message SplitRegionRequest {
+  uint64 region_id = 1;
+  bytes split_key = 2;
+}
+
+message SplitRegionResponse {
+  uint64 new_region_id = 1;
+  repeated uint64 new_peer_ids = 2;
+}
+
+message MergeRegionRequest {
+  uint64 source_region_id = 1;
+  uint64 target_region_id = 2;
+}
+
+message MergeRegionResponse {
+  bool success = 1;
+}
+
+message TransferRegionRequest {
+  uint64 region_id = 1;
+  uint64 to_store_id = 2;
+}
+
+message TransferRegionResponse {
+  bool success = 1;
+}
+
+message GetRegionInfoRequest {
+  uint64 region_id = 1;
+}
+
+message GetRegionInfoResponse {
+  uint64 region_id = 1;
+  bytes start_key = 2;
+  bytes end_key = 3;
+  uint64 region_epoch = 4;
+  repeated PeerInfo peers = 5;
+  uint64 approximate_size = 6;
+  uint64 approximate_keys = 7;
+}
+
+message PeerInfo {
+  uint64 store_id = 1;
+  string role = 2;              // "leader", "follower", "learner"
+  uint64 match_index = 3;
+}
+
+// =============================================================================
+// Common
+// =============================================================================
+
+message Empty {}

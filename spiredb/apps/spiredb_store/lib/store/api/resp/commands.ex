@@ -94,6 +94,35 @@ defmodule Store.API.RESP.Commands do
     "OK"
   end
 
+  # Route SPIRE.* commands to TableCommands
+  def execute(["SPIRE.TABLE.CREATE" | _] = cmd), do: Store.API.RESP.TableCommands.execute(cmd)
+  def execute(["SPIRE.TABLE.DROP" | _] = cmd), do: Store.API.RESP.TableCommands.execute(cmd)
+  def execute(["SPIRE.TABLE.LIST" | _] = cmd), do: Store.API.RESP.TableCommands.execute(cmd)
+  def execute(["SPIRE.TABLE.DESCRIBE" | _] = cmd), do: Store.API.RESP.TableCommands.execute(cmd)
+  def execute(["SPIRE.INDEX.CREATE" | _] = cmd), do: Store.API.RESP.TableCommands.execute(cmd)
+  def execute(["SPIRE.INDEX.DROP" | _] = cmd), do: Store.API.RESP.TableCommands.execute(cmd)
+
+  # Route transaction commands
+  def execute(["MULTI" | _] = cmd), do: Store.API.RESP.TxnCommands.execute(cmd)
+  def execute(["EXEC" | _] = cmd), do: Store.API.RESP.TxnCommands.execute(cmd)
+  def execute(["DISCARD" | _] = cmd), do: Store.API.RESP.TxnCommands.execute(cmd)
+  def execute(["SAVEPOINT" | _] = cmd), do: Store.API.RESP.TxnCommands.execute(cmd)
+  def execute(["ROLLBACK", "TO" | _] = cmd), do: Store.API.RESP.TxnCommands.execute(cmd)
+
+  # Route vector search commands (Redis Search compatible)
+  def execute(["FT.CREATE" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+  def execute(["FT.DROPINDEX" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+  def execute(["FT.ADD" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+  def execute(["FT.DEL" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+  def execute(["FT.SEARCH" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+  def execute(["FT.INFO" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+  def execute(["FT._LIST" | _] = cmd), do: Store.API.RESP.VectorCommands.execute(cmd)
+
+  # Route plugin commands
+  def execute(["SPIRE.PLUGIN.LIST" | _] = cmd), do: Store.API.RESP.PluginCommands.execute(cmd)
+  def execute(["SPIRE.PLUGIN.INFO" | _] = cmd), do: Store.API.RESP.PluginCommands.execute(cmd)
+  def execute(["SPIRE.PLUGIN.RELOAD" | _] = cmd), do: Store.API.RESP.PluginCommands.execute(cmd)
+
   def execute([command | _]) do
     {:error, "ERR unknown command '#{String.downcase(command)}'"}
   end

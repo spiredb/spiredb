@@ -1,0 +1,329 @@
+syntax = "proto3";
+
+package spiredb.cluster;
+
+option java_package = "com.spiredb.cluster";
+option go_package = "spiredb/cluster";
+
+// =============================================================================
+// Timestamp Oracle Service (TSO)
+// =============================================================================
+
+service TSOService {
+  // Allocate batch of monotonic timestamps
+  rpc GetTimestamp(GetTimestampRequest) returns (GetTimestampResponse);
+}
+
+message GetTimestampRequest {
+  uint32 count = 1;  // Number of timestamps to allocate (batch)
+}
+
+message GetTimestampResponse {
+  uint64 start_ts = 1;  // First allocated timestamp
+  uint32 count = 2;     // Number allocated
+}
+
+// =============================================================================
+// Schema Service
+// =============================================================================
+
+service SchemaService {
+  // Table operations
+  rpc CreateTable(CreateTableRequest) returns (CreateTableResponse);
+  rpc DropTable(DropTableRequest) returns (Empty);
+  rpc GetTable(GetTableRequest) returns (TableSchema);
+  rpc ListTables(Empty) returns (TableList);
+  
+  // Index operations
+  rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse);
+  rpc DropIndex(DropIndexRequest) returns (Empty);
+  rpc GetIndex(GetIndexRequest) returns (IndexSchema);
+  rpc ListIndexes(ListIndexesRequest) returns (IndexList);
+}
+
+// Column types (Arrow/DataFusion compatible)
+enum ColumnType {
+  TYPE_INT8 = 0;
+  TYPE_INT16 = 1;
+  TYPE_INT32 = 2;
+  TYPE_INT64 = 3;
+  TYPE_UINT8 = 4;
+  TYPE_UINT16 = 5;
+  TYPE_UINT32 = 6;
+  TYPE_UINT64 = 7;
+  TYPE_FLOAT32 = 8;
+  TYPE_FLOAT64 = 9;
+  TYPE_BOOL = 10;
+  TYPE_STRING = 11;
+  TYPE_BYTES = 12;
+  TYPE_DATE = 13;
+  TYPE_TIMESTAMP = 14;
+  TYPE_DECIMAL = 15;
+  TYPE_LIST = 16;
+  TYPE_VECTOR = 17;
+}
+
+message ColumnDef {
+  string name = 1;
+  ColumnType type = 2;
+  bool nullable = 3;
+  bytes default_value = 4;
+  uint32 precision = 5;     // For DECIMAL
+  uint32 scale = 6;         // For DECIMAL
+  uint32 vector_dim = 7;    // For VECTOR
+  ColumnType list_elem = 8; // For LIST element type
+}
+
+message CreateTableRequest {
+  string name = 1;
+  repeated ColumnDef columns = 2;
+  repeated string primary_key = 3;
+}
+
+message CreateTableResponse {
+  uint64 table_id = 1;
+}
+
+message DropTableRequest {
+  string name = 1;
+}
+
+message GetTableRequest {
+  oneof identifier {
+    uint64 id = 1;
+    string name = 2;
+  }
+}
+
+message TableSchema {
+  uint64 id = 1;
+  string name = 2;
+  repeated ColumnDef columns = 3;
+  repeated string primary_key = 4;
+  string region_prefix = 5;
+  uint64 created_at = 6;
+}
+
+message TableList {
+  repeated TableSchema tables = 1;
+}
+
+// Index types
+enum IndexType {
+  INDEX_BTREE = 0;
+  INDEX_ANODE = 1;
+  INDEX_MANODE = 2;
+}
+
+message CreateIndexRequest {
+  string name = 1;
+  string table_name = 2;
+  IndexType type = 3;
+  repeated string columns = 4;
+  map<string, string> params = 5;
+}
+
+message CreateIndexResponse {
+  uint64 index_id = 1;
+}
+
+message DropIndexRequest {
+  string name = 1;
+}
+
+message GetIndexRequest {
+  string name = 1;
+}
+
+message IndexSchema {
+  uint64 id = 1;
+  string name = 2;
+  uint64 table_id = 3;
+  IndexType type = 4;
+  repeated string columns = 5;
+  map<string, string> params = 6;
+}
+
+message ListIndexesRequest {
+  string table_name = 1;  // Optional: filter by table
+}
+
+message IndexList {
+  repeated IndexSchema indexes = 1;
+}
+
+// =============================================================================
+// Cluster Service
+// =============================================================================
+
+service ClusterService {
+  // Region routing
+  rpc GetRegion(GetRegionRequest) returns (Region);
+  rpc GetRegionByKey(GetRegionByKeyRequest) returns (Region);
+  rpc GetTableRegions(GetTableRegionsRequest) returns (RegionList);
+  
+  // Store management
+  rpc GetStore(GetStoreRequest) returns (Store);
+  rpc ListStores(Empty) returns (StoreList);
+  rpc RegisterStore(RegisterStoreRequest) returns (RegisterStoreResponse);
+  rpc ReportStoreHeartbeat(StoreHeartbeat) returns (StoreHeartbeatResponse);
+}
+
+message GetRegionRequest {
+  uint64 region_id = 1;
+}
+
+message GetRegionByKeyRequest {
+  bytes key = 1;
+}
+
+message GetTableRegionsRequest {
+  string table_name = 1;
+}
+
+message Region {
+  uint64 id = 1;
+  bytes start_key = 2;
+  bytes end_key = 3;
+  repeated Peer peers = 4;
+  uint64 leader_store_id = 5;
+  uint64 region_epoch = 6;
+  RegionState state = 7;
+}
+
+enum PeerRole {
+  PEER_FOLLOWER = 0;
+  PEER_LEADER = 1;
+  PEER_LEARNER = 2;
+}
+
+message Peer {
+  uint64 store_id = 1;
+  PeerRole role = 2;
+}
+
+enum RegionState {
+  REGION_ACTIVE = 0;
+  REGION_SPLITTING = 1;
+  REGION_MERGING = 2;
+}
+
+message RegionList {
+  repeated Region regions = 1;
+}
+
+message GetStoreRequest {
+  uint64 store_id = 1;
+}
+
+message Store {
+  uint64 id = 1;
+  string address = 2;
+  StoreState state = 3;
+  uint64 capacity = 4;
+  uint64 available = 5;
+  uint32 region_count = 6;
+  map<string, string> labels = 7;
+}
+
+enum StoreState {
+  STORE_UP = 0;
+  STORE_DOWN = 1;
+  STORE_TOMBSTONE = 2;
+}
+
+message StoreList {
+  repeated Store stores = 1;
+}
+
+message RegisterStoreRequest {
+  string address = 1;
+  uint64 capacity = 2;
+  map<string, string> labels = 3;
+}
+
+message RegisterStoreResponse {
+  uint64 store_id = 1;
+}
+
+message StoreHeartbeat {
+  uint64 store_id = 1;
+  uint64 available = 2;
+  uint32 region_count = 3;
+  repeated RegionStats region_stats = 4;
+}
+
+message RegionStats {
+  uint64 region_id = 1;
+  uint64 approximate_size = 2;
+  uint64 approximate_keys = 3;
+  uint64 qps = 4;
+}
+
+message StoreHeartbeatResponse {
+  // Future: scheduled tasks (split, merge, transfer leader)
+}
+
+// =============================================================================
+// Plugin Service
+// =============================================================================
+
+service PluginService {
+  rpc InstallPlugin(InstallPluginRequest) returns (InstallPluginResponse);
+  rpc UninstallPlugin(UninstallPluginRequest) returns (Empty);
+  rpc ListPlugins(Empty) returns (PluginList);
+  rpc ReloadPlugin(ReloadPluginRequest) returns (Empty);
+}
+
+enum PluginType {
+  PLUGIN_INDEX = 0;
+  PLUGIN_STORAGE = 1;
+  PLUGIN_FUNCTION = 2;
+  PLUGIN_PROTOCOL = 3;
+  PLUGIN_AUTH = 4;
+}
+
+enum PluginState {
+  PLUGIN_LOADED = 0;
+  PLUGIN_ERROR = 1;
+  PLUGIN_DISABLED = 2;
+}
+
+message InstallPluginRequest {
+  oneof source {
+    string hex_package = 1;   // e.g., "geo_index"
+    string github_repo = 2;   // e.g., "user/spiredb-fulltext"
+    bytes tarball = 3;        // Raw plugin archive
+  }
+}
+
+message InstallPluginResponse {
+  string name = 1;
+  string version = 2;
+}
+
+message UninstallPluginRequest {
+  string name = 1;
+}
+
+message PluginInfo {
+  string name = 1;
+  string version = 2;
+  PluginType type = 3;
+  bool has_nif = 4;
+  PluginState state = 5;
+}
+
+message PluginList {
+  repeated PluginInfo plugins = 1;
+}
+
+message ReloadPluginRequest {
+  string name = 1;
+}
+
+// =============================================================================
+// Common
+// =============================================================================
+
+message Empty {}

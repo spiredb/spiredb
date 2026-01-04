@@ -1,4 +1,4 @@
-defmodule SpireDb.Spiredb.ReplicaRole do
+defmodule Spiredb.Internal.TaskType do
   @moduledoc false
 
   use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -6,17 +6,35 @@ defmodule SpireDb.Spiredb.ReplicaRole do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.EnumDescriptorProto{
-      name: "ReplicaRole",
+      name: "TaskType",
       value: [
         %Google.Protobuf.EnumValueDescriptorProto{
-          name: "FOLLOWER",
+          name: "TASK_SPLIT_REGION",
           number: 0,
           options: nil,
           __unknown_fields__: []
         },
         %Google.Protobuf.EnumValueDescriptorProto{
-          name: "LEADER",
+          name: "TASK_MERGE_REGION",
           number: 1,
+          options: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "TASK_TRANSFER_LEADER",
+          number: 2,
+          options: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "TASK_ADD_PEER",
+          number: 3,
+          options: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "TASK_REMOVE_PEER",
+          number: 4,
           options: nil,
           __unknown_fields__: []
         }
@@ -28,45 +46,118 @@ defmodule SpireDb.Spiredb.ReplicaRole do
     }
   end
 
-  field(:FOLLOWER, 0)
-  field(:LEADER, 1)
+  field(:TASK_SPLIT_REGION, 0)
+  field(:TASK_MERGE_REGION, 1)
+  field(:TASK_TRANSFER_LEADER, 2)
+  field(:TASK_ADD_PEER, 3)
+  field(:TASK_REMOVE_PEER, 4)
 end
 
-defmodule SpireDb.Spiredb.RegisterStoreRequest.LabelsEntry do
+defmodule Spiredb.Internal.AppendEntriesRequest do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "LabelsEntry",
+      name: "AppendEntriesRequest",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
-          name: "key",
+          name: "region_id",
           extendee: nil,
           number: 1,
           label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
+          type: :TYPE_UINT64,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "key",
+          json_name: "regionId",
           proto3_optional: nil,
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "value",
+          name: "term",
           extendee: nil,
           number: 2,
           label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
+          type: :TYPE_UINT64,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "value",
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "leader_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "leaderId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "prev_log_index",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "prevLogIndex",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "prev_log_term",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "prevLogTerm",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "entries",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_REPEATED,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "entries",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "leader_commit",
+          extendee: nil,
+          number: 7,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "leaderCommit",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -75,17 +166,7 @@ defmodule SpireDb.Spiredb.RegisterStoreRequest.LabelsEntry do
       enum_type: [],
       extension_range: [],
       extension: [],
-      options: %Google.Protobuf.MessageOptions{
-        message_set_wire_format: false,
-        no_standard_descriptor_accessor: false,
-        deprecated: false,
-        map_entry: true,
-        deprecated_legacy_json_field_conflicts: nil,
-        features: nil,
-        uninterpreted_option: [],
-        __pb_extensions__: %{},
-        __unknown_fields__: []
-      },
+      options: nil,
       oneof_decl: [],
       reserved_range: [],
       reserved_name: [],
@@ -93,11 +174,16 @@ defmodule SpireDb.Spiredb.RegisterStoreRequest.LabelsEntry do
     }
   end
 
-  field(:key, 1, type: :string)
-  field(:value, 2, type: :string)
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:term, 2, type: :uint64)
+  field(:leader_id, 3, type: :uint64, json_name: "leaderId")
+  field(:prev_log_index, 4, type: :uint64, json_name: "prevLogIndex")
+  field(:prev_log_term, 5, type: :uint64, json_name: "prevLogTerm")
+  field(:entries, 6, repeated: true, type: :bytes)
+  field(:leader_commit, 7, type: :uint64, json_name: "leaderCommit")
 end
 
-defmodule SpireDb.Spiredb.RegisterStoreRequest do
+defmodule Spiredb.Internal.AppendEntriesResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -105,19 +191,499 @@ defmodule SpireDb.Spiredb.RegisterStoreRequest do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "RegisterStoreRequest",
+      name: "AppendEntriesResponse",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
-          name: "address",
+          name: "term",
           extendee: nil,
           number: 1,
           label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
+          type: :TYPE_UINT64,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "address",
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "success",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "success",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "match_index",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "matchIndex",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:term, 1, type: :uint64)
+  field(:success, 2, type: :bool)
+  field(:match_index, 3, type: :uint64, json_name: "matchIndex")
+end
+
+defmodule Spiredb.Internal.RequestVoteRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "RequestVoteRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "term",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "candidate_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "candidateId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "last_log_index",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "lastLogIndex",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "last_log_term",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "lastLogTerm",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:term, 2, type: :uint64)
+  field(:candidate_id, 3, type: :uint64, json_name: "candidateId")
+  field(:last_log_index, 4, type: :uint64, json_name: "lastLogIndex")
+  field(:last_log_term, 5, type: :uint64, json_name: "lastLogTerm")
+end
+
+defmodule Spiredb.Internal.RequestVoteResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "RequestVoteResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "term",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "vote_granted",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "voteGranted",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:term, 1, type: :uint64)
+  field(:vote_granted, 2, type: :bool, json_name: "voteGranted")
+end
+
+defmodule Spiredb.Internal.SnapshotChunk do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "SnapshotChunk",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "term",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "leader_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "leaderId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "last_included_index",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "lastIncludedIndex",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "last_included_term",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "lastIncludedTerm",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "offset",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "offset",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "data",
+          extendee: nil,
+          number: 7,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "data",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "done",
+          extendee: nil,
+          number: 8,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "done",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:term, 2, type: :uint64)
+  field(:leader_id, 3, type: :uint64, json_name: "leaderId")
+  field(:last_included_index, 4, type: :uint64, json_name: "lastIncludedIndex")
+  field(:last_included_term, 5, type: :uint64, json_name: "lastIncludedTerm")
+  field(:offset, 6, type: :uint64)
+  field(:data, 7, type: :bytes)
+  field(:done, 8, type: :bool)
+end
+
+defmodule Spiredb.Internal.InstallSnapshotResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "InstallSnapshotResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "term",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "success",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "success",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:term, 1, type: :uint64)
+  field(:success, 2, type: :bool)
+end
+
+defmodule Spiredb.Internal.TransferLeaderRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "TransferLeaderRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "target_store_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "targetStoreId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:target_store_id, 2, type: :uint64, json_name: "targetStoreId")
+end
+
+defmodule Spiredb.Internal.StoreHeartbeatRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "StoreHeartbeatRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "store_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "storeId",
           proto3_optional: nil,
           __unknown_fields__: []
         },
@@ -136,218 +702,23 @@ defmodule SpireDb.Spiredb.RegisterStoreRequest do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "labels",
+          name: "available",
           extendee: nil,
           number: 3,
-          label: :LABEL_REPEATED,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.RegisterStoreRequest.LabelsEntry",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "labels",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [
-        %Google.Protobuf.DescriptorProto{
-          name: "LabelsEntry",
-          field: [
-            %Google.Protobuf.FieldDescriptorProto{
-              name: "key",
-              extendee: nil,
-              number: 1,
-              label: :LABEL_OPTIONAL,
-              type: :TYPE_STRING,
-              type_name: nil,
-              default_value: nil,
-              options: nil,
-              oneof_index: nil,
-              json_name: "key",
-              proto3_optional: nil,
-              __unknown_fields__: []
-            },
-            %Google.Protobuf.FieldDescriptorProto{
-              name: "value",
-              extendee: nil,
-              number: 2,
-              label: :LABEL_OPTIONAL,
-              type: :TYPE_STRING,
-              type_name: nil,
-              default_value: nil,
-              options: nil,
-              oneof_index: nil,
-              json_name: "value",
-              proto3_optional: nil,
-              __unknown_fields__: []
-            }
-          ],
-          nested_type: [],
-          enum_type: [],
-          extension_range: [],
-          extension: [],
-          options: %Google.Protobuf.MessageOptions{
-            message_set_wire_format: false,
-            no_standard_descriptor_accessor: false,
-            deprecated: false,
-            map_entry: true,
-            deprecated_legacy_json_field_conflicts: nil,
-            features: nil,
-            uninterpreted_option: [],
-            __pb_extensions__: %{},
-            __unknown_fields__: []
-          },
-          oneof_decl: [],
-          reserved_range: [],
-          reserved_name: [],
-          __unknown_fields__: []
-        }
-      ],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:address, 1, type: :string)
-  field(:capacity, 2, type: :uint64)
-
-  field(:labels, 3,
-    repeated: true,
-    type: SpireDb.Spiredb.RegisterStoreRequest.LabelsEntry,
-    map: true
-  )
-end
-
-defmodule SpireDb.Spiredb.RegisterStoreResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "RegisterStoreResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "store_id",
-          extendee: nil,
-          number: 1,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT64,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "storeId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:store_id, 1, type: :uint64, json_name: "storeId")
-end
-
-defmodule SpireDb.Spiredb.HeartbeatRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "HeartbeatRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "store_id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "storeId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "stats",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.StoreStats",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "stats",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:store_id, 1, type: :uint64, json_name: "storeId")
-  field(:stats, 2, type: SpireDb.Spiredb.StoreStats)
-end
-
-defmodule SpireDb.Spiredb.StoreStats do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "StoreStats",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "available_space",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "availableSpace",
+          json_name: "available",
           proto3_optional: nil,
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
           name: "region_count",
           extendee: nil,
-          number: 2,
+          number: 4,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT32,
           type_name: nil,
@@ -359,16 +730,30 @@ defmodule SpireDb.Spiredb.StoreStats do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "regions",
+          name: "sending_rate",
           extendee: nil,
-          number: 3,
-          label: :LABEL_REPEATED,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.RegionStats",
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "regions",
+          json_name: "sendingRate",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "receiving_rate",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "receivingRate",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -385,12 +770,15 @@ defmodule SpireDb.Spiredb.StoreStats do
     }
   end
 
-  field(:available_space, 1, type: :uint64, json_name: "availableSpace")
-  field(:region_count, 2, type: :uint32, json_name: "regionCount")
-  field(:regions, 3, repeated: true, type: SpireDb.Spiredb.RegionStats)
+  field(:store_id, 1, type: :uint64, json_name: "storeId")
+  field(:capacity, 2, type: :uint64)
+  field(:available, 3, type: :uint64)
+  field(:region_count, 4, type: :uint32, json_name: "regionCount")
+  field(:sending_rate, 5, type: :uint64, json_name: "sendingRate")
+  field(:receiving_rate, 6, type: :uint64, json_name: "receivingRate")
 end
 
-defmodule SpireDb.Spiredb.RegionStats do
+defmodule Spiredb.Internal.StoreHeartbeatResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -398,7 +786,117 @@ defmodule SpireDb.Spiredb.RegionStats do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "RegionStats",
+      name: "StoreHeartbeatResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "tasks",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_REPEATED,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.internal.ScheduledTask",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "tasks",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:tasks, 1, repeated: true, type: Spiredb.Internal.ScheduledTask)
+end
+
+defmodule Spiredb.Internal.ScheduledTask do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "ScheduledTask",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "type",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_ENUM,
+          type_name: ".spiredb.internal.TaskType",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "type",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "params",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "params",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:type, 1, type: Spiredb.Internal.TaskType, enum: true)
+  field(:region_id, 2, type: :uint64, json_name: "regionId")
+  field(:params, 3, type: :bytes)
+end
+
+defmodule Spiredb.Internal.RegionHeartbeatRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "RegionHeartbeatRequest",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
           name: "region_id",
@@ -415,9 +913,51 @@ defmodule SpireDb.Spiredb.RegionStats do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "approximate_size",
+          name: "store_id",
           extendee: nil,
           number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "storeId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "term",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "term",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "is_leader",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "isLeader",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "approximate_size",
+          extendee: nil,
+          number: 5,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT64,
           type_name: nil,
@@ -431,7 +971,7 @@ defmodule SpireDb.Spiredb.RegionStats do
         %Google.Protobuf.FieldDescriptorProto{
           name: "approximate_keys",
           extendee: nil,
-          number: 3,
+          number: 6,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT64,
           type_name: nil,
@@ -443,16 +983,16 @@ defmodule SpireDb.Spiredb.RegionStats do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "qps",
+          name: "region_epoch",
           extendee: nil,
-          number: 4,
+          number: 7,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT64,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "qps",
+          json_name: "regionEpoch",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -470,12 +1010,15 @@ defmodule SpireDb.Spiredb.RegionStats do
   end
 
   field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:approximate_size, 2, type: :uint64, json_name: "approximateSize")
-  field(:approximate_keys, 3, type: :uint64, json_name: "approximateKeys")
-  field(:qps, 4, type: :uint64)
+  field(:store_id, 2, type: :uint64, json_name: "storeId")
+  field(:term, 3, type: :uint64)
+  field(:is_leader, 4, type: :bool, json_name: "isLeader")
+  field(:approximate_size, 5, type: :uint64, json_name: "approximateSize")
+  field(:approximate_keys, 6, type: :uint64, json_name: "approximateKeys")
+  field(:region_epoch, 7, type: :uint64, json_name: "regionEpoch")
 end
 
-defmodule SpireDb.Spiredb.HeartbeatResponse do
+defmodule Spiredb.Internal.RegionHeartbeatResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -483,623 +1026,19 @@ defmodule SpireDb.Spiredb.HeartbeatResponse do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "HeartbeatResponse",
-      field: [],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-end
-
-defmodule SpireDb.Spiredb.GetRegionRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRegionRequest",
+      name: "RegionHeartbeatResponse",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
-          name: "region_id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "regionId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-end
-
-defmodule SpireDb.Spiredb.GetRegionResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRegionResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "region",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.Region",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "region",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:region, 1, type: SpireDb.Spiredb.Region)
-end
-
-defmodule SpireDb.Spiredb.GetRegionByKeyRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRegionByKeyRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "key",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "key",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:key, 1, type: :bytes)
-end
-
-defmodule SpireDb.Spiredb.GetRegionByKeyResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRegionByKeyResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "region",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.Region",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "region",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:region, 1, type: SpireDb.Spiredb.Region)
-end
-
-defmodule SpireDb.Spiredb.Region do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "Region",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "id",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "start_key",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "startKey",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "end_key",
-          extendee: nil,
-          number: 3,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "endKey",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "replicas",
-          extendee: nil,
-          number: 4,
-          label: :LABEL_REPEATED,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.Replica",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "replicas",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "epoch",
-          extendee: nil,
-          number: 5,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "epoch",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "leader_store_id",
-          extendee: nil,
-          number: 6,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "leaderStoreId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:id, 1, type: :uint64)
-  field(:start_key, 2, type: :bytes, json_name: "startKey")
-  field(:end_key, 3, type: :bytes, json_name: "endKey")
-  field(:replicas, 4, repeated: true, type: SpireDb.Spiredb.Replica)
-  field(:epoch, 5, type: :uint64)
-  field(:leader_store_id, 6, type: :uint64, json_name: "leaderStoreId")
-end
-
-defmodule SpireDb.Spiredb.Replica do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "Replica",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "store_id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "storeId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "role",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_ENUM,
-          type_name: ".spiredb.ReplicaRole",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "role",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:store_id, 1, type: :uint64, json_name: "storeId")
-  field(:role, 2, type: SpireDb.Spiredb.ReplicaRole, enum: true)
-end
-
-defmodule SpireDb.Spiredb.CreateTableRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "CreateTableRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "name",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "name",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "schema_json",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "schemaJson",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:name, 1, type: :string)
-  field(:schema_json, 2, type: :bytes, json_name: "schemaJson")
-end
-
-defmodule SpireDb.Spiredb.CreateTableResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "CreateTableResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "table_id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "tableId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:table_id, 1, type: :uint64, json_name: "tableId")
-end
-
-defmodule SpireDb.Spiredb.GetTableRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetTableRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: 0,
-          json_name: "id",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "name",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: 0,
-          json_name: "name",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [
-        %Google.Protobuf.OneofDescriptorProto{
-          name: "identifier",
-          options: nil,
-          __unknown_fields__: []
-        }
-      ],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  oneof(:identifier, 0)
-
-  field(:id, 1, type: :uint64, oneof: 0)
-  field(:name, 2, type: :string, oneof: 0)
-end
-
-defmodule SpireDb.Spiredb.GetTableResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetTableResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "id",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "name",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "name",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "schema_json",
-          extendee: nil,
-          number: 3,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "schemaJson",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:id, 1, type: :uint64)
-  field(:name, 2, type: :string)
-  field(:schema_json, 3, type: :bytes, json_name: "schemaJson")
-end
-
-defmodule SpireDb.Spiredb.ListTablesRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "ListTablesRequest",
-      field: [],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-end
-
-defmodule SpireDb.Spiredb.ListTablesResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "ListTablesResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "tables",
+          name: "tasks",
           extendee: nil,
           number: 1,
           label: :LABEL_REPEATED,
           type: :TYPE_MESSAGE,
-          type_name: ".spiredb.GetTableResponse",
+          type_name: ".spiredb.internal.ScheduledTask",
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "tables",
+          json_name: "tasks",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -1116,609 +1055,10 @@ defmodule SpireDb.Spiredb.ListTablesResponse do
     }
   end
 
-  field(:tables, 1, repeated: true, type: SpireDb.Spiredb.GetTableResponse)
+  field(:tasks, 1, repeated: true, type: Spiredb.Internal.ScheduledTask)
 end
 
-defmodule SpireDb.Spiredb.GetClusterInfoRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetClusterInfoRequest",
-      field: [],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-end
-
-defmodule SpireDb.Spiredb.GetClusterInfoResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetClusterInfoResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "stores",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_REPEATED,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.StoreInfo",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "stores",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:stores, 1, repeated: true, type: SpireDb.Spiredb.StoreInfo)
-end
-
-defmodule SpireDb.Spiredb.StoreInfo do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "StoreInfo",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "id",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "address",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "address",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "state",
-          extendee: nil,
-          number: 3,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_STRING,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "state",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:id, 1, type: :uint64)
-  field(:address, 2, type: :string)
-  field(:state, 3, type: :string)
-end
-
-defmodule SpireDb.Spiredb.GetRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "key",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "key",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:key, 1, type: :bytes)
-end
-
-defmodule SpireDb.Spiredb.GetResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "value",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "value",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "found",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BOOL,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "found",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:value, 1, type: :bytes)
-  field(:found, 2, type: :bool)
-end
-
-defmodule SpireDb.Spiredb.PutRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "PutRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "key",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "key",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "value",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "value",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:key, 1, type: :bytes)
-  field(:value, 2, type: :bytes)
-end
-
-defmodule SpireDb.Spiredb.PutResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "PutResponse",
-      field: [],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-end
-
-defmodule SpireDb.Spiredb.DeleteRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "DeleteRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "key",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "key",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:key, 1, type: :bytes)
-end
-
-defmodule SpireDb.Spiredb.DeleteResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "DeleteResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "deleted",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BOOL,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "deleted",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:deleted, 1, type: :bool)
-end
-
-defmodule SpireDb.Spiredb.BatchPutRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "BatchPutRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "pairs",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_REPEATED,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.KVPair",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "pairs",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:pairs, 1, repeated: true, type: SpireDb.Spiredb.KVPair)
-end
-
-defmodule SpireDb.Spiredb.BatchPutResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "BatchPutResponse",
-      field: [],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-end
-
-defmodule SpireDb.Spiredb.KVPair do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "KVPair",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "key",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "key",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "value",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "value",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:key, 1, type: :bytes)
-  field(:value, 2, type: :bytes)
-end
-
-defmodule SpireDb.Spiredb.GetRegionInfoRequest do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRegionInfoRequest",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "region_id",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_UINT64,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "regionId",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-end
-
-defmodule SpireDb.Spiredb.GetRegionInfoResponse do
-  @moduledoc false
-
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.DescriptorProto{
-      name: "GetRegionInfoResponse",
-      field: [
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "region",
-          extendee: nil,
-          number: 1,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.Region",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "region",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "stats",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.RegionStats",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "stats",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        }
-      ],
-      nested_type: [],
-      enum_type: [],
-      extension_range: [],
-      extension: [],
-      options: nil,
-      oneof_decl: [],
-      reserved_range: [],
-      reserved_name: [],
-      __unknown_fields__: []
-    }
-  end
-
-  field(:region, 1, type: SpireDb.Spiredb.Region)
-  field(:stats, 2, type: SpireDb.Spiredb.RegionStats)
-end
-
-defmodule SpireDb.Spiredb.SplitRegionRequest do
+defmodule Spiredb.Internal.SplitRegionRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -1773,7 +1113,7 @@ defmodule SpireDb.Spiredb.SplitRegionRequest do
   field(:split_key, 2, type: :bytes, json_name: "splitKey")
 end
 
-defmodule SpireDb.Spiredb.SplitRegionResponse do
+defmodule Spiredb.Internal.SplitRegionResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -1828,7 +1168,7 @@ defmodule SpireDb.Spiredb.SplitRegionResponse do
   field(:new_peer_ids, 2, repeated: true, type: :uint64, json_name: "newPeerIds")
 end
 
-defmodule SpireDb.Spiredb.CoprocessorRequest do
+defmodule Spiredb.Internal.MergeRegionRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -1836,7 +1176,102 @@ defmodule SpireDb.Spiredb.CoprocessorRequest do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "CoprocessorRequest",
+      name: "MergeRegionRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "source_region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "sourceRegionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "target_region_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "targetRegionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:source_region_id, 1, type: :uint64, json_name: "sourceRegionId")
+  field(:target_region_id, 2, type: :uint64, json_name: "targetRegionId")
+end
+
+defmodule Spiredb.Internal.MergeRegionResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "MergeRegionResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "success",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "success",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:success, 1, type: :bool)
+end
+
+defmodule Spiredb.Internal.TransferRegionRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "TransferRegionRequest",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
           name: "region_id",
@@ -1853,30 +1288,16 @@ defmodule SpireDb.Spiredb.CoprocessorRequest do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "plan",
+          name: "to_store_id",
           extendee: nil,
           number: 2,
           label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
+          type: :TYPE_UINT64,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "plan",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "ranges",
-          extendee: nil,
-          number: 3,
-          label: :LABEL_REPEATED,
-          type: :TYPE_MESSAGE,
-          type_name: ".spiredb.KeyRange",
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "ranges",
+          json_name: "toStoreId",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -1894,11 +1315,10 @@ defmodule SpireDb.Spiredb.CoprocessorRequest do
   end
 
   field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:plan, 2, type: :bytes)
-  field(:ranges, 3, repeated: true, type: SpireDb.Spiredb.KeyRange)
+  field(:to_store_id, 2, type: :uint64, json_name: "toStoreId")
 end
 
-defmodule SpireDb.Spiredb.KeyRange do
+defmodule Spiredb.Internal.TransferRegionResponse do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -1906,33 +1326,19 @@ defmodule SpireDb.Spiredb.KeyRange do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "KeyRange",
+      name: "TransferRegionResponse",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
-          name: "start",
+          name: "success",
           extendee: nil,
           number: 1,
           label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
+          type: :TYPE_BOOL,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "start",
-          proto3_optional: nil,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.FieldDescriptorProto{
-          name: "end",
-          extendee: nil,
-          number: 2,
-          label: :LABEL_OPTIONAL,
-          type: :TYPE_BYTES,
-          type_name: nil,
-          default_value: nil,
-          options: nil,
-          oneof_index: nil,
-          json_name: "end",
+          json_name: "success",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -1949,11 +1355,10 @@ defmodule SpireDb.Spiredb.KeyRange do
     }
   end
 
-  field(:start, 1, type: :bytes)
-  field(:end, 2, type: :bytes)
+  field(:success, 1, type: :bool)
 end
 
-defmodule SpireDb.Spiredb.CoprocessorResponse do
+defmodule Spiredb.Internal.GetRegionInfoRequest do
   @moduledoc false
 
   use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
@@ -1961,24 +1366,194 @@ defmodule SpireDb.Spiredb.CoprocessorResponse do
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "CoprocessorResponse",
+      name: "GetRegionInfoRequest",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
-          name: "data",
+          name: "region_id",
           extendee: nil,
           number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+end
+
+defmodule Spiredb.Internal.GetRegionInfoResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "GetRegionInfoResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_key",
+          extendee: nil,
+          number: 2,
           label: :LABEL_OPTIONAL,
           type: :TYPE_BYTES,
           type_name: nil,
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "data",
+          json_name: "startKey",
           proto3_optional: nil,
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "error",
+          name: "end_key",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "endKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_epoch",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionEpoch",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "peers",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_REPEATED,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.internal.PeerInfo",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "peers",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "approximate_size",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "approximateSize",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "approximate_keys",
+          extendee: nil,
+          number: 7,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "approximateKeys",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:start_key, 2, type: :bytes, json_name: "startKey")
+  field(:end_key, 3, type: :bytes, json_name: "endKey")
+  field(:region_epoch, 4, type: :uint64, json_name: "regionEpoch")
+  field(:peers, 5, repeated: true, type: Spiredb.Internal.PeerInfo)
+  field(:approximate_size, 6, type: :uint64, json_name: "approximateSize")
+  field(:approximate_keys, 7, type: :uint64, json_name: "approximateKeys")
+end
+
+defmodule Spiredb.Internal.PeerInfo do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "PeerInfo",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "store_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "storeId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "role",
           extendee: nil,
           number: 2,
           label: :LABEL_OPTIONAL,
@@ -1987,7 +1562,21 @@ defmodule SpireDb.Spiredb.CoprocessorResponse do
           default_value: nil,
           options: nil,
           oneof_index: nil,
-          json_name: "error",
+          json_name: "role",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "match_index",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "matchIndex",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -2004,87 +1593,75 @@ defmodule SpireDb.Spiredb.CoprocessorResponse do
     }
   end
 
-  field(:data, 1, type: :bytes)
-  field(:error, 2, type: :string)
+  field(:store_id, 1, type: :uint64, json_name: "storeId")
+  field(:role, 2, type: :string)
+  field(:match_index, 3, type: :uint64, json_name: "matchIndex")
 end
 
-defmodule SpireDb.Spiredb.PlacementDriver.Service do
+defmodule Spiredb.Internal.Empty do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.PlacementDriver", protoc_gen_elixir_version: "0.15.0"
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "Empty",
+      field: [],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+end
+
+defmodule Spiredb.Internal.RaftService.Service do
+  @moduledoc false
+
+  use GRPC.Service, name: "spiredb.internal.RaftService", protoc_gen_elixir_version: "0.15.0"
 
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.ServiceDescriptorProto{
-      name: "PlacementDriver",
+      name: "RaftService",
       method: [
         %Google.Protobuf.MethodDescriptorProto{
-          name: "RegisterStore",
-          input_type: ".spiredb.RegisterStoreRequest",
-          output_type: ".spiredb.RegisterStoreResponse",
+          name: "AppendEntries",
+          input_type: ".spiredb.internal.AppendEntriesRequest",
+          output_type: ".spiredb.internal.AppendEntriesResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "StoreHeartbeat",
-          input_type: ".spiredb.HeartbeatRequest",
-          output_type: ".spiredb.HeartbeatResponse",
+          name: "RequestVote",
+          input_type: ".spiredb.internal.RequestVoteRequest",
+          output_type: ".spiredb.internal.RequestVoteResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "GetRegion",
-          input_type: ".spiredb.GetRegionRequest",
-          output_type: ".spiredb.GetRegionResponse",
+          name: "InstallSnapshot",
+          input_type: ".spiredb.internal.SnapshotChunk",
+          output_type: ".spiredb.internal.InstallSnapshotResponse",
           options: nil,
-          client_streaming: false,
+          client_streaming: true,
           server_streaming: false,
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "GetRegionByKey",
-          input_type: ".spiredb.GetRegionByKeyRequest",
-          output_type: ".spiredb.GetRegionByKeyResponse",
-          options: nil,
-          client_streaming: false,
-          server_streaming: false,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.MethodDescriptorProto{
-          name: "CreateTable",
-          input_type: ".spiredb.CreateTableRequest",
-          output_type: ".spiredb.CreateTableResponse",
-          options: nil,
-          client_streaming: false,
-          server_streaming: false,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.MethodDescriptorProto{
-          name: "GetTable",
-          input_type: ".spiredb.GetTableRequest",
-          output_type: ".spiredb.GetTableResponse",
-          options: nil,
-          client_streaming: false,
-          server_streaming: false,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.MethodDescriptorProto{
-          name: "ListTables",
-          input_type: ".spiredb.ListTablesRequest",
-          output_type: ".spiredb.ListTablesResponse",
-          options: nil,
-          client_streaming: false,
-          server_streaming: false,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.MethodDescriptorProto{
-          name: "GetClusterInfo",
-          input_type: ".spiredb.GetClusterInfoRequest",
-          output_type: ".spiredb.GetClusterInfoResponse",
+          name: "TransferLeader",
+          input_type: ".spiredb.internal.TransferLeaderRequest",
+          output_type: ".spiredb.internal.Empty",
           options: nil,
           client_streaming: false,
           server_streaming: false,
@@ -2096,78 +1673,114 @@ defmodule SpireDb.Spiredb.PlacementDriver.Service do
     }
   end
 
-  rpc(:RegisterStore, SpireDb.Spiredb.RegisterStoreRequest, SpireDb.Spiredb.RegisterStoreResponse)
-
-  rpc(:StoreHeartbeat, SpireDb.Spiredb.HeartbeatRequest, SpireDb.Spiredb.HeartbeatResponse)
-
-  rpc(:GetRegion, SpireDb.Spiredb.GetRegionRequest, SpireDb.Spiredb.GetRegionResponse)
-
   rpc(
-    :GetRegionByKey,
-    SpireDb.Spiredb.GetRegionByKeyRequest,
-    SpireDb.Spiredb.GetRegionByKeyResponse
+    :AppendEntries,
+    Spiredb.Internal.AppendEntriesRequest,
+    Spiredb.Internal.AppendEntriesResponse
   )
 
-  rpc(:CreateTable, SpireDb.Spiredb.CreateTableRequest, SpireDb.Spiredb.CreateTableResponse)
-
-  rpc(:GetTable, SpireDb.Spiredb.GetTableRequest, SpireDb.Spiredb.GetTableResponse)
-
-  rpc(:ListTables, SpireDb.Spiredb.ListTablesRequest, SpireDb.Spiredb.ListTablesResponse)
+  rpc(:RequestVote, Spiredb.Internal.RequestVoteRequest, Spiredb.Internal.RequestVoteResponse)
 
   rpc(
-    :GetClusterInfo,
-    SpireDb.Spiredb.GetClusterInfoRequest,
-    SpireDb.Spiredb.GetClusterInfoResponse
+    :InstallSnapshot,
+    stream(Spiredb.Internal.SnapshotChunk),
+    Spiredb.Internal.InstallSnapshotResponse
   )
+
+  rpc(:TransferLeader, Spiredb.Internal.TransferLeaderRequest, Spiredb.Internal.Empty)
 end
 
-defmodule SpireDb.Spiredb.PlacementDriver.Stub do
+defmodule Spiredb.Internal.RaftService.Stub do
   @moduledoc false
 
-  use GRPC.Stub, service: SpireDb.Spiredb.PlacementDriver.Service
+  use GRPC.Stub, service: Spiredb.Internal.RaftService.Service
 end
 
-defmodule SpireDb.Spiredb.Store.Service do
+defmodule Spiredb.Internal.HeartbeatService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.Store", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.HeartbeatService", protoc_gen_elixir_version: "0.15.0"
 
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.ServiceDescriptorProto{
-      name: "Store",
+      name: "HeartbeatService",
       method: [
         %Google.Protobuf.MethodDescriptorProto{
-          name: "Get",
-          input_type: ".spiredb.GetRequest",
-          output_type: ".spiredb.GetResponse",
+          name: "StoreHeartbeat",
+          input_type: ".spiredb.internal.StoreHeartbeatRequest",
+          output_type: ".spiredb.internal.StoreHeartbeatResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "Put",
-          input_type: ".spiredb.PutRequest",
-          output_type: ".spiredb.PutResponse",
+          name: "RegionHeartbeat",
+          input_type: ".spiredb.internal.RegionHeartbeatRequest",
+          output_type: ".spiredb.internal.RegionHeartbeatResponse",
+          options: nil,
+          client_streaming: false,
+          server_streaming: false,
+          __unknown_fields__: []
+        }
+      ],
+      options: nil,
+      __unknown_fields__: []
+    }
+  end
+
+  rpc(
+    :StoreHeartbeat,
+    Spiredb.Internal.StoreHeartbeatRequest,
+    Spiredb.Internal.StoreHeartbeatResponse
+  )
+
+  rpc(
+    :RegionHeartbeat,
+    Spiredb.Internal.RegionHeartbeatRequest,
+    Spiredb.Internal.RegionHeartbeatResponse
+  )
+end
+
+defmodule Spiredb.Internal.HeartbeatService.Stub do
+  @moduledoc false
+
+  use GRPC.Stub, service: Spiredb.Internal.HeartbeatService.Service
+end
+
+defmodule Spiredb.Internal.RegionService.Service do
+  @moduledoc false
+
+  use GRPC.Service, name: "spiredb.internal.RegionService", protoc_gen_elixir_version: "0.15.0"
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.ServiceDescriptorProto{
+      name: "RegionService",
+      method: [
+        %Google.Protobuf.MethodDescriptorProto{
+          name: "SplitRegion",
+          input_type: ".spiredb.internal.SplitRegionRequest",
+          output_type: ".spiredb.internal.SplitRegionResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "Delete",
-          input_type: ".spiredb.DeleteRequest",
-          output_type: ".spiredb.DeleteResponse",
+          name: "MergeRegion",
+          input_type: ".spiredb.internal.MergeRegionRequest",
+          output_type: ".spiredb.internal.MergeRegionResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "BatchPut",
-          input_type: ".spiredb.BatchPutRequest",
-          output_type: ".spiredb.BatchPutResponse",
+          name: "TransferRegion",
+          input_type: ".spiredb.internal.TransferRegionRequest",
+          output_type: ".spiredb.internal.TransferRegionResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
@@ -2175,17 +1788,8 @@ defmodule SpireDb.Spiredb.Store.Service do
         },
         %Google.Protobuf.MethodDescriptorProto{
           name: "GetRegionInfo",
-          input_type: ".spiredb.GetRegionInfoRequest",
-          output_type: ".spiredb.GetRegionInfoResponse",
-          options: nil,
-          client_streaming: false,
-          server_streaming: false,
-          __unknown_fields__: []
-        },
-        %Google.Protobuf.MethodDescriptorProto{
-          name: "SplitRegion",
-          input_type: ".spiredb.SplitRegionRequest",
-          output_type: ".spiredb.SplitRegionResponse",
+          input_type: ".spiredb.internal.GetRegionInfoRequest",
+          output_type: ".spiredb.internal.GetRegionInfoResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
@@ -2197,55 +1801,25 @@ defmodule SpireDb.Spiredb.Store.Service do
     }
   end
 
-  rpc(:Get, SpireDb.Spiredb.GetRequest, SpireDb.Spiredb.GetResponse)
+  rpc(:SplitRegion, Spiredb.Internal.SplitRegionRequest, Spiredb.Internal.SplitRegionResponse)
 
-  rpc(:Put, SpireDb.Spiredb.PutRequest, SpireDb.Spiredb.PutResponse)
+  rpc(:MergeRegion, Spiredb.Internal.MergeRegionRequest, Spiredb.Internal.MergeRegionResponse)
 
-  rpc(:Delete, SpireDb.Spiredb.DeleteRequest, SpireDb.Spiredb.DeleteResponse)
+  rpc(
+    :TransferRegion,
+    Spiredb.Internal.TransferRegionRequest,
+    Spiredb.Internal.TransferRegionResponse
+  )
 
-  rpc(:BatchPut, SpireDb.Spiredb.BatchPutRequest, SpireDb.Spiredb.BatchPutResponse)
-
-  rpc(:GetRegionInfo, SpireDb.Spiredb.GetRegionInfoRequest, SpireDb.Spiredb.GetRegionInfoResponse)
-
-  rpc(:SplitRegion, SpireDb.Spiredb.SplitRegionRequest, SpireDb.Spiredb.SplitRegionResponse)
+  rpc(
+    :GetRegionInfo,
+    Spiredb.Internal.GetRegionInfoRequest,
+    Spiredb.Internal.GetRegionInfoResponse
+  )
 end
 
-defmodule SpireDb.Spiredb.Store.Stub do
+defmodule Spiredb.Internal.RegionService.Stub do
   @moduledoc false
 
-  use GRPC.Stub, service: SpireDb.Spiredb.Store.Service
-end
-
-defmodule SpireDb.Spiredb.Coprocessor.Service do
-  @moduledoc false
-
-  use GRPC.Service, name: "spiredb.Coprocessor", protoc_gen_elixir_version: "0.15.0"
-
-  def descriptor do
-    # credo:disable-for-next-line
-    %Google.Protobuf.ServiceDescriptorProto{
-      name: "Coprocessor",
-      method: [
-        %Google.Protobuf.MethodDescriptorProto{
-          name: "Execute",
-          input_type: ".spiredb.CoprocessorRequest",
-          output_type: ".spiredb.CoprocessorResponse",
-          options: nil,
-          client_streaming: false,
-          server_streaming: true,
-          __unknown_fields__: []
-        }
-      ],
-      options: nil,
-      __unknown_fields__: []
-    }
-  end
-
-  rpc(:Execute, SpireDb.Spiredb.CoprocessorRequest, stream(SpireDb.Spiredb.CoprocessorResponse))
-end
-
-defmodule SpireDb.Spiredb.Coprocessor.Stub do
-  @moduledoc false
-
-  use GRPC.Stub, service: SpireDb.Spiredb.Coprocessor.Service
+  use GRPC.Stub, service: Spiredb.Internal.RegionService.Service
 end
