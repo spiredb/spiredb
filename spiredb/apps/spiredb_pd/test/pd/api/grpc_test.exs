@@ -26,7 +26,7 @@ defmodule PD.API.GRPCTest do
       assert Keyword.has_key?(functions, :get_region)
       assert Keyword.has_key?(functions, :list_stores)
       assert Keyword.has_key?(functions, :register_store)
-      assert Keyword.has_key?(functions, :report_store_heartbeat)
+      assert Keyword.has_key?(functions, :heartbeat)
     end
   end
 

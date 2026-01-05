@@ -166,7 +166,7 @@ service ClusterService {
   rpc GetStore(GetStoreRequest) returns (Store);
   rpc ListStores(Empty) returns (StoreList);
   rpc RegisterStore(RegisterStoreRequest) returns (RegisterStoreResponse);
-  rpc ReportStoreHeartbeat(StoreHeartbeat) returns (StoreHeartbeatResponse);
+  rpc Heartbeat(StoreHeartbeat) returns (StoreHeartbeatResponse);
 }
 
 message GetRegionRequest {
@@ -248,9 +248,10 @@ message RegisterStoreResponse {
 
 message StoreHeartbeat {
   uint64 store_id = 1;
-  uint64 available = 2;
-  uint32 region_count = 3;
-  repeated RegionStats region_stats = 4;
+  string address = 2;           // Node name for heartbeat routing
+  uint64 available = 3;
+  uint32 region_count = 4;
+  repeated RegionStats region_stats = 5;
 }
 
 message RegionStats {
@@ -261,7 +262,65 @@ message RegionStats {
 }
 
 message StoreHeartbeatResponse {
-  // Future: scheduled tasks (split, merge, transfer leader)
+  repeated ScheduledTask tasks = 1;
+}
+
+// Task scheduled by PD leader for store to execute
+message ScheduledTask {
+  uint64 task_id = 7;            // Unique task identifier
+  uint64 leader_epoch = 8;       // Raft term when task was issued (for stale task detection)
+  
+  oneof task {
+    SplitRegion split = 1;
+    MergeRegions merge = 2;
+    TransferLeader transfer_leader = 3;
+    AddPeer add_peer = 4;
+    RemovePeer remove_peer = 5;
+    CompactRegion compact = 6;
+  }
+}
+
+// Split a region at the given key
+message SplitRegion {
+  uint64 region_id = 1;
+  bytes split_key = 2;           // Key to split at
+  uint64 new_region_id = 3;      // Pre-allocated ID for new region
+  uint64 new_peer_id = 4;        // Pre-allocated peer ID
+}
+
+// Merge two adjacent regions
+message MergeRegions {
+  uint64 source_region_id = 1;   // Region to merge from (will be deleted)
+  uint64 target_region_id = 2;   // Region to merge into
+}
+
+// Transfer region leadership to another store
+message TransferLeader {
+  uint64 region_id = 1;
+  uint64 from_store_id = 2;
+  uint64 to_store_id = 3;
+}
+
+// Add a peer (replica) to a region
+message AddPeer {
+  uint64 region_id = 1;
+  uint64 store_id = 2;           // Store to add as replica
+  uint64 peer_id = 3;            // Pre-allocated peer ID
+  bool is_learner = 4;           // Start as learner before promoting
+}
+
+// Remove a peer from a region
+message RemovePeer {
+  uint64 region_id = 1;
+  uint64 store_id = 2;
+  uint64 peer_id = 3;
+}
+
+// Trigger manual compaction for a region
+message CompactRegion {
+  uint64 region_id = 1;
+  bytes start_key = 2;           // Optional: compact range start
+  bytes end_key = 3;             // Optional: compact range end
 }
 
 // =============================================================================

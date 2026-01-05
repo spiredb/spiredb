@@ -14,7 +14,7 @@ defmodule PD.Scheduler do
   use GenServer
   require Logger
 
-  alias PD.Scheduler.{LoadMonitor, BalancePlanner, Executor}
+  alias PD.Scheduler.{LoadMonitor, BalancePlanner}
 
   @check_interval :timer.seconds(30)
   @max_concurrent_operations 2
@@ -36,6 +36,16 @@ defmodule PD.Scheduler do
     :ok
   end
 
+  @doc "Get pending tasks for a store and clear them"
+  def get_pending_tasks(store_address) do
+    GenServer.call(__MODULE__, {:get_pending_tasks, store_address})
+  end
+
+  @doc "Get the current leader epoch (Raft term)"
+  def get_leader_epoch do
+    GenServer.call(__MODULE__, :get_leader_epoch)
+  end
+
   ## Server Callbacks
 
   @impl true
@@ -49,6 +59,12 @@ defmodule PD.Scheduler do
        active_operations: [],
        # Map of node -> :up | :down
        known_states: %{},
+       # Map of store_address -> [tasks]
+       pending_tasks: %{},
+       # Next task ID
+       next_task_id: 1,
+       # Current leader epoch (from Ra)
+       leader_epoch: get_ra_term(),
        stats: %{
          total_checks: 0,
          total_operations: 0,
@@ -61,6 +77,18 @@ defmodule PD.Scheduler do
   @impl true
   def handle_call(:get_stats, _from, state) do
     {:reply, state.stats, state}
+  end
+
+  @impl true
+  def handle_call({:get_pending_tasks, store_address}, _from, state) do
+    tasks = Map.get(state.pending_tasks, store_address, [])
+    new_pending = Map.delete(state.pending_tasks, store_address)
+    {:reply, {tasks, state.leader_epoch}, %{state | pending_tasks: new_pending}}
+  end
+
+  @impl true
+  def handle_call(:get_leader_epoch, _from, state) do
+    {:reply, state.leader_epoch, state}
   end
 
   @impl true
@@ -169,20 +197,61 @@ defmodule PD.Scheduler do
 
       state
     else
-      Logger.info("Executing plan",
+      Logger.info("Queueing tasks for heartbeat delivery",
         operations: length(plan.operations),
         reason: plan.reason
       )
 
-      # Execute async
-      Executor.execute_async(plan.operations, self())
+      # Queue tasks for delivery via heartbeat responses
+      # Group operations by target store
+      new_pending = queue_operations_by_store(plan.operations, state.pending_tasks, state)
 
       updated_stats = %{
         state.stats
         | total_operations: state.stats.total_operations + length(plan.operations)
       }
 
-      %{state | active_operations: plan.operations, stats: updated_stats}
+      %{state | pending_tasks: new_pending, active_operations: [], stats: updated_stats}
+    end
+  end
+
+  defp queue_operations_by_store(operations, pending_tasks, state) do
+    Enum.reduce(operations, pending_tasks, fn op, acc ->
+      # Determine target store for this operation
+      target_store = get_target_store(op)
+
+      # Add task metadata
+      task_with_meta =
+        Map.merge(op, %{
+          task_id: state.next_task_id,
+          leader_epoch: state.leader_epoch
+        })
+
+      # Append to store's pending list
+      store_key = to_string(target_store)
+      existing = Map.get(acc, store_key, [])
+      Map.put(acc, store_key, existing ++ [task_with_meta])
+    end)
+  end
+
+  defp get_target_store(%{to_store: store}), do: store
+  defp get_target_store(%{target_store: store}), do: store
+  defp get_target_store(%{from_store: store}), do: store
+  defp get_target_store(_), do: Node.self()
+
+  defp get_ra_term do
+    # Get current Raft term from Ra
+    # This represents the leader epoch
+    case :ra.members({:pd_server, Node.self()}, 1000) do
+      {:ok, _members, leader} when is_tuple(leader) ->
+        # Ra returns leader as {name, node}
+        # For now, use a simple incrementing epoch based on time
+        # In production, this should come from :ra.overview or similar
+        System.monotonic_time(:second)
+
+      _ ->
+        # Fallback if Ra not available
+        0
     end
   end
 end

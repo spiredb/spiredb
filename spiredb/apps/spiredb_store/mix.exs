@@ -44,7 +44,8 @@ defmodule SpiredbStore.MixProject do
       {:telemetry, "~> 1.0"},
       # Arrow data interchange
       {:explorer, "~> 0.11"},
-      {:adbc, "~> 0.8"}
+      {:adbc, "~> 0.8"},
+      {:anodex, "~> 0.1.3"}
     ]
   end
 end

@@ -9,7 +9,9 @@ defmodule Store.KV.Engine do
 
   require Logger
 
-  defstruct [:db_ref, :path, :cache, :rate_limiter, :statistics]
+  alias Store.KV.ColumnFamilies
+
+  defstruct [:db_ref, :cf_map, :path, :cache, :rate_limiter, :statistics]
 
   ## Client API
 
@@ -182,16 +184,20 @@ defmodule Store.KV.Engine do
       compression: config.compression
     )
 
-    case :rocksdb.open(path_charlist, db_opts) do
-      {:ok, db_ref} ->
-        Logger.info("RocksDB opened successfully at #{path}")
+    case ColumnFamilies.open_with_cf(path, db_opts) do
+      {:ok, db_ref, cf_map} ->
+        Logger.info(
+          "RocksDB opened successfully at #{path} with #{map_size(cf_map)} column families"
+        )
 
-        # Store db_ref in persistent_term for direct concurrent access
+        # Store db_ref and cf_map in persistent_term for direct concurrent access
         # This bypasses the GenServer bottleneck
         :persistent_term.put(:spiredb_rocksdb_ref, db_ref)
+        :persistent_term.put(:spiredb_rocksdb_cf_map, cf_map)
 
         state = %__MODULE__{
           db_ref: db_ref,
+          cf_map: cf_map,
           path: path,
           cache: cache,
           rate_limiter: rate_limiter,

@@ -1231,7 +1231,11 @@ defmodule Spiredb.Data.TableUpdateRequest do
   field(:table_name, 1, type: :string, json_name: "tableName")
   field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
 
-  field(:updates, 3, repeated: true, type: Spiredb.Data.TableUpdateRequest.UpdatesEntry, map: true)
+  field(:updates, 3,
+    repeated: true,
+    type: Spiredb.Data.TableUpdateRequest.UpdatesEntry,
+    map: true
+  )
 end
 
 defmodule Spiredb.Data.TableUpdateResponse do

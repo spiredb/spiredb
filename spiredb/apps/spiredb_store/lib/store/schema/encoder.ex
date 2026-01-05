@@ -242,8 +242,56 @@ defmodule Store.Schema.Encoder do
     {key, commit_ts}
   end
 
+  @doc """
+  Encode a batch get result as binary.
+  """
+  def encode_batch_get_result(results) when is_list(results) do
+    # Encode as simple format: count:4B then [key_len:4][key][val_len:4][val]...
+    # Handle both {key, value} and {key, value, found} tuple formats
+    count = length(results)
+
+    data =
+      Enum.reduce(results, <<count::32>>, fn
+        {key, value, _found}, acc ->
+          key_bin = ensure_binary(key)
+          val_bin = ensure_binary(value)
+
+          acc <>
+            <<byte_size(key_bin)::32, key_bin::binary, byte_size(val_bin)::32, val_bin::binary>>
+
+        {key, value}, acc ->
+          key_bin = ensure_binary(key)
+          val_bin = ensure_binary(value)
+
+          acc <>
+            <<byte_size(key_bin)::32, key_bin::binary, byte_size(val_bin)::32, val_bin::binary>>
+      end)
+
+    data
+  end
+
+  @doc """
+  Encode a scan batch as binary.
+  """
+  def encode_scan_batch(batch) when is_list(batch) do
+    # Encode as simple format: count:4B then [key_len:4][key][val_len:4][val]...
+    count = length(batch)
+
+    data =
+      Enum.reduce(batch, <<count::32>>, fn {key, value}, acc ->
+        key_bin = ensure_binary(key)
+        val_bin = ensure_binary(value)
+
+        acc <>
+          <<byte_size(key_bin)::32, key_bin::binary, byte_size(val_bin)::32, val_bin::binary>>
+      end)
+
+    data
+  end
+
   # Private helpers
 
+  defp ensure_binary(nil), do: <<>>
   defp ensure_binary(v) when is_binary(v), do: v
   defp ensure_binary(v) when is_integer(v), do: Integer.to_string(v)
   defp ensure_binary(v) when is_atom(v), do: Atom.to_string(v)

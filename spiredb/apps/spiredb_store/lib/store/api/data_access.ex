@@ -13,7 +13,7 @@ defmodule Store.API.DataAccess do
 
   require Logger
   alias Store.KV.Engine
-  alias Store.Arrow.Encoder
+  alias Store.Schema.Encoder
   alias Store.Server
 
   alias Spiredb.Data.{
@@ -140,14 +140,16 @@ defmodule Store.API.DataAccess do
     start_time = System.monotonic_time(:millisecond)
     Logger.debug("TableScan", table: request.table_name, columns: request.columns)
 
-    # TODO: Implement table-aware scan using Store.Schema.Registry
-    # For now, delegate to raw scan on table prefix
-    table_prefix = "#{request.table_name}:"
+    # Use table ID prefix for scan range
+    # Table names map to IDs via schema - for now use hash
+    table_id = :erlang.phash2(request.table_name)
+    table_prefix = Encoder.encode_table_key(table_id, <<>>)
+    table_end = <<table_prefix::binary, 0xFF>>
 
     opts = [batch_size: @default_batch_size, limit: request.limit]
     engine = Engine
 
-    case Engine.scan_range(engine, table_prefix, "#{table_prefix}\xFF", opts) do
+    case Engine.scan_range(engine, table_prefix, table_end, opts) do
       {:ok, batches} ->
         stream_table_batches(stream, batches, request.columns, start_time)
 
@@ -163,13 +165,14 @@ defmodule Store.API.DataAccess do
   def table_get(request, _stream) do
     Logger.debug("TableGet", table: request.table_name, pk: request.primary_key)
 
-    # TODO: Implement proper table key encoding
-    key = "#{request.table_name}:#{request.primary_key}"
+    # Encode table key with table_id and primary_key
+    table_id = :erlang.phash2(request.table_name)
+    key = Encoder.encode_table_key(table_id, request.primary_key)
     engine = get_engine_for_key(key, nil)
 
     case Engine.get(engine, key) do
       {:ok, value} ->
-        # TODO: Decode row and encode as Arrow with schema
+        # Return raw value as Arrow batch (client decodes)
         %TableGetResponse{arrow_batch: value, found: true}
 
       {:error, :not_found} ->
@@ -182,35 +185,149 @@ defmodule Store.API.DataAccess do
   end
 
   @doc """
-  Table insert.
+  Table insert with Arrow batch input.
   """
   def table_insert(request, _stream) do
-    Logger.debug("TableInsert", table: request.table_name)
+    Logger.debug("TableInsert",
+      table: request.table_name,
+      batch_size: byte_size(request.arrow_batch)
+    )
 
-    # TODO: Decode Arrow batch and insert rows with indexes
-    # For now, placeholder
-    %TableInsertResponse{rows_affected: 0}
+    table_id = :erlang.phash2(request.table_name)
+
+    # Parse Arrow batch and extract rows
+    # For now, treat arrow_batch as serialized rows
+    rows = parse_arrow_batch(request.arrow_batch, request.table_name)
+
+    # Insert each row
+    inserted =
+      Enum.reduce(rows, 0, fn {pk, value}, count ->
+        key = Encoder.encode_table_key(table_id, pk)
+
+        case get_db_ref_direct() do
+          nil ->
+            # No RocksDB - use ETS fallback
+            try do
+              :ets.insert(:table_data, {key, value})
+              count + 1
+            rescue
+              ArgumentError ->
+                :ets.new(:table_data, [:named_table, :public, :set])
+                :ets.insert(:table_data, {key, value})
+                count + 1
+            end
+
+          db_ref ->
+            case :rocksdb.put(db_ref, key, value, []) do
+              :ok -> count + 1
+              {:error, _} -> count
+            end
+        end
+      end)
+
+    %TableInsertResponse{rows_affected: inserted}
   end
 
   @doc """
-  Table update.
+  Table update by primary key.
   """
   def table_update(request, _stream) do
     Logger.debug("TableUpdate", table: request.table_name, pk: request.primary_key)
 
-    # TODO: Implement
-    %TableUpdateResponse{updated: false}
+    table_id = :erlang.phash2(request.table_name)
+    key = Encoder.encode_table_key(table_id, request.primary_key)
+
+    case get_db_ref_direct() do
+      nil ->
+        # ETS fallback
+        try do
+          case :ets.lookup(:table_data, key) do
+            [{^key, _}] ->
+              :ets.insert(:table_data, {key, request.arrow_batch})
+              %TableUpdateResponse{updated: true}
+
+            [] ->
+              %TableUpdateResponse{updated: false}
+          end
+        rescue
+          ArgumentError -> %TableUpdateResponse{updated: false}
+        end
+
+      db_ref ->
+        # Check if exists then update
+        case :rocksdb.get(db_ref, key, []) do
+          {:ok, _} ->
+            case :rocksdb.put(db_ref, key, request.arrow_batch, []) do
+              :ok -> %TableUpdateResponse{updated: true}
+              {:error, _} -> %TableUpdateResponse{updated: false}
+            end
+
+          _ ->
+            %TableUpdateResponse{updated: false}
+        end
+    end
   end
 
   @doc """
-  Table delete.
+  Table delete by primary key.
   """
   def table_delete(request, _stream) do
     Logger.debug("TableDelete", table: request.table_name, pk: request.primary_key)
 
-    # TODO: Implement with index cleanup
-    %TableDeleteResponse{deleted: false}
+    table_id = :erlang.phash2(request.table_name)
+    key = Encoder.encode_table_key(table_id, request.primary_key)
+
+    case get_db_ref_direct() do
+      nil ->
+        # ETS fallback
+        try do
+          case :ets.lookup(:table_data, key) do
+            [{^key, _}] ->
+              :ets.delete(:table_data, key)
+              %TableDeleteResponse{deleted: true}
+
+            [] ->
+              %TableDeleteResponse{deleted: false}
+          end
+        rescue
+          ArgumentError -> %TableDeleteResponse{deleted: false}
+        end
+
+      db_ref ->
+        case :rocksdb.get(db_ref, key, []) do
+          {:ok, _} ->
+            case :rocksdb.delete(db_ref, key, []) do
+              :ok -> %TableDeleteResponse{deleted: true}
+              {:error, _} -> %TableDeleteResponse{deleted: false}
+            end
+
+          _ ->
+            %TableDeleteResponse{deleted: false}
+        end
+    end
   end
+
+  defp get_db_ref_direct do
+    :persistent_term.get(:spiredb_rocksdb_ref, nil)
+  end
+
+  defp parse_arrow_batch(batch, _table_name) when is_binary(batch) do
+    # Parse Arrow IPC format to extract rows
+    # For now, treat as simple format: [pk_len:4][pk][value_len:4][value]...
+    parse_simple_batch(batch, [])
+  end
+
+  defp parse_simple_batch(<<>>, acc), do: Enum.reverse(acc)
+
+  defp parse_simple_batch(
+         <<pk_len::32, pk::binary-size(pk_len), val_len::32, value::binary-size(val_len),
+           rest::binary>>,
+         acc
+       ) do
+    parse_simple_batch(rest, [{pk, value} | acc])
+  end
+
+  defp parse_simple_batch(_, acc), do: Enum.reverse(acc)
 
   # ==========================================================================
   # Private Helpers

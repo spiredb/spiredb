@@ -210,9 +210,30 @@ defmodule Store.Server do
     # Send heartbeat to PD asynchronously to avoid blocking Store.Server
     # If PD is slow (e.g. Raft election), we don't want to freeze the Store
     node_name = state.node_name
+    node_address = to_string(node_name)
 
     Task.start(fn ->
+      # Send heartbeat via Ra
       PD.heartbeat(node_name)
+
+      # Query scheduler for any pending tasks
+      try do
+        {tasks, epoch} = PD.Scheduler.get_pending_tasks(node_address)
+
+        if tasks != [] do
+          Logger.info("Received #{length(tasks)} tasks from PD scheduler")
+
+          # Update executor's known epoch
+          Store.TaskExecutor.update_epoch(epoch)
+
+          # Convert internal format to proto format and execute
+          proto_tasks = convert_tasks_to_proto(tasks)
+          Store.TaskExecutor.execute_tasks(proto_tasks)
+        end
+      catch
+        kind, reason ->
+          Logger.debug("Could not get tasks from scheduler: #{inspect({kind, reason})}")
+      end
     end)
 
     # Schedule next heartbeat
@@ -220,6 +241,60 @@ defmodule Store.Server do
 
     {:noreply, state}
   end
+
+  defp convert_tasks_to_proto(tasks) do
+    Enum.map(tasks, fn task ->
+      %Spiredb.Cluster.ScheduledTask{
+        task_id: task[:task_id] || 0,
+        leader_epoch: task[:leader_epoch] || 0,
+        task: convert_task_type(task)
+      }
+    end)
+  end
+
+  defp convert_task_type(%{type: :move_region} = op) do
+    {:transfer_leader,
+     %Spiredb.Cluster.TransferLeader{
+       region_id: op.region_id || 0,
+       from_store_id: store_hash(op.from_store),
+       to_store_id: store_hash(op.to_store)
+     }}
+  end
+
+  defp convert_task_type(%{type: :split_region} = op) do
+    {:split,
+     %Spiredb.Cluster.SplitRegion{
+       region_id: op.region_id || 0,
+       split_key: op[:split_key] || <<>>,
+       new_region_id: op[:new_region_id] || 0,
+       new_peer_id: op[:new_peer_id] || 0
+     }}
+  end
+
+  defp convert_task_type(%{type: :add_replica} = op) do
+    {:add_peer,
+     %Spiredb.Cluster.AddPeer{
+       region_id: op.region_id || 0,
+       store_id: store_hash(op.target_store),
+       peer_id: op[:peer_id] || 0,
+       is_learner: op[:is_learner] || false
+     }}
+  end
+
+  defp convert_task_type(%{type: :remove_replica} = op) do
+    {:remove_peer,
+     %Spiredb.Cluster.RemovePeer{
+       region_id: op.region_id || 0,
+       store_id: store_hash(op.target_store),
+       peer_id: op[:peer_id] || 0
+     }}
+  end
+
+  defp convert_task_type(_), do: nil
+
+  defp store_hash(store) when is_atom(store), do: :erlang.phash2(store)
+  defp store_hash(store) when is_integer(store), do: store
+  defp store_hash(_), do: 0
 
   @impl true
   def handle_call({:get_direct, key}, _from, state) do

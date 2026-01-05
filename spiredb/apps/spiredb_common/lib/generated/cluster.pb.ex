@@ -2599,9 +2599,23 @@ defmodule Spiredb.Cluster.StoreHeartbeat do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "available",
+          name: "address",
           extendee: nil,
           number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_STRING,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "address",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "available",
+          extendee: nil,
+          number: 3,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT64,
           type_name: nil,
@@ -2615,7 +2629,7 @@ defmodule Spiredb.Cluster.StoreHeartbeat do
         %Google.Protobuf.FieldDescriptorProto{
           name: "region_count",
           extendee: nil,
-          number: 3,
+          number: 4,
           label: :LABEL_OPTIONAL,
           type: :TYPE_UINT32,
           type_name: nil,
@@ -2629,7 +2643,7 @@ defmodule Spiredb.Cluster.StoreHeartbeat do
         %Google.Protobuf.FieldDescriptorProto{
           name: "region_stats",
           extendee: nil,
-          number: 4,
+          number: 5,
           label: :LABEL_REPEATED,
           type: :TYPE_MESSAGE,
           type_name: ".spiredb.cluster.RegionStats",
@@ -2654,10 +2668,11 @@ defmodule Spiredb.Cluster.StoreHeartbeat do
   end
 
   field(:store_id, 1, type: :uint64, json_name: "storeId")
-  field(:available, 2, type: :uint64)
-  field(:region_count, 3, type: :uint32, json_name: "regionCount")
+  field(:address, 2, type: :string)
+  field(:available, 3, type: :uint64)
+  field(:region_count, 4, type: :uint32, json_name: "regionCount")
 
-  field(:region_stats, 4,
+  field(:region_stats, 5,
     repeated: true,
     type: Spiredb.Cluster.RegionStats,
     json_name: "regionStats"
@@ -2758,7 +2773,22 @@ defmodule Spiredb.Cluster.StoreHeartbeatResponse do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
       name: "StoreHeartbeatResponse",
-      field: [],
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "tasks",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_REPEATED,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.ScheduledTask",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "tasks",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
       nested_type: [],
       enum_type: [],
       extension_range: [],
@@ -2770,6 +2800,598 @@ defmodule Spiredb.Cluster.StoreHeartbeatResponse do
       __unknown_fields__: []
     }
   end
+
+  field(:tasks, 1, repeated: true, type: Spiredb.Cluster.ScheduledTask)
+end
+
+defmodule Spiredb.Cluster.ScheduledTask do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "ScheduledTask",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "task_id",
+          extendee: nil,
+          number: 7,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "taskId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "leader_epoch",
+          extendee: nil,
+          number: 8,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "leaderEpoch",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "split",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.SplitRegion",
+          default_value: nil,
+          options: nil,
+          oneof_index: 0,
+          json_name: "split",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "merge",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.MergeRegions",
+          default_value: nil,
+          options: nil,
+          oneof_index: 0,
+          json_name: "merge",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "transfer_leader",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.TransferLeader",
+          default_value: nil,
+          options: nil,
+          oneof_index: 0,
+          json_name: "transferLeader",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "add_peer",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.AddPeer",
+          default_value: nil,
+          options: nil,
+          oneof_index: 0,
+          json_name: "addPeer",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "remove_peer",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.RemovePeer",
+          default_value: nil,
+          options: nil,
+          oneof_index: 0,
+          json_name: "removePeer",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "compact",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.CompactRegion",
+          default_value: nil,
+          options: nil,
+          oneof_index: 0,
+          json_name: "compact",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [
+        %Google.Protobuf.OneofDescriptorProto{name: "task", options: nil, __unknown_fields__: []}
+      ],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  oneof(:task, 0)
+
+  field(:task_id, 7, type: :uint64, json_name: "taskId")
+  field(:leader_epoch, 8, type: :uint64, json_name: "leaderEpoch")
+  field(:split, 1, type: Spiredb.Cluster.SplitRegion, oneof: 0)
+  field(:merge, 2, type: Spiredb.Cluster.MergeRegions, oneof: 0)
+
+  field(:transfer_leader, 3,
+    type: Spiredb.Cluster.TransferLeader,
+    json_name: "transferLeader",
+    oneof: 0
+  )
+
+  field(:add_peer, 4, type: Spiredb.Cluster.AddPeer, json_name: "addPeer", oneof: 0)
+  field(:remove_peer, 5, type: Spiredb.Cluster.RemovePeer, json_name: "removePeer", oneof: 0)
+  field(:compact, 6, type: Spiredb.Cluster.CompactRegion, oneof: 0)
+end
+
+defmodule Spiredb.Cluster.SplitRegion do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "SplitRegion",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "split_key",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "splitKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "new_region_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "newRegionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "new_peer_id",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "newPeerId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:split_key, 2, type: :bytes, json_name: "splitKey")
+  field(:new_region_id, 3, type: :uint64, json_name: "newRegionId")
+  field(:new_peer_id, 4, type: :uint64, json_name: "newPeerId")
+end
+
+defmodule Spiredb.Cluster.MergeRegions do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "MergeRegions",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "source_region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "sourceRegionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "target_region_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "targetRegionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:source_region_id, 1, type: :uint64, json_name: "sourceRegionId")
+  field(:target_region_id, 2, type: :uint64, json_name: "targetRegionId")
+end
+
+defmodule Spiredb.Cluster.TransferLeader do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "TransferLeader",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "from_store_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "fromStoreId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "to_store_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "toStoreId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:from_store_id, 2, type: :uint64, json_name: "fromStoreId")
+  field(:to_store_id, 3, type: :uint64, json_name: "toStoreId")
+end
+
+defmodule Spiredb.Cluster.AddPeer do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "AddPeer",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "store_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "storeId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "peer_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "peerId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "is_learner",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "isLearner",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:store_id, 2, type: :uint64, json_name: "storeId")
+  field(:peer_id, 3, type: :uint64, json_name: "peerId")
+  field(:is_learner, 4, type: :bool, json_name: "isLearner")
+end
+
+defmodule Spiredb.Cluster.RemovePeer do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "RemovePeer",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "store_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "storeId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "peer_id",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "peerId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:store_id, 2, type: :uint64, json_name: "storeId")
+  field(:peer_id, 3, type: :uint64, json_name: "peerId")
+end
+
+defmodule Spiredb.Cluster.CompactRegion do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "CompactRegion",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "region_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "regionId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_key",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "startKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "end_key",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "endKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:start_key, 2, type: :bytes, json_name: "startKey")
+  field(:end_key, 3, type: :bytes, json_name: "endKey")
 end
 
 defmodule Spiredb.Cluster.InstallPluginRequest do
@@ -3358,7 +3980,7 @@ defmodule Spiredb.Cluster.ClusterService.Service do
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "ReportStoreHeartbeat",
+          name: "Heartbeat",
           input_type: ".spiredb.cluster.StoreHeartbeat",
           output_type: ".spiredb.cluster.StoreHeartbeatResponse",
           options: nil,
@@ -3384,11 +4006,7 @@ defmodule Spiredb.Cluster.ClusterService.Service do
 
   rpc(:RegisterStore, Spiredb.Cluster.RegisterStoreRequest, Spiredb.Cluster.RegisterStoreResponse)
 
-  rpc(
-    :ReportStoreHeartbeat,
-    Spiredb.Cluster.StoreHeartbeat,
-    Spiredb.Cluster.StoreHeartbeatResponse
-  )
+  rpc(:Heartbeat, Spiredb.Cluster.StoreHeartbeat, Spiredb.Cluster.StoreHeartbeatResponse)
 end
 
 defmodule Spiredb.Cluster.ClusterService.Stub do

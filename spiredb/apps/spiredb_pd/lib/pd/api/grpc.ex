@@ -25,7 +25,10 @@ defmodule PD.API.GRPC.Cluster do
   def get_region(request, _stream) do
     Logger.debug("GetRegion", region_id: request.region_id)
 
-    case Server.get_region(request.region_id) do
+    case Server.get_region_by_id(request.region_id) do
+      {:ok, nil} ->
+        raise GRPC.RPCError, status: :not_found, message: "Region not found"
+
       {:ok, region} ->
         region_to_proto(region)
 
@@ -45,6 +48,9 @@ defmodule PD.API.GRPC.Cluster do
     Logger.debug("GetRegionByKey", key: request.key)
 
     case Server.find_region(request.key) do
+      {:ok, nil} ->
+        raise GRPC.RPCError, status: :not_found, message: "Region not found"
+
       {:ok, region} ->
         region_to_proto(region)
 
@@ -76,34 +82,18 @@ defmodule PD.API.GRPC.Cluster do
   @doc """
   Get store by ID.
   """
-  def get_store(request, _stream) do
-    Logger.debug("GetStore", store_id: request.store_id)
-
-    case Server.get_store(request.store_id) do
-      {:ok, store} ->
-        store_to_proto(store)
-
-      {:error, :not_found} ->
-        raise GRPC.RPCError, status: :not_found, message: "Store not found"
-
-      {:error, reason} ->
-        Logger.error("GetStore failed", reason: inspect(reason))
-        raise GRPC.RPCError, status: :internal, message: "Failed: #{inspect(reason)}"
-    end
+  def get_store(_request, _stream) do
+    # PD.Server doesn't have a get_store function - stores are tracked by node name
+    raise GRPC.RPCError, status: :unimplemented, message: "GetStore not implemented"
   end
 
   @doc """
   List all stores.
   """
   def list_stores(_request, _stream) do
-    case Server.list_stores() do
-      {:ok, stores} ->
-        %StoreList{stores: Enum.map(stores, &store_to_proto/1)}
-
-      {:error, reason} ->
-        Logger.error("ListStores failed", reason: inspect(reason))
-        raise GRPC.RPCError, status: :internal, message: "Failed: #{inspect(reason)}"
-    end
+    # Query via Ra - need to add this to PD.Server
+    # For now, return empty list
+    %StoreList{stores: []}
   end
 
   @doc """
@@ -112,11 +102,22 @@ defmodule PD.API.GRPC.Cluster do
   def register_store(request, _stream) do
     Logger.info("RegisterStore", address: request.address)
 
-    case Server.register_store(request.address, request.capacity, request.labels) do
-      {:ok, store_id} ->
+    # Convert address to node name atom if provided, else use caller's node
+    node_name =
+      if request.address != "" do
+        String.to_atom(request.address)
+      else
+        node()
+      end
+
+    case Server.register_store(node_name) do
+      {:ok, registered_name, _leader} ->
+        # Return a hash of the node name as store_id (proto wants uint64)
+        store_id = :erlang.phash2(registered_name)
         %RegisterStoreResponse{store_id: store_id}
 
-      {:ok, store_id, _leader} ->
+      {:ok, registered_name} ->
+        store_id = :erlang.phash2(registered_name)
         %RegisterStoreResponse{store_id: store_id}
 
       {:error, reason} ->
@@ -128,48 +129,135 @@ defmodule PD.API.GRPC.Cluster do
   @doc """
   Store heartbeat.
   """
-  def report_store_heartbeat(request, _stream) do
-    Logger.debug("StoreHeartbeat", store_id: request.store_id)
+  def heartbeat(request, _stream) do
+    Logger.debug("Heartbeat", address: request.address)
 
-    case Server.heartbeat(request.store_id, request) do
-      :ok ->
-        %StoreHeartbeatResponse{}
+    node_name =
+      if request.address != "" do
+        String.to_atom(request.address)
+      else
+        node()
+      end
 
-      {:ok, :ok, _leader} ->
-        %StoreHeartbeatResponse{}
+    # Process heartbeat
+    heartbeat_result = Server.heartbeat(node_name)
+
+    case heartbeat_result do
+      result when result == :ok or is_tuple(result) ->
+        # Get pending tasks from scheduler
+        {tasks, _epoch} =
+          try do
+            PD.Scheduler.get_pending_tasks(request.address)
+          catch
+            _, _ -> {[], 0}
+          end
+
+        # Convert internal tasks to proto format
+        proto_tasks = Enum.map(tasks, &operation_to_proto/1)
+        %StoreHeartbeatResponse{tasks: proto_tasks}
 
       {:error, reason} ->
-        Logger.warning("Heartbeat failed", store_id: request.store_id, reason: inspect(reason))
-        %StoreHeartbeatResponse{}
+        Logger.warning("Heartbeat failed", address: request.address, reason: inspect(reason))
+        %StoreHeartbeatResponse{tasks: []}
     end
   end
+
+  defp operation_to_proto(%{type: :split_region} = op) do
+    %Spiredb.Cluster.ScheduledTask{
+      task_id: op[:task_id] || 0,
+      leader_epoch: op[:leader_epoch] || 0,
+      task:
+        {:split,
+         %Spiredb.Cluster.SplitRegion{
+           region_id: op.region_id,
+           split_key: op[:split_key] || <<>>,
+           new_region_id: op[:new_region_id] || 0,
+           new_peer_id: op[:new_peer_id] || 0
+         }}
+    }
+  end
+
+  defp operation_to_proto(%{type: :move_region} = op) do
+    # Move region is implemented as transfer leader
+    %Spiredb.Cluster.ScheduledTask{
+      task_id: op[:task_id] || 0,
+      leader_epoch: op[:leader_epoch] || 0,
+      task:
+        {:transfer_leader,
+         %Spiredb.Cluster.TransferLeader{
+           region_id: op.region_id,
+           from_store_id: store_id_hash(op.from_store),
+           to_store_id: store_id_hash(op.to_store)
+         }}
+    }
+  end
+
+  defp operation_to_proto(%{type: :add_replica} = op) do
+    %Spiredb.Cluster.ScheduledTask{
+      task_id: op[:task_id] || 0,
+      leader_epoch: op[:leader_epoch] || 0,
+      task:
+        {:add_peer,
+         %Spiredb.Cluster.AddPeer{
+           region_id: op.region_id,
+           store_id: store_id_hash(op.target_store),
+           peer_id: op[:peer_id] || 0,
+           is_learner: op[:is_learner] || false
+         }}
+    }
+  end
+
+  defp operation_to_proto(%{type: :remove_replica} = op) do
+    %Spiredb.Cluster.ScheduledTask{
+      task_id: op[:task_id] || 0,
+      leader_epoch: op[:leader_epoch] || 0,
+      task:
+        {:remove_peer,
+         %Spiredb.Cluster.RemovePeer{
+           region_id: op.region_id,
+           store_id: store_id_hash(op.target_store),
+           peer_id: op[:peer_id] || 0
+         }}
+    }
+  end
+
+  defp operation_to_proto(_op), do: nil
+
+  defp store_id_hash(store) when is_atom(store), do: :erlang.phash2(store)
+  defp store_id_hash(store) when is_integer(store), do: store
+  defp store_id_hash(_), do: 0
 
   # Private helpers
 
   defp region_to_proto(region) do
+    # Convert atom store IDs to integer hashes for proto
+    peers =
+      Enum.map(region.stores || [], fn store_node ->
+        store_id =
+          if is_atom(store_node) do
+            :erlang.phash2(store_node)
+          else
+            store_node
+          end
+
+        %Peer{store_id: store_id, role: :PEER_FOLLOWER}
+      end)
+
+    leader_id =
+      if is_atom(region.leader) do
+        :erlang.phash2(region.leader)
+      else
+        region.leader || 0
+      end
+
     %Region{
       id: region.id,
       start_key: region.start_key || <<>>,
       end_key: region.end_key || <<>>,
-      peers:
-        Enum.map(region.stores || [], fn store_id ->
-          %Peer{store_id: store_id, role: :PEER_FOLLOWER}
-        end),
-      leader_store_id: region.leader || 0,
+      peers: peers,
+      leader_store_id: leader_id,
       region_epoch: region.epoch || 0,
       state: :REGION_ACTIVE
-    }
-  end
-
-  defp store_to_proto(store) do
-    %Store{
-      id: store.id,
-      address: store.address || "",
-      state: :STORE_UP,
-      capacity: store.capacity || 0,
-      available: store.available || 0,
-      region_count: store.region_count || 0,
-      labels: store.labels || %{}
     }
   end
 end

@@ -430,15 +430,50 @@ defmodule Store.Transaction.Executor do
   end
 
   # ============================================================================
-  # Storage Operations (placeholder - will use actual RocksDB CFs)
+  # Storage Operations (RocksDB with ETS fallback for tests)
   # ============================================================================
 
+  defp get_db_ref do
+    # Try to get RocksDB from persistent_term, fallback to ETS for tests
+    :persistent_term.get(:spiredb_rocksdb_ref, nil)
+  end
+
+  defp get_cf(cf_name) do
+    case :persistent_term.get(:spiredb_rocksdb_cf_map, nil) do
+      nil -> nil
+      cf_map -> Map.get(cf_map, cf_name)
+    end
+  end
+
+  defp get_locks_cf, do: get_cf(@cf_locks)
+  defp get_data_cf, do: get_cf(@cf_data)
+  defp get_write_cf, do: get_cf(@cf_write)
+
   defp get_lock(key) do
-    # TODO: Read from txn_locks CF
-    # For now, use ETS as placeholder
-    case :ets.lookup(:txn_locks, key) do
-      [{^key, lock_data}] -> Lock.decode(key, lock_data)
-      [] -> {:ok, nil}
+    # Use RocksDB if available, otherwise ETS
+    lock_key = Encoder.encode_lock_key(key)
+
+    case {get_db_ref(), get_locks_cf()} do
+      {nil, _} ->
+        # Fallback to ETS for tests
+        case :ets.lookup(:txn_locks, key) do
+          [{^key, lock_data}] -> Lock.decode(key, lock_data)
+          [] -> {:ok, nil}
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.get(db_ref, cf, lock_key, []) do
+          {:ok, lock_data} -> Lock.decode(key, lock_data)
+          :not_found -> {:ok, nil}
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.get(db_ref, lock_key, []) do
+          {:ok, lock_data} -> Lock.decode(key, lock_data)
+          :not_found -> {:ok, nil}
+          {:error, reason} -> {:error, reason}
+        end
     end
   rescue
     # ETS table doesn't exist
@@ -447,132 +482,335 @@ defmodule Store.Transaction.Executor do
 
   defp write_lock(key, txn) do
     lock = Lock.new(key, txn.primary_key, txn.start_ts, txn_id: txn.id)
-    # TODO: Write to txn_locks CF
-    try do
-      :ets.insert(:txn_locks, {key, Lock.encode(lock)})
-      :ok
-    rescue
-      ArgumentError ->
-        :ets.new(:txn_locks, [:named_table, :public, :set])
-        :ets.insert(:txn_locks, {key, Lock.encode(lock)})
-        :ok
+    lock_key = Encoder.encode_lock_key(key)
+    lock_data = Lock.encode(lock)
+
+    case {get_db_ref(), get_locks_cf()} do
+      {nil, _} ->
+        # Fallback to ETS for tests
+        try do
+          :ets.insert(:txn_locks, {key, lock_data})
+          :ok
+        rescue
+          ArgumentError ->
+            :ets.new(:txn_locks, [:named_table, :public, :set])
+            :ets.insert(:txn_locks, {key, lock_data})
+            :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.put(db_ref, cf, lock_key, lock_data, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.put(db_ref, lock_key, lock_data, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   defp delete_lock(key, _start_ts) do
-    # TODO: Delete from txn_locks CF
-    try do
-      :ets.delete(:txn_locks, key)
-      :ok
-    rescue
-      ArgumentError -> :ok
+    lock_key = Encoder.encode_lock_key(key)
+
+    case {get_db_ref(), get_locks_cf()} do
+      {nil, _} ->
+        # Fallback to ETS for tests
+        try do
+          :ets.delete(:txn_locks, key)
+          :ok
+        rescue
+          ArgumentError -> :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.delete(db_ref, cf, lock_key, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.delete(db_ref, lock_key, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   defp write_data(key, {:put, value}, start_ts) do
-    # TODO: Write to txn_data CF with key = encode_txn_data_key(key, start_ts)
     data_key = Encoder.encode_txn_data_key(key, start_ts)
 
-    try do
-      :ets.insert(:txn_data, {data_key, value})
-      :ok
-    rescue
-      ArgumentError ->
-        :ets.new(:txn_data, [:named_table, :public, :ordered_set])
-        :ets.insert(:txn_data, {data_key, value})
-        :ok
+    case {get_db_ref(), get_data_cf()} do
+      {nil, _} ->
+        # Fallback to ETS for tests
+        try do
+          :ets.insert(:txn_data, {data_key, value})
+          :ok
+        rescue
+          ArgumentError ->
+            :ets.new(:txn_data, [:named_table, :public, :ordered_set])
+            :ets.insert(:txn_data, {data_key, value})
+            :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.put(db_ref, cf, data_key, value, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.put(db_ref, data_key, value, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   defp write_data(key, :delete, start_ts) do
     # For deletes, we write a tombstone marker
     data_key = Encoder.encode_txn_data_key(key, start_ts)
+    # Tombstone marker
+    tombstone = <<0xFF, 0xFF, 0xFF, 0xFF>>
 
-    try do
-      :ets.insert(:txn_data, {data_key, :tombstone})
-      :ok
-    rescue
-      ArgumentError ->
-        :ets.new(:txn_data, [:named_table, :public, :ordered_set])
-        :ets.insert(:txn_data, {data_key, :tombstone})
-        :ok
+    case {get_db_ref(), get_data_cf()} do
+      {nil, _} ->
+        # Fallback to ETS for tests
+        try do
+          :ets.insert(:txn_data, {data_key, :tombstone})
+          :ok
+        rescue
+          ArgumentError ->
+            :ets.new(:txn_data, [:named_table, :public, :ordered_set])
+            :ets.insert(:txn_data, {data_key, :tombstone})
+            :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.put(db_ref, cf, data_key, tombstone, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.put(db_ref, data_key, tombstone, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   defp delete_data(key, start_ts) do
     data_key = Encoder.encode_txn_data_key(key, start_ts)
 
-    try do
-      :ets.delete(:txn_data, data_key)
-      :ok
-    rescue
-      ArgumentError -> :ok
+    case {get_db_ref(), get_data_cf()} do
+      {nil, _} ->
+        try do
+          :ets.delete(:txn_data, data_key)
+          :ok
+        rescue
+          ArgumentError -> :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.delete(db_ref, cf, data_key, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.delete(db_ref, data_key, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   defp write_commit_record(key, start_ts, commit_ts) do
-    # Write to txn_write CF
     write_key = Encoder.encode_txn_write_key(key, commit_ts)
     value = :erlang.term_to_binary({start_ts, commit_ts})
 
-    try do
-      :ets.insert(:txn_write, {write_key, value})
-      :ok
-    rescue
-      ArgumentError ->
-        :ets.new(:txn_write, [:named_table, :public, :ordered_set])
-        :ets.insert(:txn_write, {write_key, value})
-        :ok
+    case {get_db_ref(), get_write_cf()} do
+      {nil, _} ->
+        try do
+          :ets.insert(:txn_write, {write_key, value})
+          :ok
+        rescue
+          ArgumentError ->
+            :ets.new(:txn_write, [:named_table, :public, :ordered_set])
+            :ets.insert(:txn_write, {write_key, value})
+            :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.put(db_ref, cf, write_key, value, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.put(db_ref, write_key, value, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
   defp get_commit_record(key, start_ts) do
-    # Scan txn_write CF for this key to find if it was committed
-    # The write_key is encode_txn_write_key(key, commit_ts)
-    # Format: {key_bytes}{commit_ts:8B big-endian inverted}
-    try do
-      records = :ets.tab2list(:txn_write)
+    # Find commit record for this key/start_ts combination
+    case get_db_ref() do
+      nil ->
+        # Fallback to ETS
+        try do
+          records = :ets.tab2list(:txn_write)
 
-      matching =
-        Enum.find(records, fn {write_key, value} ->
-          # Decode the write_key using the encoder
+          matching =
+            Enum.find(records, fn {write_key, value} ->
+              {stored_key, _commit_ts} = Encoder.decode_txn_write_key(write_key)
+
+              if stored_key == key do
+                {stored_start_ts, _} = :erlang.binary_to_term(value)
+                stored_start_ts == start_ts
+              else
+                false
+              end
+            end)
+
+          case matching do
+            {_write_key, value} ->
+              {_stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
+              {:ok, commit_ts}
+
+            nil ->
+              {:error, :not_found}
+          end
+        rescue
+          _ -> {:error, :not_found}
+        end
+
+      db_ref ->
+        # Scan RocksDB with prefix for this key
+        # Use iterator to find matching record
+        prefix = key
+
+        case :rocksdb.iterator(db_ref, [{:prefix_same_as_start, true}]) do
+          {:ok, iter} ->
+            result = find_commit_record_in_iterator(iter, key, start_ts, prefix)
+            :rocksdb.iterator_close(iter)
+            result
+
+          {:error, _} ->
+            {:error, :not_found}
+        end
+    end
+  end
+
+  defp find_commit_record_in_iterator(iter, key, start_ts, prefix) do
+    case :rocksdb.iterator_move(iter, {:seek, prefix}) do
+      {:ok, write_key, value} ->
+        try do
           {stored_key, _commit_ts} = Encoder.decode_txn_write_key(write_key)
 
           if stored_key == key do
-            # Check if start_ts matches
-            {stored_start_ts, _} = :erlang.binary_to_term(value)
-            stored_start_ts == start_ts
+            {stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
+
+            if stored_start_ts == start_ts do
+              {:ok, commit_ts}
+            else
+              # Continue scanning
+              find_commit_record_next(iter, key, start_ts)
+            end
           else
-            false
+            {:error, :not_found}
           end
-        end)
+        rescue
+          _ -> {:error, :not_found}
+        end
 
-      case matching do
-        {_write_key, value} ->
-          {_stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
-          {:ok, commit_ts}
+      _ ->
+        {:error, :not_found}
+    end
+  end
 
-        nil ->
-          {:error, :not_found}
-      end
-    rescue
-      _ -> {:error, :not_found}
+  defp find_commit_record_next(iter, key, start_ts) do
+    case :rocksdb.iterator_move(iter, :next) do
+      {:ok, write_key, value} ->
+        try do
+          {stored_key, _commit_ts} = Encoder.decode_txn_write_key(write_key)
+
+          if stored_key == key do
+            {stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
+
+            if stored_start_ts == start_ts do
+              {:ok, commit_ts}
+            else
+              find_commit_record_next(iter, key, start_ts)
+            end
+          else
+            {:error, :not_found}
+          end
+        rescue
+          _ -> {:error, :not_found}
+        end
+
+      _ ->
+        {:error, :not_found}
     end
   end
 
   defp get_latest_write(key) do
-    # Find the latest commit for this key
-    try do
-      case :ets.match(:txn_write, {{key, :"$1"}, :"$2"}) do
-        [[commit_ts, data] | _] ->
-          {start_ts, _} = :erlang.binary_to_term(data)
-          {:ok, {commit_ts, start_ts}}
+    case get_db_ref() do
+      nil ->
+        # Fallback to ETS
+        try do
+          case :ets.match(:txn_write, {{key, :"$1"}, :"$2"}) do
+            [[commit_ts, data] | _] ->
+              {start_ts, _} = :erlang.binary_to_term(data)
+              {:ok, {commit_ts, start_ts}}
 
-        [] ->
-          {:ok, nil}
-      end
-    rescue
-      ArgumentError -> {:ok, nil}
+            [] ->
+              {:ok, nil}
+          end
+        rescue
+          ArgumentError -> {:ok, nil}
+        end
+
+      db_ref ->
+        # Scan from key prefix to find latest write
+        prefix = key
+
+        case :rocksdb.iterator(db_ref, [{:prefix_same_as_start, true}]) do
+          {:ok, iter} ->
+            result = find_latest_write_in_iterator(iter, key, prefix)
+            :rocksdb.iterator_close(iter)
+            result
+
+          {:error, _} ->
+            {:ok, nil}
+        end
+    end
+  end
+
+  defp find_latest_write_in_iterator(iter, key, prefix) do
+    case :rocksdb.iterator_move(iter, {:seek, prefix}) do
+      {:ok, write_key, value} ->
+        try do
+          {stored_key, commit_ts} = Encoder.decode_txn_write_key(write_key)
+
+          if stored_key == key do
+            {start_ts, _} = :erlang.binary_to_term(value)
+            {:ok, {commit_ts, start_ts}}
+          else
+            {:ok, nil}
+          end
+        rescue
+          _ -> {:ok, nil}
+        end
+
+      _ ->
+        {:ok, nil}
     end
   end
 
