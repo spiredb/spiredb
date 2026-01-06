@@ -20,9 +20,14 @@ defmodule Store.TransactionTest do
   alias Store.Transaction.Executor
 
   setup do
-    # Ensure TSO is running
-    start_supervised!({PD.TSO, name: PD.TSO})
-    start_supervised!({Manager, name: Store.Transaction.Manager})
+    # Only start if not already running (may be started by application supervisor)
+    unless Process.whereis(PD.TSO) do
+      start_supervised!({PD.TSO, name: PD.TSO})
+    end
+
+    unless Process.whereis(Store.Transaction.Manager) do
+      start_supervised!({Manager, name: Store.Transaction.Manager})
+    end
 
     # Clean up ETS tables
     for table <- [:txn_locks, :txn_data, :txn_write] do

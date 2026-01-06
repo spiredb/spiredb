@@ -17,6 +17,15 @@ defmodule Store.Supervisor do
       # KV Engine (must start before Server)
       {Store.KV.Engine, [path: db_path, name: Store.KV.Engine]},
 
+      # Plugin Registry
+      {Store.Plugin.Registry, []},
+
+      # Vector Index (for FT.* commands)
+      {Store.VectorIndex, []},
+
+      # Transaction Manager (for MULTI/EXEC)
+      {Store.Transaction.Manager, []},
+
       # Main store server (manages regions + KV engine)
       {Store.Server, []}
     ]

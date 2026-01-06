@@ -19,8 +19,15 @@ defmodule Store.Plugin.Registry do
   ## Client API
 
   def start_link(opts \\ []) do
-    name = opts[:name] || __MODULE__
-    GenServer.start_link(__MODULE__, opts, name: name)
+    # Use Keyword.has_key? to distinguish explicit nil from missing key
+    name = if Keyword.has_key?(opts, :name), do: opts[:name], else: __MODULE__
+
+    if name do
+      GenServer.start_link(__MODULE__, opts, name: name)
+    else
+      # Anonymous process when name: nil explicitly passed
+      GenServer.start_link(__MODULE__, opts)
+    end
   end
 
   @doc """

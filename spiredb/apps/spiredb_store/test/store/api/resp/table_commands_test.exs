@@ -10,8 +10,15 @@ defmodule Store.API.RESP.TableCommandsTest do
   alias Store.VectorIndex
 
   setup do
-    start_supervised!({Registry, name: PD.Schema.Registry})
-    start_supervised!({VectorIndex, name: Store.VectorIndex})
+    # Only start if not already running (may be started by application supervisor)
+    unless Process.whereis(PD.Schema.Registry) do
+      start_supervised!({Registry, name: PD.Schema.Registry})
+    end
+
+    unless Process.whereis(Store.VectorIndex) do
+      start_supervised!({VectorIndex, name: Store.VectorIndex})
+    end
+
     :ok
   end
 

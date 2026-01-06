@@ -10,7 +10,21 @@ defmodule Store.VectorIndexTest do
   @pid Store.VectorIndex
 
   setup do
-    start_supervised!({VectorIndex, name: @pid})
+    # Only start if not already running (may be started by application supervisor)
+    unless Process.whereis(@pid) do
+      start_supervised!({VectorIndex, name: @pid})
+    end
+
+    # Clean up any existing indexes from previous tests
+    case VectorIndex.list_indexes(@pid) do
+      {:ok, indexes} ->
+        Enum.each(indexes, fn idx ->
+          VectorIndex.drop_index(@pid, idx.name)
+        end)
+
+      _ ->
+        :ok
+    end
 
     # Clean up ETS tables
     for table <- [:vector_payloads] do

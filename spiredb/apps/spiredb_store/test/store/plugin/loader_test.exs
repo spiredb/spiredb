@@ -15,15 +15,23 @@ defmodule Store.Plugin.LoaderTest do
     File.rm_rf!(@test_plugin_dir)
     File.mkdir_p!(@test_plugin_dir)
 
-    # Start registry
-    {:ok, registry_pid} = Registry.start_link(name: Store.Plugin.Registry)
+    # Only start registry if not already running (may be started by application supervisor)
+    registry_pid =
+      case Process.whereis(Store.Plugin.Registry) do
+        nil ->
+          {:ok, pid} = Registry.start_link(name: Store.Plugin.Registry)
+          pid
+
+        pid ->
+          pid
+      end
 
     on_exit(fn ->
       File.rm_rf!(@test_plugin_dir)
-      if Process.alive?(registry_pid), do: GenServer.stop(registry_pid)
+      # Only stop if we started it (if it was nil before)
     end)
 
-    {:ok, plugin_dir: @test_plugin_dir}
+    {:ok, plugin_dir: @test_plugin_dir, registry_pid: registry_pid}
   end
 
   describe "load_all/1" do
