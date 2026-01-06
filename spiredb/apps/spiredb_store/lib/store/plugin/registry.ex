@@ -202,4 +202,10 @@ defmodule Store.Plugin.Registry do
 
     :ok
   end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("Plugin.Registry received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
+  end
 end

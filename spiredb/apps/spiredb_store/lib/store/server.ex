@@ -12,7 +12,7 @@ defmodule Store.Server do
   require Logger
 
   alias Store.Region.Raft
-  alias PD.Server, as: PD
+  alias PD.Server, as: PDServer
 
   # Dynamic module reference to avoid compile-time warning
   # PD.Scheduler is in spiredb_pd which loads after spiredb_store
@@ -177,7 +177,7 @@ defmodule Store.Server do
     spawn(fn ->
       Logger.info("Attempting to register with PD as #{node}...")
 
-      case PD.register_store(node) do
+      case PDServer.register_store(node) do
         {:ok, {:ok, _result}, _leader} ->
           Logger.info("Registered with PD: #{node}")
 
@@ -218,7 +218,7 @@ defmodule Store.Server do
 
     Task.start(fn ->
       # Send heartbeat via Ra
-      PD.heartbeat(node_name)
+      PDServer.heartbeat(node_name)
 
       # Query scheduler for any pending tasks
       try do
@@ -243,6 +243,12 @@ defmodule Store.Server do
     # Schedule next heartbeat
     schedule_heartbeat()
 
+    {:noreply, state}
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("Store.Server received unexpected message: #{inspect(msg)}")
     {:noreply, state}
   end
 
@@ -519,16 +525,16 @@ defmodule Store.Server do
 
   defp wait_for_pd_ready do
     # Try to find seed node
-    seed = PD.seed_node()
+    seed = PDServer.seed_node()
 
     # Check if PD is running on seed
     # Remote check via RPC if seed != self, or local check
     is_ready =
       if seed == Node.self() do
-        PD.is_running?(seed)
+        PDServer.is_running?(seed)
       else
         # RPC check
-        case :rpc.call(seed, PD, :is_running?, [seed]) do
+        case :rpc.call(seed, PD.Server, :is_running?, [seed]) do
           true -> true
           _ -> false
         end

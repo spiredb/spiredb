@@ -512,4 +512,10 @@ defmodule Store.VectorIndex do
         acc
     end
   end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("VectorIndex received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
+  end
 end

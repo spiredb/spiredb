@@ -223,4 +223,10 @@ defmodule Store.Transaction.Manager do
   defp update_txn(state, txn) do
     %{state | transactions: Map.put(state.transactions, txn.id, txn)}
   end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("Transaction.Manager received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
+  end
 end

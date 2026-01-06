@@ -108,13 +108,35 @@ defmodule Store.API.RESP.Handler do
     end
   end
 
+  # Simple commands that can be executed inline without Task spawn
+  @inline_commands ~w(PING ECHO COMMAND INFO)
+
   defp execute_command_with_timeout([cmd | args]) when is_binary(cmd) do
     normalized_cmd = String.upcase(cmd)
+    command = [normalized_cmd | args]
 
+    if normalized_cmd in @inline_commands do
+      # Inline execution - no Task spawn for simple commands
+      try do
+        Commands.execute(command)
+      catch
+        kind, reason ->
+          Logger.error("Inline command failed (#{kind}): #{inspect(reason)}")
+          {:error, "ERR internal error"}
+      end
+    else
+      # Async execution with timeout for complex commands
+      execute_with_task(command, normalized_cmd)
+    end
+  end
+
+  defp execute_command_with_timeout(_invalid), do: {:error, "ERR invalid command format"}
+
+  defp execute_with_task(command, cmd_name) do
     task =
       Task.async(fn ->
         try do
-          Commands.execute([normalized_cmd | args])
+          Commands.execute(command)
         catch
           :exit, reason ->
             Logger.error("Command execution exited: #{inspect(reason)}")
@@ -131,12 +153,10 @@ defmodule Store.API.RESP.Handler do
         result
 
       nil ->
-        Logger.warning("Command timed out: #{normalized_cmd}")
+        Logger.warning("Command timed out: #{cmd_name}")
         {:error, "ERR command timeout"}
     end
   end
-
-  defp execute_command_with_timeout(_invalid), do: {:error, "ERR invalid command format"}
 
   defp send_responses(transport, socket, responses) do
     Enum.each(responses, fn response ->
