@@ -7,7 +7,8 @@ defmodule Store.KV.ColumnFamilies do
 
   require Logger
 
-  @current_schema_version 2
+  # Local schema version for the column families and internal metadata
+  @current_schema_version 3
 
   # Column families for SpireDB
   @column_families [
@@ -26,7 +27,9 @@ defmodule Store.KV.ColumnFamilies do
     # MVCC data
     "txn_data",
     # Commit records
-    "txn_write"
+    "txn_write",
+    # Plugin persistent state
+    "plugin_state"
   ]
 
   @doc """
@@ -156,6 +159,13 @@ defmodule Store.KV.ColumnFamilies do
     # Column families are already created in open_with_cf
     # This migration is a placeholder for any data transformations
     Logger.info("Migration v1→v2: Transaction column families initialized")
+    :ok
+  end
+
+  # V2 → V3: Plugin state column family
+  defp migrate(_db_ref, _cf_map, 2, 3) do
+    # Column family already created in open_with_cf
+    Logger.info("Migration v2→v3: Plugin state column family initialized")
     :ok
   end
 

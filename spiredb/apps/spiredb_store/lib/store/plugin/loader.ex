@@ -3,7 +3,7 @@ defmodule Store.Plugin.Loader do
   Loads plugins from the filesystem.
 
   Supports:
-  - Pure Elixir plugins (.ex, .beam)
+  - Pure Elixir plugins (.ex source, .beam compiled)
   - Rustler NIF plugins (priv/native/*.so)
 
   Plugin directory structure:
@@ -47,6 +47,8 @@ defmodule Store.Plugin.Loader do
 
     with {:ok, metadata} <- load_metadata(plugin_path),
          :ok <- add_to_code_path(plugin_path),
+         :ok <- compile_sources(plugin_path),
+         :ok <- load_nif(plugin_path, metadata),
          {:ok, module} <- load_module(metadata) do
       # Register with plugin registry
       case Store.Plugin.Registry.register(module) do
@@ -60,6 +62,31 @@ defmodule Store.Plugin.Loader do
     else
       {:error, reason} ->
         Logger.warning("Failed to load plugin from #{plugin_path}: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Load a plugin directly from a binary (.beam file content).
+  """
+  def load_from_binary(module_name, binary, metadata \\ %{}) when is_binary(binary) do
+    module = String.to_atom("Elixir.#{module_name}")
+
+    case :code.load_binary(module, ~c"#{module_name}.beam", binary) do
+      {:module, ^module} ->
+        name = Map.get(metadata, "name", module_name)
+
+        case Store.Plugin.Registry.register(module) do
+          :ok ->
+            Logger.info("Loaded binary plugin: #{name}")
+            {:ok, name}
+
+          {:error, reason} ->
+            {:error, reason}
+        end
+
+      {:error, reason} ->
+        Logger.warning("Failed to load binary: #{inspect(reason)}")
         {:error, reason}
     end
   end
@@ -105,6 +132,59 @@ defmodule Store.Plugin.Loader do
     end
 
     :ok
+  end
+
+  defp compile_sources(plugin_path) do
+    lib_path = Path.join(plugin_path, "lib")
+
+    if File.dir?(lib_path) do
+      lib_path
+      |> Path.join("**/*.ex")
+      |> Path.wildcard()
+      |> Enum.each(fn source_file ->
+        Logger.debug("Compiling plugin source: #{source_file}")
+
+        try do
+          Code.compile_file(source_file)
+        rescue
+          e ->
+            Logger.warning("Failed to compile #{source_file}: #{inspect(e)}")
+        end
+      end)
+    end
+
+    :ok
+  end
+
+  defp load_nif(plugin_path, metadata) do
+    if Map.get(metadata, "has_nif", false) do
+      nif_name = Map.get(metadata, "nif_name", metadata["module"])
+      nif_path = Path.join([plugin_path, "priv", "native", "lib#{nif_name}"])
+
+      if File.exists?(nif_path <> ".so") or File.exists?(nif_path <> ".dylib") do
+        Logger.debug("Loading NIF from #{nif_path}")
+
+        case :erlang.load_nif(to_charlist(nif_path), 0) do
+          :ok ->
+            Logger.info("Loaded NIF: #{nif_name}")
+            :ok
+
+          {:error, {:reload, _}} ->
+            # Already loaded
+            :ok
+
+          {:error, reason} ->
+            Logger.warning("Failed to load NIF #{nif_name}: #{inspect(reason)}")
+            # Don't fail plugin load for NIF issues
+            :ok
+        end
+      else
+        Logger.debug("NIF not found at #{nif_path}, skipping")
+        :ok
+      end
+    else
+      :ok
+    end
   end
 
   defp load_module(%{"module" => module_name}) when is_binary(module_name) do

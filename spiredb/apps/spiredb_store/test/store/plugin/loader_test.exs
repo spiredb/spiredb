@@ -132,6 +132,111 @@ defmodule Store.Plugin.LoaderTest do
     end
   end
 
+  describe "load_from_binary/3" do
+    test "loads a valid beam binary" do
+      # Create a simple module dynamically with explicit atom name
+      {:module, mod, binary, _} =
+        defmodule :"Elixir.TestBinaryLoaderPlugin" do
+          @behaviour Store.Plugin
+
+          def info do
+            %{
+              name: "test_binary_loader",
+              version: "1.0.0",
+              type: :function,
+              description: "Test binary plugin",
+              has_nif: false
+            }
+          end
+
+          def init(_opts), do: {:ok, %{}}
+          def shutdown(_state), do: :ok
+        end
+
+      # Unload it first
+      :code.purge(mod)
+      :code.delete(mod)
+
+      # Now load from binary
+      result =
+        Loader.load_from_binary("TestBinaryLoaderPlugin", binary, %{
+          "name" => "test_binary_loader"
+        })
+
+      assert {:ok, "test_binary_loader"} = result
+
+      # Verify it's registered
+      assert {:ok, _, _, _} = Registry.get("test_binary_loader")
+
+      # Cleanup
+      Registry.unregister("test_binary_loader")
+    end
+  end
+
+  describe "full plugin lifecycle integration" do
+    test "create -> compile -> load -> use -> unload", %{plugin_dir: dir} do
+      plugin_path = Path.join(dir, "integration_test_plugin")
+      lib_path = Path.join(plugin_path, "lib")
+      File.mkdir_p!(lib_path)
+
+      # Step 1: Create plugin source code
+      plugin_source = """
+      defmodule IntegrationTestPlugin do
+        @behaviour Store.Plugin
+
+        def info do
+          %{
+            name: "integration_test",
+            version: "1.0.0",
+            type: :function,
+            description: "Integration test plugin",
+            has_nif: false
+          }
+        end
+
+        def init(_opts), do: {:ok, %{counter: 0}}
+        def shutdown(_state), do: :ok
+
+        # Custom function for testing
+        def increment(n), do: n + 1
+      end
+      """
+
+      source_path = Path.join(lib_path, "integration_test_plugin.ex")
+      File.write!(source_path, plugin_source)
+
+      # Step 2: Create plugin.json metadata
+      metadata = %{
+        "name" => "integration_test",
+        "version" => "1.0.0",
+        "module" => "IntegrationTestPlugin",
+        "type" => "function",
+        "description" => "Integration test plugin"
+      }
+
+      File.write!(Path.join(plugin_path, "plugin.json"), Jason.encode!(metadata))
+
+      # Step 3: Load the plugin (should compile .ex and register)
+      assert {:ok, "integration_test"} = Loader.load_plugin(plugin_path)
+
+      # Step 4: Verify plugin is registered
+      assert {:ok, module, _state, _info} = Registry.get("integration_test")
+      assert module == IntegrationTestPlugin
+
+      # Step 5: Use the plugin
+      info = module.info()
+      assert info.name == "integration_test"
+      assert info.version == "1.0.0"
+      assert module.increment(5) == 6
+
+      # Step 6: Unload the plugin
+      assert :ok = Loader.unload("integration_test")
+
+      # Step 7: Verify plugin is unregistered
+      assert {:error, :not_found} = Registry.get("integration_test")
+    end
+  end
+
   describe "plugin directory structure" do
     test "adds lib path to code path", %{plugin_dir: dir} do
       plugin_path = Path.join(dir, "with_lib")

@@ -17,6 +17,9 @@ defmodule Store.Supervisor do
       # KV Engine (must start before Server)
       {Store.KV.Engine, [path: db_path, name: Store.KV.Engine]},
 
+      # RocksDB Telemetry (after engine)
+      {Store.Telemetry.RocksDB, []},
+
       # Plugin Registry
       {Store.Plugin.Registry, []},
 
