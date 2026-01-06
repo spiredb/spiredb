@@ -17,6 +17,7 @@ defmodule PD.Scheduler do
   alias PD.Scheduler.{LoadMonitor, BalancePlanner}
 
   @check_interval :timer.seconds(30)
+  @startup_delay :timer.seconds(5)
   @max_concurrent_operations 2
 
   ## Client API
@@ -51,7 +52,8 @@ defmodule PD.Scheduler do
   @impl true
   def init(_opts) do
     Logger.info("PD Scheduler started", interval_seconds: @check_interval / 1000)
-    schedule_next_check()
+    # Delay first check to allow PD.Server to start
+    schedule_first_check()
 
     {:ok,
      %{
@@ -63,8 +65,8 @@ defmodule PD.Scheduler do
        pending_tasks: %{},
        # Next task ID
        next_task_id: 1,
-       # Current leader epoch (from Ra)
-       leader_epoch: get_ra_term(),
+       # Epoch initialized lazily on first check
+       leader_epoch: 0,
        stats: %{
          total_checks: 0,
          total_operations: 0,
@@ -120,12 +122,16 @@ defmodule PD.Scheduler do
       | total_checks: new_state.stats.total_checks + 1
     }
 
+    # Update epoch lazily (first check or if it changed)
+    current_epoch = get_ra_term()
+
     {:noreply,
      %{
        new_state
        | last_check: DateTime.utc_now(),
          stats: updated_stats,
-         known_states: new_known_states
+         known_states: new_known_states,
+         leader_epoch: current_epoch
      }}
   end
 
@@ -178,6 +184,11 @@ defmodule PD.Scheduler do
   end
 
   ## Private Functions
+
+  defp schedule_first_check do
+    # Delay first check to give PD.Server time to start
+    Process.send_after(self(), :check_cluster, @startup_delay)
+  end
 
   defp schedule_next_check do
     Process.send_after(self(), :check_cluster, @check_interval)
