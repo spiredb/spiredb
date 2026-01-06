@@ -108,7 +108,7 @@ defmodule PD.Schema.RegistryTest do
     end
 
     test "creates vector index with params" do
-      {:ok, index_id} =
+      {:ok, _index_id} =
         Registry.create_index(
           PD.Schema.Registry,
           "vec_idx",

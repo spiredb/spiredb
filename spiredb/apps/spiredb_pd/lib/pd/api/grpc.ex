@@ -12,7 +12,6 @@ defmodule PD.API.GRPC.Cluster do
   alias Spiredb.Cluster.{
     Region,
     RegionList,
-    Store,
     StoreList,
     RegisterStoreResponse,
     StoreHeartbeatResponse,

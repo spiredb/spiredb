@@ -40,7 +40,7 @@ defmodule Store.Transaction.Executor do
             # Lock was resolved, retry read
             read_committed_value(key, start_ts)
 
-          {:wait, ttl_remaining} ->
+          {:wait, _ttl_remaining} ->
             # Lock is still valid, return error
             {:error, :locked, lock}
 
@@ -186,7 +186,7 @@ defmodule Store.Transaction.Executor do
   @doc """
   Acquire pessimistic lock (for gRPC).
   """
-  def acquire_pessimistic_lock(key, start_ts, for_update_ts, lock_ttl) do
+  def acquire_pessimistic_lock(key, start_ts, _for_update_ts, lock_ttl) do
     case get_lock(key) do
       {:ok, nil} ->
         lock =
@@ -288,7 +288,7 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp check_lock_conflict(key, start_ts) do
+  defp check_lock_conflict(key, _start_ts) do
     case get_lock(key) do
       {:ok, nil} ->
         :ok

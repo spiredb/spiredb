@@ -233,7 +233,7 @@ defmodule Store.TransactionTest do
       # Commit a value first
       {:ok, txn1} = Manager.begin_transaction()
       :ok = Manager.put(txn1, "mvcc_key", "value_v1")
-      {:ok, commit_ts} = Manager.commit(txn1)
+      {:ok, _commit_ts} = Manager.commit(txn1)
 
       # Small delay for async cleanup
       Process.sleep(50)

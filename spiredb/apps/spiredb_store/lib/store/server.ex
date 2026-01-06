@@ -14,6 +14,10 @@ defmodule Store.Server do
   alias Store.Region.Raft
   alias PD.Server, as: PD
 
+  # Dynamic module reference to avoid compile-time warning
+  # PD.Scheduler is in spiredb_pd which loads after spiredb_store
+  @scheduler_module PD.Scheduler
+
   defstruct [
     :node_name,
     # %{region_id => raft_pid}
@@ -218,7 +222,7 @@ defmodule Store.Server do
 
       # Query scheduler for any pending tasks
       try do
-        {tasks, epoch} = PD.Scheduler.get_pending_tasks(node_address)
+        {tasks, epoch} = apply(@scheduler_module, :get_pending_tasks, [node_address])
 
         if tasks != [] do
           Logger.info("Received #{length(tasks)} tasks from PD scheduler")

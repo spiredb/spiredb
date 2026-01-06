@@ -109,7 +109,7 @@ defmodule Store.KV.Engine do
       _, _ -> :ok
     end
 
-    path_charlist = to_charlist(path)
+    _path_charlist = to_charlist(path)
 
     # Load configuration with production defaults
     config = load_rocksdb_config()

@@ -6,8 +6,11 @@ defmodule PD.API.GRPC.Plugin do
   use GRPC.Server, service: Spiredb.Cluster.PluginService.Service
 
   require Logger
-  alias Store.Plugin.Registry
-  alias Store.Plugin.Loader
+
+  # Dynamic module references to avoid compile-time warnings
+  # These modules are in spiredb_store which may not be loaded
+  @loader_module Store.Plugin.Loader
+  @registry_module Store.Plugin.Registry
 
   alias Spiredb.Cluster.{
     InstallPluginResponse,
@@ -24,7 +27,7 @@ defmodule PD.API.GRPC.Plugin do
         {:tarball, data} -> {:tarball, data}
       end
 
-    case Loader.load_plugin(source) do
+    case apply(@loader_module, :load_plugin, [source]) do
       {:ok, name} ->
         %InstallPluginResponse{name: name, version: "0.0.0"}
 
@@ -38,7 +41,7 @@ defmodule PD.API.GRPC.Plugin do
   end
 
   def uninstall_plugin(request, _stream) do
-    case Loader.unload(request.name) do
+    case apply(@loader_module, :unload, [request.name]) do
       :ok ->
         %Empty{}
 
@@ -52,7 +55,7 @@ defmodule PD.API.GRPC.Plugin do
   end
 
   def list_plugins(_request, _stream) do
-    {:ok, plugins} = Registry.list()
+    {:ok, plugins} = apply(@registry_module, :list, [])
 
     plugin_infos =
       Enum.map(plugins, fn plugin ->
@@ -69,7 +72,7 @@ defmodule PD.API.GRPC.Plugin do
   end
 
   def reload_plugin(request, _stream) do
-    case Registry.reload(request.name) do
+    case apply(@registry_module, :reload, [request.name]) do
       :ok ->
         %Empty{}
 

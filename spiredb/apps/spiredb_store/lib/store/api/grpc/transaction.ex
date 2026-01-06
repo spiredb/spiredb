@@ -9,7 +9,6 @@ defmodule Store.API.GRPC.Transaction do
 
   require Logger
   alias Store.Transaction.Executor
-  alias Store.Transaction.Lock
 
   alias Spiredb.Data.{
     PrewriteResponse,

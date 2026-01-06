@@ -344,7 +344,7 @@ defmodule Store.API.DataAccess do
     end
   end
 
-  defp stream_raw_batches(stream, batches, start_time) do
+  defp stream_raw_batches(stream, batches, _start_time) do
     total = length(batches)
 
     Enum.with_index(batches)

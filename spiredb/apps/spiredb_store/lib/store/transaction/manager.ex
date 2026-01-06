@@ -10,7 +10,6 @@ defmodule Store.Transaction.Manager do
 
   require Logger
   alias Store.Transaction
-  alias Store.Transaction.Lock
   alias Store.Transaction.Executor
 
   defstruct [
