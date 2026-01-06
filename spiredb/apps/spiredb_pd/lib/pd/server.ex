@@ -36,7 +36,8 @@ defmodule PD.Server do
       stores: %{},
       regions: regions,
       next_region_id: num_regions + 1,
-      num_regions: num_regions
+      num_regions: num_regions,
+      plugins: %{}
     }
 
     # Ra machine init must return state
@@ -100,6 +101,36 @@ defmodule PD.Server do
     }
 
     {new_state, {:ok, region}, []}
+  end
+
+  @impl :ra_machine
+  def apply(_meta, {:register_plugin, plugin_info}, state) do
+    name = Map.get(plugin_info, :name) || Map.get(plugin_info, "name")
+    plugins = Map.get(state, :plugins, %{})
+
+    normalized = %{
+      name: name,
+      version: Map.get(plugin_info, :version) || Map.get(plugin_info, "version"),
+      type: Map.get(plugin_info, :type) || Map.get(plugin_info, "type"),
+      description: Map.get(plugin_info, :description) || Map.get(plugin_info, "description"),
+      has_nif: Map.get(plugin_info, :has_nif) || Map.get(plugin_info, "has_nif", false),
+      registered_at: DateTime.utc_now()
+    }
+
+    new_state = %{state | plugins: Map.put(plugins, name, normalized)}
+    {new_state, {:ok, name}, []}
+  end
+
+  @impl :ra_machine
+  def apply(_meta, {:unregister_plugin, plugin_name}, state) do
+    plugins = Map.get(state, :plugins, %{})
+
+    if Map.has_key?(plugins, plugin_name) do
+      new_state = %{state | plugins: Map.delete(plugins, plugin_name)}
+      {new_state, :ok, []}
+    else
+      {state, {:error, :not_found}, []}
+    end
   end
 
   @impl :ra_machine

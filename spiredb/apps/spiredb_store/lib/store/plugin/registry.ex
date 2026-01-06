@@ -72,6 +72,14 @@ defmodule Store.Plugin.Registry do
     GenServer.call(pid, {:reload, name})
   end
 
+  @doc """
+  Register plugin info only (metadata without module).
+  Used for cluster sync when module isn't locally available.
+  """
+  def register_info(pid \\ __MODULE__, name, info) when is_binary(name) and is_map(info) do
+    GenServer.call(pid, {:register_info, name, info})
+  end
+
   ## Server Callbacks
 
   @impl true
@@ -127,6 +135,23 @@ defmodule Store.Plugin.Registry do
   end
 
   @impl true
+  def handle_call({:register_info, name, info}, _from, state) do
+    # Register plugin metadata only (no module, for cluster sync)
+    if Map.has_key?(state.plugins, name) do
+      {:reply, {:error, :already_registered}, state}
+    else
+      plugin_type = Map.get(info, :type) || Map.get(info, "type") || :unknown
+      normalized_info = normalize_info(info)
+
+      new_plugins = Map.put(state.plugins, name, {nil, nil, normalized_info})
+      new_by_type = Map.update(state.by_type, plugin_type, [name], &[name | &1])
+
+      Logger.debug("Registered plugin info (no module): #{name}")
+      {:reply, :ok, %{state | plugins: new_plugins, by_type: new_by_type}}
+    end
+  end
+
+  @impl true
   def handle_call({:get, name}, _from, state) do
     case Map.get(state.plugins, name) do
       nil -> {:reply, {:error, :not_found}, state}
@@ -138,8 +163,10 @@ defmodule Store.Plugin.Registry do
   def handle_call(:list, _from, state) do
     plugins =
       state.plugins
-      |> Enum.map(fn {name, {_module, _state, info}} ->
-        Map.put(info, :name, name)
+      |> Enum.map(fn {name, {module, _state, info}} ->
+        info
+        |> Map.put(:name, name)
+        |> Map.put(:has_module, module != nil)
       end)
 
     {:reply, {:ok, plugins}, state}
@@ -207,5 +234,17 @@ defmodule Store.Plugin.Registry do
   def handle_info(msg, state) do
     Logger.warning("Plugin.Registry received unexpected message: #{inspect(msg)}")
     {:noreply, state}
+  end
+
+  ## Private helpers
+
+  defp normalize_info(info) when is_map(info) do
+    %{
+      name: Map.get(info, :name) || Map.get(info, "name"),
+      version: Map.get(info, :version) || Map.get(info, "version"),
+      type: Map.get(info, :type) || Map.get(info, "type"),
+      description: Map.get(info, :description) || Map.get(info, "description"),
+      has_nif: Map.get(info, :has_nif) || Map.get(info, "has_nif", false)
+    }
   end
 end

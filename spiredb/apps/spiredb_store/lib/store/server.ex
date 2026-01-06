@@ -238,6 +238,9 @@ defmodule Store.Server do
         kind, reason ->
           Logger.debug("Could not get tasks from scheduler: #{inspect({kind, reason})}")
       end
+
+      # Sync cluster plugins to local registry
+      sync_cluster_plugins(node_address)
     end)
 
     # Schedule next heartbeat
@@ -552,5 +555,36 @@ defmodule Store.Server do
   defp schedule_heartbeat do
     interval = Application.get_env(:spiredb_pd, :heartbeat_interval, 10_000)
     Process.send_after(self(), :heartbeat, interval)
+  end
+
+  # Sync cluster-registered plugins to local registry
+  defp sync_cluster_plugins(_node_address) do
+    try do
+      case PD.PluginManager.list_plugins() do
+        {:ok, plugins} when plugins != [] ->
+          # Get locally registered plugins
+          {:ok, local_plugins} = Store.Plugin.Registry.list()
+
+          local_names =
+            MapSet.new(Enum.map(local_plugins, fn {name, _mod, _state, _info} -> name end))
+
+          # Register any missing plugins
+          Enum.each(plugins, fn plugin_info ->
+            name = Map.get(plugin_info, :name) || Map.get(plugin_info, "name")
+
+            unless MapSet.member?(local_names, name) do
+              Logger.debug("Syncing cluster plugin to local registry: #{name}")
+              # Note: We only register metadata here - actual module loading
+              # would require the plugin binary to be distributed
+              Store.Plugin.Registry.register_info(name, plugin_info)
+            end
+          end)
+
+        _ ->
+          :ok
+      end
+    catch
+      _, _ -> :ok
+    end
   end
 end
