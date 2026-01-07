@@ -12,6 +12,10 @@ build:
 	cd spiredb && mix compile
 
 run:
+	@echo "Running SpireDB..."
+	-@pkill -9 -f 'beam.*spiredb' 2>/dev/null || true
+	@rm -rf /tmp/spiredb_test* 2>/dev/null || true
+	@rm -rf spiredb/test_data 2>/dev/null || true
 	cd spiredb && iex --name spiredb@127.0.0.1 --cookie spiredb -S mix
 
 test: test-unit
@@ -39,7 +43,7 @@ clean:
 
 proto:
 	cd spiredb/apps/spiredb_common && \
-	protoc --elixir_out=plugins=grpc:./lib/generated --elixir_opt=package_prefix=spire_db,gen_descriptors=true \
+	protoc --elixir_out=plugins=grpc:./lib/generated --elixir_opt=gen_descriptors=true \
 	-I priv/proto priv/proto/*.proto
 
 format:

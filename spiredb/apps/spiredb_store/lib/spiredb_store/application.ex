@@ -23,6 +23,9 @@ defmodule SpiredbStore.Application do
       # Store for data management (manages regions)
       {Store.Supervisor, []},
 
+      # Task executor for scheduled tasks from PD
+      {Store.TaskExecutor, []},
+
       # RESP server
       {Store.API.RESP.Supervisor, [port: resp_port]},
 

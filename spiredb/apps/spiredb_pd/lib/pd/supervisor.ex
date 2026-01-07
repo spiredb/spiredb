@@ -18,10 +18,13 @@ defmodule PD.Supervisor do
       if Application.get_env(:spiredb_pd, :start_raft, true) do
         [
           # Start Cluster Manager which handles PD Server Lifecycle (Bootstrap vs Join)
-          PD.ClusterManager
+          PD.ClusterManager,
+          # Plugin Manager for cluster-wide plugin coordination
+          PD.PluginManager
         ]
       else
-        []
+        # Standalone mode - still run PluginManager
+        [PD.PluginManager]
       end
 
     Supervisor.init(children, strategy: :one_for_one)

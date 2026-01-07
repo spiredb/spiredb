@@ -2,40 +2,133 @@ syntax = "proto3";
 
 package spiredb.data;
 
-// Simple data access service (per-node)
-// Provides raw range scan and point lookup operations
+option java_package = "com.spiredb.data";
+option go_package = "spiredb/data";
+
+// =============================================================================
+// Data Access Service (Port 50052)
+// =============================================================================
+
 service DataAccess {
-  // Range scan on a SINGLE region
-  // SpireSQL fans out to multiple regions for full table scans
-  rpc Scan(ScanRequest) returns (stream ScanResponse);
+  // --- Raw KV Operations ---
+  rpc RawGet(RawGetRequest) returns (RawGetResponse);
+  rpc RawPut(RawPutRequest) returns (Empty);
+  rpc RawDelete(RawDeleteRequest) returns (Empty);
+  rpc RawScan(RawScanRequest) returns (stream RawScanResponse);
+  rpc RawBatchGet(RawBatchGetRequest) returns (RawBatchGetResponse);
   
-  // Point lookup
-  rpc Get(GetRequest) returns (GetResponse);
-  
-  // Batch get multiple keys (within same region)
-  rpc BatchGet(BatchGetRequest) returns (BatchGetResponse);
+  // --- Table-aware Operations (for SpireSQL) ---
+  rpc TableScan(TableScanRequest) returns (stream TableScanResponse);
+  rpc TableGet(TableGetRequest) returns (TableGetResponse);
+  rpc TableInsert(TableInsertRequest) returns (TableInsertResponse);
+  rpc TableUpdate(TableUpdateRequest) returns (TableUpdateResponse);
+  rpc TableDelete(TableDeleteRequest) returns (TableDeleteResponse);
 }
 
-// Scan request for single region
-message ScanRequest {
-  uint32 region_id = 1;
+// --- Raw KV Messages ---
+
+message RawGetRequest {
+  uint64 region_id = 1;
+  bytes key = 2;
+  uint64 snapshot_ts = 3;  // 0 = latest
+  bool read_follower = 4;
+}
+
+message RawGetResponse {
+  bytes value = 1;
+  bool found = 2;
+}
+
+message RawPutRequest {
+  bytes key = 1;
+  bytes value = 2;
+}
+
+message RawDeleteRequest {
+  bytes key = 1;
+}
+
+message RawScanRequest {
+  uint64 region_id = 1;
   bytes start_key = 2;
   bytes end_key = 3;
-  uint32 batch_size = 4;   // Rows per Arrow batch (default: 1000)
-  uint32 limit = 5;         // Max rows from THIS region (0 = unlimited)
-  bool read_follower = 6;   // Allow reading from follower (eventually consistent)
+  uint32 batch_size = 4;
+  uint32 limit = 5;
+  uint64 snapshot_ts = 6;
+  bool read_follower = 7;
 }
 
-// Scan response with Arrow batch
-message ScanResponse {
-  // Apache Arrow RecordBatch (binary IPC format)
-  // Schema: [key: Binary, value: Binary]
-  bytes arrow_batch = 1;
-  
+message RawScanResponse {
+  bytes arrow_batch = 1;  // Schema: [key: Binary, value: Binary]
   bool has_more = 2;
-  
-  // Stats for monitoring
   ScanStats stats = 3;
+}
+
+message RawBatchGetRequest {
+  uint64 region_id = 1;
+  repeated bytes keys = 2;
+  uint64 snapshot_ts = 3;
+}
+
+message RawBatchGetResponse {
+  bytes arrow_batch = 1;  // Schema: [key: Binary, value: Binary, found: Bool]
+}
+
+// --- Table-aware Messages ---
+
+message TableScanRequest {
+  string table_name = 1;
+  repeated string columns = 2;    // Projection (empty = all)
+  bytes filter_expr = 3;          // Serialized DataFusion Expr
+  uint32 limit = 4;
+  uint64 snapshot_ts = 5;
+  bool read_follower = 6;
+}
+
+message TableScanResponse {
+  bytes arrow_batch = 1;          // Arrow IPC RecordBatch with schema
+  bool has_more = 2;
+  ScanStats stats = 3;
+}
+
+message TableGetRequest {
+  string table_name = 1;
+  bytes primary_key = 2;          // Encoded PK
+  repeated string columns = 3;    // Projection
+  uint64 snapshot_ts = 4;
+}
+
+message TableGetResponse {
+  bytes arrow_batch = 1;          // Single-row Arrow batch
+  bool found = 2;
+}
+
+message TableInsertRequest {
+  string table_name = 1;
+  bytes arrow_batch = 2;          // Rows to insert
+}
+
+message TableInsertResponse {
+  uint64 rows_affected = 1;
+}
+
+message TableUpdateRequest {
+  string table_name = 1;
+  bytes primary_key = 2;
+  map<string, bytes> updates = 3; // column -> new value
+}
+
+message TableUpdateResponse {
+  bool updated = 1;
+}
+
+message TableDeleteRequest {
+  string table_name = 1;
+  bytes primary_key = 2;
+}
+
+message TableDeleteResponse {
+  bool deleted = 1;
 }
 
 message ScanStats {
@@ -44,25 +137,186 @@ message ScanStats {
   uint32 scan_time_ms = 3;
 }
 
-// Point get
-message GetRequest {
-  uint32 region_id = 1;
+// =============================================================================
+// Transaction Service (Port 50052)
+// =============================================================================
+
+service TransactionService {
+  // Percolator-style 2PC
+  rpc Prewrite(PrewriteRequest) returns (PrewriteResponse);
+  rpc Commit(CommitRequest) returns (CommitResponse);
+  rpc Rollback(RollbackRequest) returns (Empty);
+  
+  // Lock operations
+  rpc CheckTxnStatus(CheckTxnStatusRequest) returns (TxnStatus);
+  rpc ResolveLock(ResolveLockRequest) returns (Empty);
+  
+  // Pessimistic locking
+  rpc AcquirePessimisticLock(PessimisticLockRequest) returns (PessimisticLockResponse);
+}
+
+enum MutationType {
+  MUTATION_PUT = 0;
+  MUTATION_DELETE = 1;
+  MUTATION_LOCK = 2;
+}
+
+message Mutation {
+  MutationType type = 1;
   bytes key = 2;
-  bool read_follower = 3;
+  bytes value = 3;
 }
 
-message GetResponse {
-  bytes value = 1;
-  bool found = 2;
+message PrewriteRequest {
+  repeated Mutation mutations = 1;
+  bytes primary_key = 2;
+  uint64 start_ts = 3;
+  uint64 lock_ttl = 4;
+  bool is_pessimistic = 5;
 }
 
-// Batch get (all keys must be in same region)
-message BatchGetRequest {
-  uint32 region_id = 1;
+message PrewriteResponse {
+  bool success = 1;
+  repeated KeyError errors = 2;
+}
+
+message KeyError {
+  bytes key = 1;
+  string error = 2;
+  LockInfo lock_info = 3;  // If locked by another txn
+}
+
+message LockInfo {
+  bytes primary_key = 1;
+  uint64 start_ts = 2;
+  uint64 ttl = 3;
+}
+
+message CommitRequest {
+  bytes primary_key = 1;
+  uint64 start_ts = 2;
+  uint64 commit_ts = 3;
+  repeated bytes keys = 4;  // For async secondary commit
+}
+
+message CommitResponse {
+  bool success = 1;
+  string error = 2;
+}
+
+message RollbackRequest {
+  uint64 start_ts = 1;
   repeated bytes keys = 2;
 }
 
-message BatchGetResponse {
-  // Arrow batch with schema: [key: Binary, value: Binary, found: Boolean]
-  bytes arrow_batch = 1;
+message CheckTxnStatusRequest {
+  bytes primary_key = 1;
+  uint64 start_ts = 2;
 }
+
+enum TxnState {
+  TXN_PENDING = 0;
+  TXN_COMMITTED = 1;
+  TXN_ROLLED_BACK = 2;
+}
+
+message TxnStatus {
+  TxnState state = 1;
+  uint64 commit_ts = 2;     // Only if committed
+  uint64 lock_ttl = 3;      // Remaining TTL if pending
+}
+
+message ResolveLockRequest {
+  bytes key = 1;
+  uint64 start_ts = 2;
+  uint64 commit_ts = 3;     // 0 = rollback, >0 = commit
+}
+
+message PessimisticLockRequest {
+  repeated bytes keys = 1;
+  uint64 start_ts = 2;
+  uint64 for_update_ts = 3;
+  uint64 lock_ttl = 4;
+}
+
+message PessimisticLockResponse {
+  bool success = 1;
+  repeated KeyError errors = 2;
+}
+
+// =============================================================================
+// Vector Service (Port 50052)
+// =============================================================================
+
+service VectorService {
+  rpc CreateIndex(VectorIndexCreateRequest) returns (Empty);
+  rpc DropIndex(VectorIndexDropRequest) returns (Empty);
+  rpc Insert(VectorInsertRequest) returns (VectorInsertResponse);
+  rpc Delete(VectorDeleteRequest) returns (Empty);
+  rpc Search(VectorSearchRequest) returns (VectorSearchResponse);
+  rpc BatchSearch(BatchVectorSearchRequest) returns (BatchVectorSearchResponse);
+}
+
+message VectorIndexCreateRequest {
+  string name = 1;
+  string table_name = 2;
+  string column_name = 3;
+  string algorithm = 4;         // "ANODE" or "MANODE"
+  map<string, string> params = 5;
+}
+
+message VectorIndexDropRequest {
+  string name = 1;
+}
+
+message VectorInsertRequest {
+  string index_name = 1;
+  bytes doc_id = 2;
+  bytes vector = 3;             // Float32 array as bytes
+  bytes payload = 4;            // Optional JSON metadata
+}
+
+message VectorInsertResponse {
+  uint64 internal_id = 1;
+}
+
+message VectorDeleteRequest {
+  string index_name = 1;
+  bytes doc_id = 2;
+}
+
+message VectorSearchRequest {
+  string index_name = 1;
+  bytes query_vector = 2;
+  uint32 k = 3;
+  float radius = 4;             // Optional: range search (0 = disabled)
+  bytes filter = 5;             // Optional: metadata filter
+  bool return_payload = 6;
+}
+
+message VectorSearchResponse {
+  repeated VectorResult results = 1;
+}
+
+message VectorResult {
+  bytes id = 1;
+  float distance = 2;
+  bytes payload = 3;            // JSON metadata (if requested)
+}
+
+message BatchVectorSearchRequest {
+  string index_name = 1;
+  repeated bytes query_vectors = 2;
+  uint32 k = 3;
+  bool return_payload = 4;
+}
+
+message BatchVectorSearchResponse {
+  repeated VectorSearchResponse results = 1;
+}
+
+// =============================================================================
+// Common
+// =============================================================================
+
+message Empty {}

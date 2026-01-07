@@ -12,7 +12,11 @@ defmodule Store.Server do
   require Logger
 
   alias Store.Region.Raft
-  alias PD.Server, as: PD
+  alias PD.Server, as: PDServer
+
+  # Dynamic module reference to avoid compile-time warning
+  # PD.Scheduler is in spiredb_pd which loads after spiredb_store
+  @scheduler_module PD.Scheduler
 
   defstruct [
     :node_name,
@@ -48,6 +52,14 @@ defmodule Store.Server do
   """
   def put(key, value) do
     GenServer.call(__MODULE__, {:put, key, value})
+  end
+
+  @doc """
+  Batch write multiple key-value pairs.
+  Groups writes by region for efficiency.
+  """
+  def batch_write(operations) when is_list(operations) do
+    GenServer.call(__MODULE__, {:batch_write, operations})
   end
 
   @doc """
@@ -173,7 +185,7 @@ defmodule Store.Server do
     spawn(fn ->
       Logger.info("Attempting to register with PD as #{node}...")
 
-      case PD.register_store(node) do
+      case PDServer.register_store(node) do
         {:ok, {:ok, _result}, _leader} ->
           Logger.info("Registered with PD: #{node}")
 
@@ -210,9 +222,33 @@ defmodule Store.Server do
     # Send heartbeat to PD asynchronously to avoid blocking Store.Server
     # If PD is slow (e.g. Raft election), we don't want to freeze the Store
     node_name = state.node_name
+    node_address = to_string(node_name)
 
     Task.start(fn ->
-      PD.heartbeat(node_name)
+      # Send heartbeat via Ra
+      PDServer.heartbeat(node_name)
+
+      # Query scheduler for any pending tasks
+      try do
+        {tasks, epoch} = apply(@scheduler_module, :get_pending_tasks, [node_address])
+
+        if tasks != [] do
+          Logger.info("Received #{length(tasks)} tasks from PD scheduler")
+
+          # Update executor's known epoch
+          Store.TaskExecutor.update_epoch(epoch)
+
+          # Convert internal format to proto format and execute
+          proto_tasks = convert_tasks_to_proto(tasks)
+          Store.TaskExecutor.execute_tasks(proto_tasks)
+        end
+      catch
+        kind, reason ->
+          Logger.debug("Could not get tasks from scheduler: #{inspect({kind, reason})}")
+      end
+
+      # Sync cluster plugins to local registry
+      sync_cluster_plugins(node_address)
     end)
 
     # Schedule next heartbeat
@@ -220,6 +256,66 @@ defmodule Store.Server do
 
     {:noreply, state}
   end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("Store.Server received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
+  end
+
+  defp convert_tasks_to_proto(tasks) do
+    Enum.map(tasks, fn task ->
+      %Spiredb.Cluster.ScheduledTask{
+        task_id: task[:task_id] || 0,
+        leader_epoch: task[:leader_epoch] || 0,
+        task: convert_task_type(task)
+      }
+    end)
+  end
+
+  defp convert_task_type(%{type: :move_region} = op) do
+    {:transfer_leader,
+     %Spiredb.Cluster.TransferLeader{
+       region_id: op.region_id || 0,
+       from_store_id: store_hash(op.from_store),
+       to_store_id: store_hash(op.to_store)
+     }}
+  end
+
+  defp convert_task_type(%{type: :split_region} = op) do
+    {:split,
+     %Spiredb.Cluster.SplitRegion{
+       region_id: op.region_id || 0,
+       split_key: op[:split_key] || <<>>,
+       new_region_id: op[:new_region_id] || 0,
+       new_peer_id: op[:new_peer_id] || 0
+     }}
+  end
+
+  defp convert_task_type(%{type: :add_replica} = op) do
+    {:add_peer,
+     %Spiredb.Cluster.AddPeer{
+       region_id: op.region_id || 0,
+       store_id: store_hash(op.target_store),
+       peer_id: op[:peer_id] || 0,
+       is_learner: op[:is_learner] || false
+     }}
+  end
+
+  defp convert_task_type(%{type: :remove_replica} = op) do
+    {:remove_peer,
+     %Spiredb.Cluster.RemovePeer{
+       region_id: op.region_id || 0,
+       store_id: store_hash(op.target_store),
+       peer_id: op[:peer_id] || 0
+     }}
+  end
+
+  defp convert_task_type(_), do: nil
+
+  defp store_hash(store) when is_atom(store), do: :erlang.phash2(store)
+  defp store_hash(store) when is_integer(store), do: store
+  defp store_hash(_), do: 0
 
   @impl true
   def handle_call({:get_direct, key}, _from, state) do
@@ -252,6 +348,41 @@ defmodule Store.Server do
     case find_and_execute(state, key, :delete, [key]) do
       {:ok, result} -> {:reply, result, state}
       {:error, _} = error -> {:reply, error, state}
+    end
+  end
+
+  @impl true
+  def handle_call({:batch_write, operations}, _from, state) do
+    # Group operations by region for efficient batch execution
+    num_regions = map_size(state.regions)
+
+    if num_regions == 0 do
+      {:reply, {:error, :regions_initializing}, state}
+    else
+      # Group by region
+      by_region =
+        Enum.group_by(operations, fn
+          {:put, key, _value} -> :erlang.phash2(key, num_regions) + 1
+          {:delete, key} -> :erlang.phash2(key, num_regions) + 1
+        end)
+
+      # Execute batch per region
+      results =
+        Enum.map(by_region, fn {region_id, ops} ->
+          case execute_batch_for_region(state, region_id, ops) do
+            {:ok, _} -> :ok
+            {:error, reason} -> {:error, region_id, reason}
+          end
+        end)
+
+      # Check for errors
+      errors = Enum.filter(results, &match?({:error, _, _}, &1))
+
+      if errors == [] do
+        {:reply, {:ok, length(operations)}, state}
+      else
+        {:reply, {:error, {:partial_failure, errors}}, state}
+      end
     end
   end
 
@@ -418,6 +549,29 @@ defmodule Store.Server do
     {:ok, {:ok, :ok}}
   end
 
+  defp execute_batch_for_region(state, region_id, operations) do
+    case Map.get(state.regions, region_id) do
+      nil ->
+        # Region not running, execute locally
+        kv_engine = :persistent_term.get(:spiredb_kv_engine, nil)
+
+        if kv_engine do
+          Enum.each(operations, fn
+            {:put, key, value} -> Store.KV.Engine.put(kv_engine, key, value)
+            {:delete, key} -> Store.KV.Engine.delete(kv_engine, key)
+          end)
+
+          {:ok, :local}
+        else
+          {:error, :no_kv_engine}
+        end
+
+      pid when is_pid(pid) ->
+        # Execute via Raft batch
+        Raft.batch_execute(pid, operations)
+    end
+  end
+
   defp hash_key_to_region(key, num_regions) do
     # Simple hash-based routing
     :erlang.phash2(key, num_regions) + 1
@@ -440,16 +594,16 @@ defmodule Store.Server do
 
   defp wait_for_pd_ready do
     # Try to find seed node
-    seed = PD.seed_node()
+    seed = PDServer.seed_node()
 
     # Check if PD is running on seed
     # Remote check via RPC if seed != self, or local check
     is_ready =
       if seed == Node.self() do
-        PD.is_running?(seed)
+        PDServer.is_running?(seed)
       else
         # RPC check
-        case :rpc.call(seed, PD, :is_running?, [seed]) do
+        case :rpc.call(seed, PD.Server, :is_running?, [seed]) do
           true -> true
           _ -> false
         end
@@ -467,5 +621,36 @@ defmodule Store.Server do
   defp schedule_heartbeat do
     interval = Application.get_env(:spiredb_pd, :heartbeat_interval, 10_000)
     Process.send_after(self(), :heartbeat, interval)
+  end
+
+  # Sync cluster-registered plugins to local registry
+  defp sync_cluster_plugins(_node_address) do
+    try do
+      case PD.PluginManager.list_plugins() do
+        {:ok, plugins} when plugins != [] ->
+          # Get locally registered plugins
+          {:ok, local_plugins} = Store.Plugin.Registry.list()
+
+          local_names =
+            MapSet.new(Enum.map(local_plugins, fn {name, _mod, _state, _info} -> name end))
+
+          # Register any missing plugins
+          Enum.each(plugins, fn plugin_info ->
+            name = Map.get(plugin_info, :name) || Map.get(plugin_info, "name")
+
+            unless MapSet.member?(local_names, name) do
+              Logger.debug("Syncing cluster plugin to local registry: #{name}")
+              # Note: We only register metadata here - actual module loading
+              # would require the plugin binary to be distributed
+              Store.Plugin.Registry.register_info(name, plugin_info)
+            end
+          end)
+
+        _ ->
+          :ok
+      end
+    catch
+      _, _ -> :ok
+    end
   end
 end

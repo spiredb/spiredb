@@ -83,6 +83,20 @@ defmodule Store.Region.Raft do
     :ra.process_command(server, command, timeout)
   end
 
+  @doc """
+  Execute a batch of operations atomically via Raft.
+  """
+  def batch_execute(pid, operations, timeout \\ 5000) when is_pid(pid) do
+    # Convert pid to server_id by extracting region from registered name
+    # For batch, we use the {:batch, ops} command
+    try do
+      :ra.process_command(pid, {:batch, operations}, timeout)
+    catch
+      :exit, reason ->
+        {:error, reason}
+    end
+  end
+
   def server_id(region_id) do
     {String.to_atom("region_#{region_id}"), node()}
   end

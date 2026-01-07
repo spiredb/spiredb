@@ -118,7 +118,7 @@ defmodule Store.Region.RaftTest do
         # Additional check: verify Ra application is actually running
         case Application.started_applications() |> Enum.find(fn {app, _, _} -> app == :ra end) do
           nil ->
-            Logger.warn("Ra supervisor exists but application not in started list")
+            Logger.warning("Ra supervisor exists but application not in started list")
             Process.sleep(500)
             wait_for_ra_ready(retries - 1)
 

@@ -5,7 +5,15 @@
 
 <h1 align="center">SpireDB</h1>
 <p align="center">
-  <b>Distributed all-in-one OLTP database</b>
+  <b>Stream -> Store -> Scale.</b>
+</p>
+
+<p align="center">
+  <a href="https://opensource.org/licenses/MIT"><img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="License"></a>
+  <a href="https://elixir-lang.org"><img src="https://img.shields.io/badge/Elixir-1.14+-4B275F.svg" alt="Elixir"></a>
+  <a href="https://redis.io/docs/reference/protocol-spec/"><img src="https://img.shields.io/badge/Protocol-RESP-DC382D.svg" alt="RESP"></a>
+  <a href="https://discord.gg/6GtdpFpU8F"><img src="https://img.shields.io/discord/1266804004327784489?label=Discord&logo=discord&logoColor=white&color=5865F2" alt="Discord"></a>
+  <a href="https://ghcr.io/spiredb/spiredb"><img src="https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white" alt="Docker"></a>
 </p>
 
 <br>

@@ -9,7 +9,9 @@ defmodule Store.KV.Engine do
 
   require Logger
 
-  defstruct [:db_ref, :path, :cache, :rate_limiter, :statistics]
+  alias Store.KV.ColumnFamilies
+
+  defstruct [:db_ref, :cf_map, :path, :cache, :rate_limiter, :statistics]
 
   ## Client API
 
@@ -107,7 +109,7 @@ defmodule Store.KV.Engine do
       _, _ -> :ok
     end
 
-    path_charlist = to_charlist(path)
+    _path_charlist = to_charlist(path)
 
     # Load configuration with production defaults
     config = load_rocksdb_config()
@@ -175,23 +177,32 @@ defmodule Store.KV.Engine do
       enable_write_thread_adaptive_yield: true
     ]
 
-    Logger.info("Opening RocksDB at #{path} with optimized config",
-      block_cache_mb: div(config.block_cache_size, 1024 * 1024),
-      write_buffer_mb: div(config.write_buffer_size, 1024 * 1024),
-      bloom_bits: config.bloom_bits_per_key,
-      compression: config.compression
-    )
+    Logger.info("""
+    Opening RocksDB at #{path}
+      compression: #{config.compression}
+      bottommost_compression: #{config.bottommost_compression}
+      block_cache_mb: #{div(config.block_cache_size, 1024 * 1024)}
+      write_buffer_mb: #{div(config.write_buffer_size, 1024 * 1024)}
+      max_write_buffers: #{config.max_write_buffer_number}
+      bloom_bits: #{config.bloom_bits_per_key}
+      max_open_files: #{config.max_open_files}
+      max_background_jobs: #{config.max_background_jobs}
+    """)
 
-    case :rocksdb.open(path_charlist, db_opts) do
-      {:ok, db_ref} ->
-        Logger.info("RocksDB opened successfully at #{path}")
+    case ColumnFamilies.open_with_cf(path, db_opts) do
+      {:ok, db_ref, cf_map} ->
+        Logger.info(
+          "RocksDB opened successfully at #{path} with #{map_size(cf_map)} column families"
+        )
 
-        # Store db_ref in persistent_term for direct concurrent access
+        # Store db_ref and cf_map in persistent_term for direct concurrent access
         # This bypasses the GenServer bottleneck
         :persistent_term.put(:spiredb_rocksdb_ref, db_ref)
+        :persistent_term.put(:spiredb_rocksdb_cf_map, cf_map)
 
         state = %__MODULE__{
           db_ref: db_ref,
+          cf_map: cf_map,
           path: path,
           cache: cache,
           rate_limiter: rate_limiter,
@@ -225,10 +236,10 @@ defmodule Store.KV.Engine do
       create_if_missing: Application.get_env(:spiredb_store, :rocksdb_create_if_missing, true),
       max_open_files: Application.get_env(:spiredb_store, :rocksdb_max_open_files, 10_000),
 
-      # Compression - :none for compatibility, :lz4 or :zstd for production
-      compression: Application.get_env(:spiredb_store, :rocksdb_compression, :none),
+      # Compression - LZ4 for speed, Zstd for cold data
+      compression: Application.get_env(:spiredb_store, :rocksdb_compression, :lz4),
       bottommost_compression:
-        Application.get_env(:spiredb_store, :rocksdb_bottommost_compression, :none),
+        Application.get_env(:spiredb_store, :rocksdb_bottommost_compression, :zstd),
 
       # Block cache - 512MB default, critical for read performance
       block_cache_size:
@@ -369,5 +380,11 @@ defmodule Store.KV.Engine do
     :persistent_term.erase(:spiredb_rocksdb_ref)
 
     :ok
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.warning("Store.KV.Engine received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
   end
 end

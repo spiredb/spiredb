@@ -7,6 +7,8 @@ defmodule Store.API.DataAccessTest do
   alias Store.Test.MockGRPC
 
   setup do
+    # Tests pass engine directly in requests, no need to start Store.Server
+
     # Start a unique Engine for this test process
     unique_name = :"TestEngine_#{System.unique_integer([:positive])}"
     path = "/tmp/spiredb_test_data_access_#{System.unique_integer([:positive])}"
@@ -46,7 +48,7 @@ defmodule Store.API.DataAccessTest do
 
     # Scan (mock stream is passed but unused by MockGRPC, just identity)
     stream = :mock_stream
-    DataAccess.scan(request, stream)
+    DataAccess.raw_scan(request, stream)
 
     # Should have scanned successfully and sent replies
     assert_receive {:grpc_reply, response}
@@ -58,7 +60,7 @@ defmodule Store.API.DataAccessTest do
     :ok = Engine.put(engine, "test_key", "test_value")
 
     request = %{region_id: 1, key: "test_key", read_follower: false, engine: engine}
-    result = DataAccess.get(request, nil)
+    result = DataAccess.raw_get(request, nil)
 
     assert result.found == true
     assert result.value == "test_value"
@@ -66,7 +68,7 @@ defmodule Store.API.DataAccessTest do
 
   test "get returns not found for missing key", %{engine: engine} do
     request = %{region_id: 1, key: "missing_key", read_follower: false, engine: engine}
-    result = DataAccess.get(request, nil)
+    result = DataAccess.raw_get(request, nil)
 
     assert result.found == false
   end
@@ -82,7 +84,7 @@ defmodule Store.API.DataAccessTest do
       engine: engine
     }
 
-    result = DataAccess.batch_get(request, nil)
+    result = DataAccess.raw_batch_get(request, nil)
 
     assert is_binary(result.arrow_batch)
   end

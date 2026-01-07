@@ -36,6 +36,27 @@ defmodule Store.Region.StateMachine do
     end
   end
 
+  def apply(_meta, {:batch, operations}, state) when is_list(operations) do
+    results =
+      Enum.map(operations, fn
+        {:put, key, value} ->
+          case Engine.put(Store.KV.Engine, key, value) do
+            :ok -> :ok
+            error -> error
+          end
+
+        {:delete, key} ->
+          case Engine.delete(Store.KV.Engine, key) do
+            :ok -> :ok
+            error -> error
+          end
+      end)
+
+    # Return success count
+    success_count = Enum.count(results, &(&1 == :ok))
+    {state, {:ok, success_count}, []}
+  end
+
   def apply(_meta, command, state) do
     Logger.warning("Unknown command received: #{inspect(command)}")
     {state, {:error, :unknown_command}, []}
