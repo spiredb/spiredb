@@ -32,6 +32,9 @@ defmodule Store.Supervisor do
       # CDC Change Stream (for realtime change capture)
       {Store.ChangeStream, []},
 
+      # TTL background cleanup
+      {Store.KV.TTLFilter, []},
+
       # Main store server (manages regions + KV engine)
       {Store.Server, []}
     ]
