@@ -219,9 +219,9 @@ defmodule Store.TransactionTest do
     test "savepoint and rollback to" do
       {:ok, txn_id} = Manager.begin_transaction()
 
-      :ok = Manager.put(txn_id, "key1", "value1")
+      :ok = Manager.put(txn_id, "zkey1", "value1")
       :ok = Manager.savepoint(txn_id, "sp1")
-      :ok = Manager.put(txn_id, "key2", "value2")
+      :ok = Manager.put(txn_id, "zkey2", "value2")
       :ok = Manager.rollback_to(txn_id, "sp1")
 
       # Can still commit
