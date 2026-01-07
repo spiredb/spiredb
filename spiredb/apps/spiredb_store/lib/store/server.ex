@@ -55,6 +55,14 @@ defmodule Store.Server do
   end
 
   @doc """
+  Batch write multiple key-value pairs.
+  Groups writes by region for efficiency.
+  """
+  def batch_write(operations) when is_list(operations) do
+    GenServer.call(__MODULE__, {:batch_write, operations})
+  end
+
+  @doc """
   Check if key exists.
 
   Uses direct read for fast lookup.
@@ -344,6 +352,41 @@ defmodule Store.Server do
   end
 
   @impl true
+  def handle_call({:batch_write, operations}, _from, state) do
+    # Group operations by region for efficient batch execution
+    num_regions = map_size(state.regions)
+
+    if num_regions == 0 do
+      {:reply, {:error, :regions_initializing}, state}
+    else
+      # Group by region
+      by_region =
+        Enum.group_by(operations, fn
+          {:put, key, _value} -> :erlang.phash2(key, num_regions) + 1
+          {:delete, key} -> :erlang.phash2(key, num_regions) + 1
+        end)
+
+      # Execute batch per region
+      results =
+        Enum.map(by_region, fn {region_id, ops} ->
+          case execute_batch_for_region(state, region_id, ops) do
+            {:ok, _} -> :ok
+            {:error, reason} -> {:error, region_id, reason}
+          end
+        end)
+
+      # Check for errors
+      errors = Enum.filter(results, &match?({:error, _, _}, &1))
+
+      if errors == [] do
+        {:reply, {:ok, length(operations)}, state}
+      else
+        {:reply, {:error, {:partial_failure, errors}}, state}
+      end
+    end
+  end
+
+  @impl true
   def handle_call({:find_region, key}, _from, state) do
     # Hash key to determine region
     num_regions = map_size(state.regions)
@@ -504,6 +547,29 @@ defmodule Store.Server do
   defp execute_local(kv_engine, :delete, [key]) do
     Store.KV.Engine.delete(kv_engine, key)
     {:ok, {:ok, :ok}}
+  end
+
+  defp execute_batch_for_region(state, region_id, operations) do
+    case Map.get(state.regions, region_id) do
+      nil ->
+        # Region not running, execute locally
+        kv_engine = :persistent_term.get(:spiredb_kv_engine, nil)
+
+        if kv_engine do
+          Enum.each(operations, fn
+            {:put, key, value} -> Store.KV.Engine.put(kv_engine, key, value)
+            {:delete, key} -> Store.KV.Engine.delete(kv_engine, key)
+          end)
+
+          {:ok, :local}
+        else
+          {:error, :no_kv_engine}
+        end
+
+      pid when is_pid(pid) ->
+        # Execute via Raft batch
+        Raft.batch_execute(pid, operations)
+    end
   end
 
   defp hash_key_to_region(key, num_regions) do

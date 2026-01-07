@@ -123,6 +123,16 @@ defmodule Store.API.RESP.Commands do
   def execute(["SPIRE.PLUGIN.INFO" | _] = cmd), do: Store.API.RESP.PluginCommands.execute(cmd)
   def execute(["SPIRE.PLUGIN.RELOAD" | _] = cmd), do: Store.API.RESP.PluginCommands.execute(cmd)
 
+  # Route stream commands
+  def execute(["XADD" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XREAD" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XRANGE" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XREVRANGE" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XLEN" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XINFO" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XTRIM" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+  def execute(["XDEL" | _] = cmd), do: Store.API.RESP.StreamCommands.execute(cmd)
+
   def execute([command | _]) do
     {:error, "ERR unknown command '#{String.downcase(command)}'"}
   end
