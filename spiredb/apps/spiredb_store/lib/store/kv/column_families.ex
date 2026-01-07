@@ -8,7 +8,7 @@ defmodule Store.KV.ColumnFamilies do
   require Logger
 
   # Local schema version for the column families and internal metadata
-  @current_schema_version 3
+  @current_schema_version 5
 
   # Column families for SpireDB
   @column_families [
@@ -29,7 +29,13 @@ defmodule Store.KV.ColumnFamilies do
     # Commit records
     "txn_write",
     # Plugin persistent state
-    "plugin_state"
+    "plugin_state",
+    # Stream entries (key: stream:id, value: encoded event)
+    "streams",
+    # Stream metadata (key: stream_name, value: last_id, length, etc)
+    "stream_meta",
+    # CDC change log entries
+    "change_log"
   ]
 
   @doc """
@@ -166,6 +172,20 @@ defmodule Store.KV.ColumnFamilies do
   defp migrate(_db_ref, _cf_map, 2, 3) do
     # Column family already created in open_with_cf
     Logger.info("Migration v2→v3: Plugin state column family initialized")
+    :ok
+  end
+
+  # V3 → V4: Streams column families
+  defp migrate(_db_ref, _cf_map, 3, 4) do
+    # Column families already created in open_with_cf
+    Logger.info("Migration v3→v4: Streams column families initialized")
+    :ok
+  end
+
+  # V4 → V5: CDC change log column family
+  defp migrate(_db_ref, _cf_map, 4, 5) do
+    # Column family already created in open_with_cf
+    Logger.info("Migration v4→v5: Change log column family initialized")
     :ok
   end
 
