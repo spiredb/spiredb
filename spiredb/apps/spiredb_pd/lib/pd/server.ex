@@ -139,9 +139,46 @@ defmodule PD.Server do
   ## Query Functions (read-only, don't modify state)
 
   def find_region_by_key(state, key) do
-    # Simple hash-based routing
-    region_id = :erlang.phash2(key, state.num_regions) + 1
-    Map.get(state.regions, region_id)
+    # First try key range-based routing for regions with defined key ranges
+    range_match =
+      state.regions
+      |> Map.values()
+      |> Enum.find(fn region ->
+        key_in_region?(key, region.start_key, region.end_key)
+      end)
+
+    case range_match do
+      nil ->
+        # Fallback to hash-based routing for regions without key ranges
+        # This maintains backward compatibility with existing deployments
+        region_id = :erlang.phash2(key, state.num_regions) + 1
+        Map.get(state.regions, region_id)
+
+      region ->
+        region
+    end
+  end
+
+  # Check if key falls within region's key range
+  # start_key is inclusive, end_key is exclusive
+  defp key_in_region?(key, start_key, end_key) do
+    # If no key ranges defined, don't match (use hash fallback)
+    cond do
+      is_nil(start_key) and is_nil(end_key) ->
+        false
+
+      is_nil(start_key) ->
+        # No start means region starts at beginning of keyspace
+        key < end_key
+
+      is_nil(end_key) ->
+        # No end means region extends to end of keyspace
+        key >= start_key
+
+      true ->
+        # Both bounds defined
+        key >= start_key and key < end_key
+    end
   end
 
   def list_stores(state) do
