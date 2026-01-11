@@ -13,6 +13,7 @@ defmodule Store.Server do
 
   alias Store.Region.Raft
   alias PD.Server, as: PDServer
+  alias SpiredbCommon.RaReadiness
 
   # Dynamic module reference to avoid compile-time warning
   # PD.Scheduler is in spiredb_pd which loads after spiredb_store
@@ -577,18 +578,14 @@ defmodule Store.Server do
     :erlang.phash2(key, num_regions) + 1
   end
 
-  defp wait_for_ra(retries \\ 30) do
-    if retries == 0 do
-      Logger.error("Ra application failed to become ready")
-      :error
-    else
-      # Check if Ra application is started
-      if Process.whereis(:ra_sup) do
+  defp wait_for_ra(_retries \\ 30) do
+    case RaReadiness.wait_for_ra_system(:default, 15_000) do
+      :ok ->
         :ok
-      else
-        Process.sleep(500)
-        wait_for_ra(retries - 1)
-      end
+
+      {:error, :timeout} ->
+        Logger.error("Ra application failed to become ready")
+        :error
     end
   end
 

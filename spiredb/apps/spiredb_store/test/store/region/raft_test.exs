@@ -160,7 +160,7 @@ defmodule Store.Region.RaftTest do
 
   describe "Store.Region.Raft" do
     test "starts single node region server", %{uid: uid} do
-      region_id = String.to_integer(uid) |> rem(10000)
+      region_id = :erlang.phash2(uid, 10000)
       nodes = [{region_id, node()}]
 
       result = Raft.start_server(region_id, nodes)
@@ -173,7 +173,7 @@ defmodule Store.Region.RaftTest do
     end
 
     test "write and read via Raft consensus", %{uid: uid} do
-      region_id = String.to_integer(uid) |> rem(10000)
+      region_id = :erlang.phash2(uid, 10000)
       nodes = [{region_id, node()}]
 
       result = Raft.start_server(region_id, nodes)
@@ -192,7 +192,7 @@ defmodule Store.Region.RaftTest do
     end
 
     test "delete key", %{uid: uid} do
-      region_id = String.to_integer(uid) |> rem(10000)
+      region_id = :erlang.phash2(uid, 10000)
       nodes = [{region_id, node()}]
 
       result = Raft.start_server(region_id, nodes)
@@ -211,7 +211,7 @@ defmodule Store.Region.RaftTest do
     end
 
     test "multiple writes maintain order", %{uid: uid} do
-      region_id = String.to_integer(uid) |> rem(10000)
+      region_id = :erlang.phash2(uid, 10000)
       nodes = [{region_id, node()}]
 
       result = Raft.start_server(region_id, nodes)

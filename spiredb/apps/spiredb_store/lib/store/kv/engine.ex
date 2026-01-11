@@ -15,6 +15,20 @@ defmodule Store.KV.Engine do
 
   ## Client API
 
+  @doc """
+  Child specification for supervision tree.
+  Uses 30s shutdown timeout to allow RocksDB to flush and close cleanly.
+  """
+  def child_spec(opts) do
+    %{
+      id: __MODULE__,
+      start: {__MODULE__, :start_link, [opts]},
+      restart: :permanent,
+      shutdown: 30_000,
+      type: :worker
+    }
+  end
+
   def start_link(opts) do
     _path = opts[:path] || raise "Path is required"
     name = opts[:name] || __MODULE__

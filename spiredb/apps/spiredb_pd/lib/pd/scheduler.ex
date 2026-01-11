@@ -17,7 +17,8 @@ defmodule PD.Scheduler do
   alias PD.Scheduler.{LoadMonitor, BalancePlanner}
 
   @check_interval :timer.seconds(30)
-  @startup_delay :timer.seconds(5)
+  @startup_delay :timer.seconds(1)
+  @max_startup_retries 30
   @max_concurrent_operations 2
 
   ## Client API
@@ -52,8 +53,8 @@ defmodule PD.Scheduler do
   @impl true
   def init(_opts) do
     Logger.info("PD Scheduler started", interval_seconds: @check_interval / 1000)
-    # Delay first check to allow PD.Server to start
-    schedule_first_check()
+    # Wait for PD.Server before starting checks
+    send(self(), :wait_for_pd)
 
     {:ok,
      %{
@@ -67,6 +68,8 @@ defmodule PD.Scheduler do
        next_task_id: 1,
        # Epoch initialized lazily on first check
        leader_epoch: 0,
+       # Startup retry counter
+       startup_retries: 0,
        stats: %{
          total_checks: 0,
          total_operations: 0,
@@ -91,6 +94,27 @@ defmodule PD.Scheduler do
   @impl true
   def handle_call(:get_leader_epoch, _from, state) do
     {:reply, state.leader_epoch, state}
+  end
+
+  @impl true
+  def handle_info(:wait_for_pd, state) do
+    if PD.Server.is_running?(Node.self()) do
+      Logger.info("PD.Server ready, starting scheduler checks")
+      schedule_first_check()
+      {:noreply, state}
+    else
+      retries = state.startup_retries
+
+      if retries < @max_startup_retries do
+        Logger.debug("Waiting for PD.Server (attempt #{retries + 1}/#{@max_startup_retries})")
+        Process.send_after(self(), :wait_for_pd, @startup_delay)
+        {:noreply, %{state | startup_retries: retries + 1}}
+      else
+        Logger.error("PD.Server not ready after #{@max_startup_retries} retries, starting anyway")
+        schedule_first_check()
+        {:noreply, state}
+      end
+    end
   end
 
   @impl true
