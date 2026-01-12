@@ -371,10 +371,8 @@ defmodule Store.Transaction.DistributedCommitTest do
           %{pid: pid}
 
         {:error, {:already_started, pid}} ->
-          # Reset state by stopping and restarting
-          GenServer.stop(pid)
-          {:ok, new_pid} = LockWaitQueue.start_link([])
-          %{pid: new_pid}
+          # Use existing from supervision tree
+          %{pid: pid}
       end
     end
 

@@ -92,6 +92,14 @@ defmodule Store.Transaction.Manager do
   @impl true
   def init(_opts) do
     Logger.info("Transaction Manager started")
+
+    # Run crash recovery for any pending commits from previous run
+    spawn(fn ->
+      # Wait for RocksDB to be ready
+      Process.sleep(500)
+      Store.Transaction.CrashRecovery.recover_pending_commits()
+    end)
+
     {:ok, %__MODULE__{}}
   end
 

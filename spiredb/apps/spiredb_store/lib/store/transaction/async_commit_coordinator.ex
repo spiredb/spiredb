@@ -149,15 +149,136 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
   defp prewrite_key_async(txn, key, primary_key, secondaries, min_commit_ts) do
     operation = Map.get(txn.write_buffer, key)
 
-    lock =
-      Lock.new_async_commit(key, primary_key, txn.start_ts,
-        txn_id: txn.id,
-        min_commit_ts: min_commit_ts,
-        secondaries: secondaries
-      )
+    # Check if key belongs to local or remote store
+    case get_store_for_key(key) do
+      {:local, _region_id} ->
+        # Local prewrite
+        lock =
+          Lock.new_async_commit(key, primary_key, txn.start_ts,
+            txn_id: txn.id,
+            min_commit_ts: min_commit_ts,
+            secondaries: secondaries
+          )
 
-    Executor.prewrite_with_lock(key, operation, lock, txn.start_ts)
+        Executor.prewrite_with_lock(key, operation, lock, txn.start_ts)
+
+      {:remote, store_address} ->
+        # Remote prewrite via gRPC
+        prewrite_remote(
+          store_address,
+          txn,
+          key,
+          operation,
+          primary_key,
+          secondaries,
+          min_commit_ts
+        )
+    end
   end
+
+  defp prewrite_remote(
+         store_address,
+         txn,
+         key,
+         operation,
+         primary_key,
+         secondaries,
+         min_commit_ts
+       ) do
+    alias Store.Transaction.InternalClient
+
+    mutation = build_mutation(key, operation)
+    secondary_keys = if secondaries, do: secondaries, else: []
+
+    request = %Spiredb.Cluster.AsyncPrewriteRequest{
+      mutations: [mutation],
+      primary_key: primary_key,
+      secondary_keys: secondary_keys,
+      start_ts: txn.start_ts,
+      min_commit_ts: min_commit_ts,
+      lock_ttl: 30_000,
+      txn_id: txn.id
+    }
+
+    case InternalClient.async_prewrite(store_address, request) do
+      {:ok, %{success: true}} ->
+        :ok
+
+      {:ok, %{success: false, errors: errors}} ->
+        first_error = List.first(errors)
+        {:error, {:remote_prewrite_failed, first_error && first_error.error}}
+
+      {:error, reason} ->
+        {:error, {:rpc_failed, reason}}
+    end
+  end
+
+  defp build_mutation(key, {:put, value}) do
+    %Spiredb.Cluster.InternalMutation{
+      type: :INTERNAL_MUTATION_PUT,
+      key: key,
+      value: value
+    }
+  end
+
+  defp build_mutation(key, :delete) do
+    %Spiredb.Cluster.InternalMutation{
+      type: :INTERNAL_MUTATION_DELETE,
+      key: key,
+      value: <<>>
+    }
+  end
+
+  defp get_store_for_key(key) do
+    # Check if key belongs to local or remote store
+    case get_region_for_key(key) do
+      nil ->
+        # No region info - assume local
+        {:local, nil}
+
+      region_id ->
+        # Check if this region is local
+        local_regions = get_local_region_ids()
+
+        if region_id in local_regions do
+          {:local, region_id}
+        else
+          # Get store address for this region
+          case get_store_address_for_region(region_id) do
+            # Fallback to local if unknown
+            nil -> {:local, region_id}
+            address -> {:remote, address}
+          end
+        end
+    end
+  end
+
+  defp get_local_region_ids do
+    # Get regions managed by this node
+    try do
+      {:ok, state} = :sys.get_state(Store.Server)
+      Map.keys(state.regions)
+    catch
+      # Default: assume all local
+      _, _ -> 1..16 |> Enum.to_list()
+    end
+  end
+
+  defp get_store_address_for_region(region_id) do
+    try do
+      case PD.Server.get_region_store(region_id) do
+        {:ok, store_node} when store_node != node() ->
+          InternalClient.get_store_address(store_node)
+
+        _ ->
+          nil
+      end
+    catch
+      :exit, _ -> nil
+    end
+  end
+
+  alias Store.Transaction.InternalClient
 
   defp spawn_async_finalize(txn, primary_key, min_commit_ts) do
     spawn(fn ->
