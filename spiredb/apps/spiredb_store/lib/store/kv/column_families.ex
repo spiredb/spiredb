@@ -8,7 +8,7 @@ defmodule Store.KV.ColumnFamilies do
   require Logger
 
   # Local schema version for the column families and internal metadata
-  @current_schema_version 5
+  @current_schema_version 6
 
   # Column families for SpireDB
   @column_families [
@@ -28,6 +28,8 @@ defmodule Store.KV.ColumnFamilies do
     "txn_data",
     # Commit records
     "txn_write",
+    # Pending commits for crash recovery
+    "txn_pending",
     # Plugin persistent state
     "plugin_state",
     # Stream entries (key: stream:id, value: encoded event)
@@ -186,6 +188,13 @@ defmodule Store.KV.ColumnFamilies do
   defp migrate(_db_ref, _cf_map, 4, 5) do
     # Column family already created in open_with_cf
     Logger.info("Migration v4→v5: Change log column family initialized")
+    :ok
+  end
+
+  # V5 → V6: Transaction pending commits for crash recovery
+  defp migrate(_db_ref, _cf_map, 5, 6) do
+    # Column family already created in open_with_cf
+    Logger.info("Migration v5→v6: Transaction pending commits column family initialized")
     :ok
   end
 

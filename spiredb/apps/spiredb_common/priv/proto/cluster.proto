@@ -382,6 +382,83 @@ message ReloadPluginRequest {
 }
 
 // =============================================================================
+// Internal Transaction Service (Store-to-Store)
+// =============================================================================
+
+service InternalTransactionService {
+  // Async commit prewrite with embedded secondaries
+  rpc AsyncPrewrite(AsyncPrewriteRequest) returns (AsyncPrewriteResponse);
+  
+  // Check if secondary locks exist (for async commit resolution)
+  rpc CheckSecondaryLocks(CheckSecondaryLocksRequest) returns (CheckSecondaryLocksResponse);
+  
+  // Resolve locks on keys
+  rpc ResolveLock(InternalResolveLockRequest) returns (Empty);
+}
+
+message AsyncPrewriteRequest {
+  repeated InternalMutation mutations = 1;
+  bytes primary_key = 2;
+  repeated bytes secondary_keys = 3;  // All secondary keys for async commit
+  uint64 start_ts = 4;
+  uint64 min_commit_ts = 5;           // Calculated min commit timestamp
+  uint64 lock_ttl = 6;
+  bytes txn_id = 7;
+}
+
+message InternalMutation {
+  InternalMutationType type = 1;
+  bytes key = 2;
+  bytes value = 3;
+}
+
+enum InternalMutationType {
+  INTERNAL_MUTATION_PUT = 0;
+  INTERNAL_MUTATION_DELETE = 1;
+}
+
+message AsyncPrewriteResponse {
+  bool success = 1;
+  repeated InternalKeyError errors = 2;
+  uint64 actual_min_commit_ts = 3;    // May be higher due to concurrent reads
+}
+
+message InternalKeyError {
+  bytes key = 1;
+  string error = 2;
+  InternalLockInfo lock_info = 3;
+}
+
+message InternalLockInfo {
+  bytes primary_key = 1;
+  uint64 start_ts = 2;
+  uint64 ttl = 3;
+}
+
+message CheckSecondaryLocksRequest {
+  bytes primary_key = 1;
+  uint64 start_ts = 2;
+  repeated bytes secondary_keys = 3;
+}
+
+message CheckSecondaryLocksResponse {
+  repeated SecondaryLockStatus statuses = 1;
+}
+
+message SecondaryLockStatus {
+  bytes key = 1;
+  bool locked = 2;
+  bool committed = 3;
+  uint64 commit_ts = 4;
+}
+
+message InternalResolveLockRequest {
+  bytes key = 1;
+  uint64 start_ts = 2;
+  uint64 commit_ts = 3;     // 0 = rollback, >0 = commit
+}
+
+// =============================================================================
 // Common
 // =============================================================================
 

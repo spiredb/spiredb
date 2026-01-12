@@ -1,0 +1,96 @@
+defmodule Store.Transaction.InternalClient do
+  @moduledoc """
+  Client for InternalTransactionService gRPC calls to remote stores.
+
+  Used by AsyncCommitCoordinator to perform cross-node operations.
+  """
+
+  require Logger
+  alias Spiredb.Cluster.InternalTransactionService.Stub
+
+  @default_timeout 10_000
+
+  @doc """
+  Async prewrite mutations to a remote store.
+  """
+  def async_prewrite(store_address, request, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, @default_timeout)
+
+    with {:ok, channel} <- connect(store_address),
+         {:ok, response} <- Stub.async_prewrite(channel, request, timeout: timeout) do
+      GRPC.Stub.disconnect(channel)
+      {:ok, response}
+    else
+      {:error, reason} ->
+        Logger.warning(
+          "InternalClient.async_prewrite failed for #{store_address}: #{inspect(reason)}"
+        )
+
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Check secondary locks on a remote store.
+  """
+  def check_secondary_locks(store_address, request, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, @default_timeout)
+
+    with {:ok, channel} <- connect(store_address),
+         {:ok, response} <- Stub.check_secondary_locks(channel, request, timeout: timeout) do
+      GRPC.Stub.disconnect(channel)
+      {:ok, response}
+    else
+      {:error, reason} ->
+        Logger.warning("InternalClient.check_secondary_locks failed: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Resolve a lock on a remote store.
+  """
+  def resolve_lock(store_address, request, opts \\ []) do
+    timeout = Keyword.get(opts, :timeout, @default_timeout)
+
+    with {:ok, channel} <- connect(store_address),
+         {:ok, _response} <- Stub.resolve_lock(channel, request, timeout: timeout) do
+      GRPC.Stub.disconnect(channel)
+      :ok
+    else
+      {:error, reason} ->
+        Logger.warning("InternalClient.resolve_lock failed: #{inspect(reason)}")
+        {:error, reason}
+    end
+  end
+
+  @doc """
+  Get the gRPC address for a store node.
+  Returns address in format "host:port".
+  """
+  def get_store_address(store_node) when is_atom(store_node) do
+    # Extract hostname from node name (e.g., spiredb@host -> host)
+    node_string = Atom.to_string(store_node)
+
+    host =
+      case String.split(node_string, "@") do
+        [_name, host] -> host
+        [host] -> host
+      end
+
+    # Internal gRPC port (same as DataAccess port)
+    port = Application.get_env(:spiredb_store, :grpc_port, 50052)
+
+    "#{host}:#{port}"
+  end
+
+  def get_store_address(store_node) when is_binary(store_node) do
+    store_node
+  end
+
+  ## Private
+
+  defp connect(address) do
+    GRPC.Stub.connect(address, interceptors: [])
+  end
+end

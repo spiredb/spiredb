@@ -217,6 +217,127 @@ defmodule Store.Transaction.Executor do
     end
   end
 
+  # ============================================================================
+  # Public API for Async Commit Coordinator
+  # ============================================================================
+
+  @doc """
+  Get lock for a key (public API for async commit resolution).
+  """
+  def get_lock(key) do
+    get_lock_internal(key)
+  end
+
+  @doc """
+  Delete lock for a key (public API for async commit).
+  """
+  def delete_lock(key, start_ts) do
+    delete_lock_internal(key, start_ts)
+  end
+
+  @doc """
+  Delete data for a key (public API for rollback).
+  """
+  def delete_data(key, start_ts) do
+    delete_data_internal(key, start_ts)
+  end
+
+  @doc """
+  Write commit record (public API for async commit).
+  """
+  def write_commit_record(key, start_ts, commit_ts) do
+    write_commit_record_internal(key, start_ts, commit_ts)
+  end
+
+  @doc """
+  Get commit record (public API for async commit resolution).
+  """
+  def get_commit_record(key, start_ts) do
+    get_commit_record_internal(key, start_ts)
+  end
+
+  @doc """
+  Prewrite with a pre-built lock (for async commit).
+  Used when lock already contains secondaries list.
+  """
+  def prewrite_with_lock(key, operation, lock, start_ts) do
+    with :ok <- check_write_conflict(key, start_ts),
+         :ok <- check_lock_conflict(key, start_ts),
+         :ok <- do_write_lock(key, lock),
+         :ok <- write_data(key, operation, start_ts) do
+      :ok
+    end
+  end
+
+  @doc """
+  Write rollback record to prevent late prewrites.
+  """
+  def write_rollback_record(key, start_ts) do
+    # Use write CF with special marker
+    write_key = Encoder.encode_txn_write_key(key, start_ts)
+    # Rollback marker: {start_ts, 0} where 0 indicates rollback
+    value = :erlang.term_to_binary({start_ts, 0, :rollback})
+
+    case {get_db_ref(), get_write_cf()} do
+      {nil, _} ->
+        try do
+          :ets.insert(:txn_write, {write_key, value})
+          :ok
+        rescue
+          ArgumentError ->
+            :ets.new(:txn_write, [:named_table, :public, :ordered_set])
+            :ets.insert(:txn_write, {write_key, value})
+            :ok
+        end
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.put(db_ref, cf, write_key, value, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.put(db_ref, write_key, value, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+    end
+  end
+
+  @doc """
+  Scan for writes after a given timestamp (for SSI conflict detection).
+  """
+  def scan_writes_after(key, after_ts) do
+    try do
+      records = :ets.tab2list(:txn_write)
+
+      commits =
+        records
+        |> Enum.filter(fn {write_key, value} ->
+          {stored_key, commit_ts} = Encoder.decode_txn_write_key(write_key)
+          stored_key == key and commit_ts > after_ts
+        end)
+        |> Enum.map(fn {_write_key, value} ->
+          case :erlang.binary_to_term(value) do
+            {start_ts, commit_ts} -> {commit_ts, start_ts}
+            {start_ts, commit_ts, _} -> {commit_ts, start_ts}
+          end
+        end)
+        |> Enum.sort_by(fn {commit_ts, _} -> commit_ts end, :desc)
+
+      {:ok, commits}
+    rescue
+      _ -> {:ok, []}
+    end
+  end
+
+  @doc """
+  Get latest write for a key (public API for SSI).
+  """
+  def get_latest_write(key) do
+    get_latest_write_internal(key)
+  end
+
   defp do_write_lock(key, lock) do
     try do
       :ets.insert(:txn_locks, {key, Lock.encode(lock)})
@@ -449,7 +570,7 @@ defmodule Store.Transaction.Executor do
   defp get_data_cf, do: get_cf(@cf_data)
   defp get_write_cf, do: get_cf(@cf_write)
 
-  defp get_lock(key) do
+  defp get_lock_internal(key) do
     # Use RocksDB if available, otherwise ETS
     lock_key = Encoder.encode_lock_key(key)
 
@@ -512,7 +633,7 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp delete_lock(key, _start_ts) do
+  defp delete_lock_internal(key, _start_ts) do
     lock_key = Encoder.encode_lock_key(key)
 
     case {get_db_ref(), get_locks_cf()} do
@@ -602,7 +723,7 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp delete_data(key, start_ts) do
+  defp delete_data_internal(key, start_ts) do
     data_key = Encoder.encode_txn_data_key(key, start_ts)
 
     case {get_db_ref(), get_data_cf()} do
@@ -628,7 +749,7 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp write_commit_record(key, start_ts, commit_ts) do
+  defp write_commit_record_internal(key, start_ts, commit_ts) do
     write_key = Encoder.encode_txn_write_key(key, commit_ts)
     value = :erlang.term_to_binary({start_ts, commit_ts})
 
@@ -658,7 +779,7 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp get_commit_record(key, start_ts) do
+  defp get_commit_record_internal(key, start_ts) do
     # Find commit record for this key/start_ts combination
     case get_db_ref() do
       nil ->
@@ -760,7 +881,7 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp get_latest_write(key) do
+  defp get_latest_write_internal(key) do
     case get_db_ref() do
       nil ->
         # Fallback to ETS

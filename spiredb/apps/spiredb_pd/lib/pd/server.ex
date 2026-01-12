@@ -149,8 +149,7 @@ defmodule PD.Server do
 
     case range_match do
       nil ->
-        # Fallback to hash-based routing for regions without key ranges
-        # This maintains backward compatibility with existing deployments
+        # Fallback to phash2 for uniform distribution
         region_id = :erlang.phash2(key, state.num_regions) + 1
         Map.get(state.regions, region_id)
 
@@ -178,6 +177,31 @@ defmodule PD.Server do
       true ->
         # Both bounds defined
         key >= start_key and key < end_key
+    end
+  end
+
+  @doc """
+  Get stores hosting a region, filtered by health status.
+  Returns list of stores sorted by preference (leader first).
+  """
+  def get_region_stores(state, region_id) do
+    case Map.get(state.regions, region_id) do
+      nil ->
+        []
+
+      region ->
+        # Get store health status
+        stores_with_status =
+          Enum.map(region.stores, fn store_node ->
+            store = Map.get(state.stores, store_node)
+            status = if store && store.state == :up, do: :up, else: :down
+            {store_node, status}
+          end)
+
+        # Sort: leader first, then up stores, then down stores
+        Enum.sort_by(stores_with_status, fn {node, status} ->
+          {if(node == region.leader, do: 0, else: 1), if(status == :up, do: 0, else: 1)}
+        end)
     end
   end
 

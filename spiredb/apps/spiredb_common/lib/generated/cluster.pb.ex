@@ -404,6 +404,40 @@ defmodule Spiredb.Cluster.PluginState do
   field(:PLUGIN_DISABLED, 2)
 end
 
+defmodule Spiredb.Cluster.InternalMutationType do
+  @moduledoc false
+
+  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.EnumDescriptorProto{
+      name: "InternalMutationType",
+      value: [
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "INTERNAL_MUTATION_PUT",
+          number: 0,
+          options: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "INTERNAL_MUTATION_DELETE",
+          number: 1,
+          options: nil,
+          __unknown_fields__: []
+        }
+      ],
+      options: nil,
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:INTERNAL_MUTATION_PUT, 0)
+  field(:INTERNAL_MUTATION_DELETE, 1)
+end
+
 defmodule Spiredb.Cluster.GetTimestampRequest do
   @moduledoc false
 
@@ -3747,6 +3781,681 @@ defmodule Spiredb.Cluster.ReloadPluginRequest do
   field(:name, 1, type: :string)
 end
 
+defmodule Spiredb.Cluster.AsyncPrewriteRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "AsyncPrewriteRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "mutations",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_REPEATED,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.InternalMutation",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "mutations",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "primary_key",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "primaryKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "secondary_keys",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_REPEATED,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "secondaryKeys",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_ts",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "startTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "min_commit_ts",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "minCommitTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "lock_ttl",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "lockTtl",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "txn_id",
+          extendee: nil,
+          number: 7,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "txnId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:mutations, 1, repeated: true, type: Spiredb.Cluster.InternalMutation)
+  field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
+  field(:secondary_keys, 3, repeated: true, type: :bytes, json_name: "secondaryKeys")
+  field(:start_ts, 4, type: :uint64, json_name: "startTs")
+  field(:min_commit_ts, 5, type: :uint64, json_name: "minCommitTs")
+  field(:lock_ttl, 6, type: :uint64, json_name: "lockTtl")
+  field(:txn_id, 7, type: :bytes, json_name: "txnId")
+end
+
+defmodule Spiredb.Cluster.InternalMutation do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "InternalMutation",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "type",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_ENUM,
+          type_name: ".spiredb.cluster.InternalMutationType",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "type",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "key",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "key",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "value",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "value",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:type, 1, type: Spiredb.Cluster.InternalMutationType, enum: true)
+  field(:key, 2, type: :bytes)
+  field(:value, 3, type: :bytes)
+end
+
+defmodule Spiredb.Cluster.AsyncPrewriteResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "AsyncPrewriteResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "success",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "success",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "errors",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_REPEATED,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.InternalKeyError",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "errors",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "actual_min_commit_ts",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "actualMinCommitTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:success, 1, type: :bool)
+  field(:errors, 2, repeated: true, type: Spiredb.Cluster.InternalKeyError)
+  field(:actual_min_commit_ts, 3, type: :uint64, json_name: "actualMinCommitTs")
+end
+
+defmodule Spiredb.Cluster.InternalKeyError do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "InternalKeyError",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "key",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "key",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "error",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_STRING,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "error",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "lock_info",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.InternalLockInfo",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "lockInfo",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:key, 1, type: :bytes)
+  field(:error, 2, type: :string)
+  field(:lock_info, 3, type: Spiredb.Cluster.InternalLockInfo, json_name: "lockInfo")
+end
+
+defmodule Spiredb.Cluster.InternalLockInfo do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "InternalLockInfo",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "primary_key",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "primaryKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_ts",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "startTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "ttl",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "ttl",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:ttl, 3, type: :uint64)
+end
+
+defmodule Spiredb.Cluster.CheckSecondaryLocksRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "CheckSecondaryLocksRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "primary_key",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "primaryKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_ts",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "startTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "secondary_keys",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_REPEATED,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "secondaryKeys",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:secondary_keys, 3, repeated: true, type: :bytes, json_name: "secondaryKeys")
+end
+
+defmodule Spiredb.Cluster.CheckSecondaryLocksResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "CheckSecondaryLocksResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "statuses",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_REPEATED,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.cluster.SecondaryLockStatus",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "statuses",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:statuses, 1, repeated: true, type: Spiredb.Cluster.SecondaryLockStatus)
+end
+
+defmodule Spiredb.Cluster.SecondaryLockStatus do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "SecondaryLockStatus",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "key",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "key",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "locked",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "locked",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "committed",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "committed",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "commit_ts",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "commitTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:key, 1, type: :bytes)
+  field(:locked, 2, type: :bool)
+  field(:committed, 3, type: :bool)
+  field(:commit_ts, 4, type: :uint64, json_name: "commitTs")
+end
+
+defmodule Spiredb.Cluster.InternalResolveLockRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "InternalResolveLockRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "key",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "key",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_ts",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "startTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "commit_ts",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "commitTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:key, 1, type: :bytes)
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:commit_ts, 3, type: :uint64, json_name: "commitTs")
+end
+
 defmodule Spiredb.Cluster.Empty do
   @moduledoc false
 
@@ -4080,4 +4789,66 @@ defmodule Spiredb.Cluster.PluginService.Stub do
   @moduledoc false
 
   use GRPC.Stub, service: Spiredb.Cluster.PluginService.Service
+end
+
+defmodule Spiredb.Cluster.InternalTransactionService.Service do
+  @moduledoc false
+
+  use GRPC.Service,
+    name: "spiredb.cluster.InternalTransactionService",
+    protoc_gen_elixir_version: "0.15.0"
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.ServiceDescriptorProto{
+      name: "InternalTransactionService",
+      method: [
+        %Google.Protobuf.MethodDescriptorProto{
+          name: "AsyncPrewrite",
+          input_type: ".spiredb.cluster.AsyncPrewriteRequest",
+          output_type: ".spiredb.cluster.AsyncPrewriteResponse",
+          options: nil,
+          client_streaming: false,
+          server_streaming: false,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.MethodDescriptorProto{
+          name: "CheckSecondaryLocks",
+          input_type: ".spiredb.cluster.CheckSecondaryLocksRequest",
+          output_type: ".spiredb.cluster.CheckSecondaryLocksResponse",
+          options: nil,
+          client_streaming: false,
+          server_streaming: false,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.MethodDescriptorProto{
+          name: "ResolveLock",
+          input_type: ".spiredb.cluster.InternalResolveLockRequest",
+          output_type: ".spiredb.cluster.Empty",
+          options: nil,
+          client_streaming: false,
+          server_streaming: false,
+          __unknown_fields__: []
+        }
+      ],
+      options: nil,
+      __unknown_fields__: []
+    }
+  end
+
+  rpc(:AsyncPrewrite, Spiredb.Cluster.AsyncPrewriteRequest, Spiredb.Cluster.AsyncPrewriteResponse)
+
+  rpc(
+    :CheckSecondaryLocks,
+    Spiredb.Cluster.CheckSecondaryLocksRequest,
+    Spiredb.Cluster.CheckSecondaryLocksResponse
+  )
+
+  rpc(:ResolveLock, Spiredb.Cluster.InternalResolveLockRequest, Spiredb.Cluster.Empty)
+end
+
+defmodule Spiredb.Cluster.InternalTransactionService.Stub do
+  @moduledoc false
+
+  use GRPC.Stub, service: Spiredb.Cluster.InternalTransactionService.Service
 end

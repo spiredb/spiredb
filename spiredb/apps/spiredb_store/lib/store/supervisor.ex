@@ -14,6 +14,9 @@ defmodule Store.Supervisor do
     db_path = Application.get_env(:spiredb_store, :rocksdb_path, "/var/lib/spiredb/data")
 
     children = [
+      # Registry for region-level processes (ReadTsTracker, etc)
+      {Registry, keys: :unique, name: Store.Region.Registry},
+
       # KV Engine (must start before Server)
       {Store.KV.Engine, [path: db_path, name: Store.KV.Engine]},
 
@@ -26,8 +29,20 @@ defmodule Store.Supervisor do
       # Vector Index (for FT.* commands)
       {Store.VectorIndex, []},
 
+      # Transaction back-pressure (must start before Manager)
+      {Store.Transaction.BackPressure, []},
+
+      # Transaction metrics handler (attaches telemetry handlers)
+      {Store.Transaction.MetricsHandler, []},
+
+      # Lock Wait Queue (for distributed transaction deadlock detection)
+      {Store.Transaction.LockWaitQueue, []},
+
       # Transaction Manager (for MULTI/EXEC)
       {Store.Transaction.Manager, []},
+
+      # Transaction Reaper (timeout cleanup, orphaned lock cleanup)
+      {Store.Transaction.Reaper, []},
 
       # CDC Change Stream (for realtime change capture)
       {Store.ChangeStream, []},

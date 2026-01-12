@@ -4,6 +4,11 @@ defmodule Store.Transaction.Manager do
 
   Tracks active transactions per connection and provides
   the coordination for Percolator-style 2PC.
+
+  Integrates:
+  - SSIConflictDetector for serializable isolation
+  - AsyncCommitCoordinator for 1-RTT cross-store commits
+  - LockWaitQueue for lock conflict handling
   """
 
   use GenServer
@@ -11,6 +16,8 @@ defmodule Store.Transaction.Manager do
   require Logger
   alias Store.Transaction
   alias Store.Transaction.Executor
+  alias Store.Transaction.SSIConflictDetector
+  alias Store.Transaction.AsyncCommitCoordinator
 
   defstruct [
     # txn_id -> Transaction
@@ -94,6 +101,10 @@ defmodule Store.Transaction.Manager do
       {:ok, start_ts} ->
         txn = Transaction.new(start_ts, opts)
         new_state = %{state | transactions: Map.put(state.transactions, txn.id, txn)}
+
+        # Register with SSI for serializable transactions
+        SSIConflictDetector.register_transaction(txn)
+
         Logger.debug("Transaction #{txn.id} started at ts=#{start_ts}")
         {:reply, {:ok, txn.id}, new_state}
 
@@ -109,6 +120,10 @@ defmodule Store.Transaction.Manager do
       # Record in read set for conflict detection
       updated_txn = Transaction.record_read(txn, key)
       new_state = update_txn(state, updated_txn)
+
+      # Track read for SSI
+      SSIConflictDetector.record_read(txn, key, txn.start_ts)
+
       {:reply, {:ok, value}, new_state}
     else
       {:error, :locked, lock} ->
@@ -128,6 +143,10 @@ defmodule Store.Transaction.Manager do
         |> Transaction.set_primary(key)
 
       new_state = update_txn(state, updated_txn)
+
+      # Track write for SSI
+      SSIConflictDetector.record_write(txn, key)
+
       {:reply, :ok, new_state}
     else
       {:error, reason} -> {:reply, {:error, reason}, state}
@@ -143,6 +162,10 @@ defmodule Store.Transaction.Manager do
         |> Transaction.set_primary(key)
 
       new_state = update_txn(state, updated_txn)
+
+      # Track write for SSI
+      SSIConflictDetector.record_write(txn, key)
+
       {:reply, :ok, new_state}
     else
       {:error, reason} -> {:reply, {:error, reason}, state}
@@ -173,28 +196,45 @@ defmodule Store.Transaction.Manager do
 
   @impl true
   def handle_call({:commit, txn_id}, _from, state) do
-    with {:ok, txn} <- get_txn(state, txn_id) do
-      case Executor.commit(txn) do
+    with {:ok, txn} <- get_txn(state, txn_id),
+         :ok <- SSIConflictDetector.validate_commit(txn) do
+      # Choose commit strategy based on transaction characteristics
+      result = commit_transaction(txn)
+
+      case result do
         {:ok, commit_ts} ->
-          # Remove transaction from active set
+          # Cleanup SSI tracking
+          SSIConflictDetector.cleanup_transaction(txn_id)
           new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
           Logger.debug("Transaction #{txn_id} committed at ts=#{commit_ts}")
           {:reply, {:ok, commit_ts}, new_state}
 
         {:error, reason} ->
           # Transaction failed, clean up
+          SSIConflictDetector.cleanup_transaction(txn_id)
           Task.start(fn -> Executor.cleanup(txn) end)
           new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
           {:reply, {:error, reason}, new_state}
       end
     else
-      {:error, reason} -> {:reply, {:error, reason}, state}
+      {:error, {:serialization_failure, _} = reason} ->
+        # SSI validation failed
+        with {:ok, txn} <- get_txn(state, txn_id) do
+          SSIConflictDetector.cleanup_transaction(txn_id)
+          Task.start(fn -> Executor.cleanup(txn) end)
+          new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
+          {:reply, {:error, reason}, new_state}
+        end
+
+      {:error, reason} ->
+        {:reply, {:error, reason}, state}
     end
   end
 
   @impl true
   def handle_call({:rollback, txn_id}, _from, state) do
     with {:ok, txn} <- get_txn(state, txn_id) do
+      SSIConflictDetector.cleanup_transaction(txn_id)
       Task.start(fn -> Executor.cleanup(txn) end)
       new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
       Logger.debug("Transaction #{txn_id} rolled back")
@@ -205,6 +245,29 @@ defmodule Store.Transaction.Manager do
   end
 
   # Private helpers
+
+  defp commit_transaction(txn) do
+    key_count = map_size(txn.write_buffer)
+
+    cond do
+      key_count == 0 ->
+        # Empty transaction
+        {:ok, txn.start_ts}
+
+      key_count > 1 and use_async_commit?() ->
+        # Multi-key transaction: use async commit for lower latency
+        AsyncCommitCoordinator.commit(txn)
+
+      true ->
+        # Standard 2PC
+        Executor.commit(txn)
+    end
+  end
+
+  defp use_async_commit? do
+    # Can be configured via application env
+    Application.get_env(:spiredb_store, :use_async_commit, true)
+  end
 
   defp get_txn(state, txn_id) do
     case Map.get(state.transactions, txn_id) do

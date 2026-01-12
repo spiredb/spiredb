@@ -421,9 +421,13 @@ defmodule Store.Server do
         fn region_id ->
           case start_region_with_retry(region_id, 10) do
             {:ok, pid} ->
+              # Start ReadTsTracker for this region
+              start_read_ts_tracker(region_id)
               {:ok, region_id, pid}
 
             {:error, {:already_started, pid}} ->
+              # Ensure ReadTsTracker exists for this region
+              start_read_ts_tracker(region_id)
               {:ok, region_id, pid}
 
             {:error, reason} ->
@@ -493,6 +497,25 @@ defmodule Store.Server do
     # Start Raft process for this region
     nodes = [{region_id, Node.self()}]
     Raft.start_server(region_id, nodes)
+  end
+
+  defp start_read_ts_tracker(region_id) do
+    # Start ReadTsTracker for this region to track max_read_ts
+    # Used by AsyncCommitCoordinator for calculating commit timestamps
+    case Store.Region.ReadTsTracker.start_link(region_id) do
+      {:ok, _pid} ->
+        :ok
+
+      {:error, {:already_started, _pid}} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning(
+          "Failed to start ReadTsTracker for region #{region_id}: #{inspect(reason)}"
+        )
+
+        :ok
+    end
   end
 
   defp find_and_execute(state, key, operation, args) do
