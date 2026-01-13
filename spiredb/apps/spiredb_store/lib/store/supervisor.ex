@@ -29,6 +29,9 @@ defmodule Store.Supervisor do
       # Vector Index (for FT.* commands)
       {Store.VectorIndex, []},
 
+      # gRPC Connection Pool (for internal transaction client)
+      {Store.Transaction.ConnectionPool, []},
+
       # Transaction back-pressure (must start before Manager)
       {Store.Transaction.BackPressure, []},
 

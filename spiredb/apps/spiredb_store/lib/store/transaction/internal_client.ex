@@ -3,10 +3,12 @@ defmodule Store.Transaction.InternalClient do
   Client for InternalTransactionService gRPC calls to remote stores.
 
   Used by AsyncCommitCoordinator to perform cross-node operations.
+  Uses ConnectionPool for connection reuse.
   """
 
   require Logger
   alias Spiredb.Cluster.InternalTransactionService.Stub
+  alias Store.Transaction.ConnectionPool
 
   @default_timeout 10_000
 
@@ -16,18 +18,19 @@ defmodule Store.Transaction.InternalClient do
   def async_prewrite(store_address, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, @default_timeout)
 
-    with {:ok, channel} <- connect(store_address),
-         {:ok, response} <- Stub.async_prewrite(channel, request, timeout: timeout) do
-      GRPC.Stub.disconnect(channel)
-      {:ok, response}
-    else
-      {:error, reason} ->
-        Logger.warning(
-          "InternalClient.async_prewrite failed for #{store_address}: #{inspect(reason)}"
-        )
+    ConnectionPool.with_connection(store_address, fn channel ->
+      case Stub.async_prewrite(channel, request, timeout: timeout) do
+        {:ok, response} ->
+          {:ok, response}
 
-        {:error, reason}
-    end
+        {:error, reason} ->
+          Logger.warning(
+            "InternalClient.async_prewrite failed for #{store_address}: #{inspect(reason)}"
+          )
+
+          {:error, reason}
+      end
+    end)
   end
 
   @doc """
@@ -36,15 +39,16 @@ defmodule Store.Transaction.InternalClient do
   def check_secondary_locks(store_address, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, @default_timeout)
 
-    with {:ok, channel} <- connect(store_address),
-         {:ok, response} <- Stub.check_secondary_locks(channel, request, timeout: timeout) do
-      GRPC.Stub.disconnect(channel)
-      {:ok, response}
-    else
-      {:error, reason} ->
-        Logger.warning("InternalClient.check_secondary_locks failed: #{inspect(reason)}")
-        {:error, reason}
-    end
+    ConnectionPool.with_connection(store_address, fn channel ->
+      case Stub.check_secondary_locks(channel, request, timeout: timeout) do
+        {:ok, response} ->
+          {:ok, response}
+
+        {:error, reason} ->
+          Logger.warning("InternalClient.check_secondary_locks failed: #{inspect(reason)}")
+          {:error, reason}
+      end
+    end)
   end
 
   @doc """
@@ -53,15 +57,16 @@ defmodule Store.Transaction.InternalClient do
   def resolve_lock(store_address, request, opts \\ []) do
     timeout = Keyword.get(opts, :timeout, @default_timeout)
 
-    with {:ok, channel} <- connect(store_address),
-         {:ok, _response} <- Stub.resolve_lock(channel, request, timeout: timeout) do
-      GRPC.Stub.disconnect(channel)
-      :ok
-    else
-      {:error, reason} ->
-        Logger.warning("InternalClient.resolve_lock failed: #{inspect(reason)}")
-        {:error, reason}
-    end
+    ConnectionPool.with_connection(store_address, fn channel ->
+      case Stub.resolve_lock(channel, request, timeout: timeout) do
+        {:ok, _response} ->
+          :ok
+
+        {:error, reason} ->
+          Logger.warning("InternalClient.resolve_lock failed: #{inspect(reason)}")
+          {:error, reason}
+      end
+    end)
   end
 
   @doc """
@@ -86,11 +91,5 @@ defmodule Store.Transaction.InternalClient do
 
   def get_store_address(store_node) when is_binary(store_node) do
     store_node
-  end
-
-  ## Private
-
-  defp connect(address) do
-    GRPC.Stub.connect(address, interceptors: [])
   end
 end

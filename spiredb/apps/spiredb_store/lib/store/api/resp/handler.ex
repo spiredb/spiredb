@@ -109,7 +109,8 @@ defmodule Store.API.RESP.Handler do
   end
 
   # Simple commands that can be executed inline without Task spawn
-  @inline_commands ~w(PING ECHO COMMAND INFO)
+  # These are fast enough that the Task overhead would be significant
+  @inline_commands ~w(PING ECHO COMMAND INFO GET SET DEL EXISTS INCR DECR SETNX TTL PTTL TYPE DBSIZE)
 
   defp execute_command_with_timeout([cmd | args]) when is_binary(cmd) do
     normalized_cmd = String.upcase(cmd)

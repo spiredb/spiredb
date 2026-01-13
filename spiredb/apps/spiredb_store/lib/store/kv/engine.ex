@@ -176,8 +176,11 @@ defmodule Store.KV.Engine do
       max_background_compactions: config.max_background_compactions,
       max_background_flushes: config.max_background_flushes,
 
-      # WAL settings
+      # WAL settings - optimized for write performance
       max_total_wal_size: config.max_total_wal_size,
+      wal_recovery_mode: :point_in_time_recovery,
+      recycle_log_file_num: config.recycle_log_file_num,
+      wal_bytes_per_sync: config.wal_bytes_per_sync,
 
       # Rate limiting for compaction I/O
       rate_limiter: rate_limiter,
@@ -282,9 +285,14 @@ defmodule Store.KV.Engine do
       max_background_flushes:
         Application.get_env(:spiredb_store, :rocksdb_max_background_flushes, 2),
 
-      # WAL settings - 512MB max total WAL size
+      # WAL settings - optimized for write performance
       max_total_wal_size:
         Application.get_env(:spiredb_store, :rocksdb_max_total_wal_size, 512 * 1024 * 1024),
+      # Recycle WAL files to avoid allocation overhead (0 = disabled)
+      recycle_log_file_num: Application.get_env(:spiredb_store, :rocksdb_recycle_log_file_num, 4),
+      # Sync WAL every N bytes (0 = OS handles it)
+      wal_bytes_per_sync:
+        Application.get_env(:spiredb_store, :rocksdb_wal_bytes_per_sync, 512 * 1024),
 
       # Rate limiter - 100MB/s default to prevent I/O storms
       rate_limit_bytes_per_sec:
