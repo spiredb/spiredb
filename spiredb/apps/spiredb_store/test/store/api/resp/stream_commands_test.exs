@@ -3,14 +3,18 @@ defmodule Store.API.RESP.StreamCommandsTest do
 
   alias Store.API.RESP.StreamCommands
 
+  alias Store.Test.RocksDBHelper
+
   @test_stream "test_resp_stream_#{:erlang.unique_integer([:positive])}"
 
   setup do
-    # Clean up test stream
-    Store.Stream.delete_stream(@test_stream)
+    # Setup isolated RocksDB for this test file
+    {:ok, _db, _cfs} =
+      RocksDBHelper.setup_rocksdb("stream_commands_test_#{:erlang.unique_integer([:positive])}")
 
     on_exit(fn ->
-      Store.Stream.delete_stream(@test_stream)
+      # Cleanup is handled by RocksDBHelper but we can ensure stream is gone
+      :ok
     end)
 
     :ok
