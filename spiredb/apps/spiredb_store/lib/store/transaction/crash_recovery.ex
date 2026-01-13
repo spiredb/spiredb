@@ -15,10 +15,10 @@ defmodule Store.Transaction.CrashRecovery do
   Run crash recovery on startup.
   Scans txn_pending CF and completes or rolls back pending transactions.
   """
-  def recover_pending_commits do
+  def recover_pending_commits(store_ref) do
     Logger.info("CrashRecovery: scanning for pending commits...")
 
-    case get_pending_commits() do
+    case get_pending_commits(store_ref) do
       {:ok, pending} when map_size(pending) == 0 ->
         Logger.info("CrashRecovery: no pending commits found")
         :ok
@@ -27,7 +27,7 @@ defmodule Store.Transaction.CrashRecovery do
         Logger.info("CrashRecovery: found #{map_size(pending)} pending commits")
 
         Enum.each(pending, fn {txn_id, entry} ->
-          recover_transaction(txn_id, entry)
+          recover_transaction(store_ref, txn_id, entry)
         end)
 
         Logger.info("CrashRecovery: completed")
@@ -43,8 +43,8 @@ defmodule Store.Transaction.CrashRecovery do
   Write a pending commit record before committing.
   Used to track in-flight commits for crash recovery.
   """
-  def write_pending_commit(txn_id, start_ts, commit_ts, keys) do
-    case {get_db_ref(), get_pending_cf()} do
+  def write_pending_commit(store_ref, txn_id, start_ts, commit_ts, keys) do
+    case {get_db_ref(store_ref), get_pending_cf(store_ref)} do
       {nil, _} ->
         :ok
 
@@ -61,8 +61,8 @@ defmodule Store.Transaction.CrashRecovery do
   @doc """
   Remove pending commit record after successful commit.
   """
-  def clear_pending_commit(txn_id) do
-    case {get_db_ref(), get_pending_cf()} do
+  def clear_pending_commit(store_ref, txn_id) do
+    case {get_db_ref(store_ref), get_pending_cf(store_ref)} do
       {nil, _} ->
         :ok
 
@@ -77,8 +77,8 @@ defmodule Store.Transaction.CrashRecovery do
 
   ## Private
 
-  defp get_pending_commits do
-    case {get_db_ref(), get_pending_cf()} do
+  defp get_pending_commits(store_ref) do
+    case {get_db_ref(store_ref), get_pending_cf(store_ref)} do
       {nil, _} -> {:ok, %{}}
       {_, nil} -> {:ok, %{}}
       {db_ref, cf} -> scan_pending_cf(db_ref, cf)
@@ -134,13 +134,13 @@ defmodule Store.Transaction.CrashRecovery do
     end
   end
 
-  defp recover_transaction(txn_id, entry) do
+  defp recover_transaction(store_ref, txn_id, entry) do
     Logger.info("CrashRecovery: recovering transaction #{txn_id}")
 
     # Check if all keys are committed
     all_committed =
       Enum.all?(entry.keys, fn key ->
-        case Executor.get_commit_record(key, entry.start_ts) do
+        case Executor.get_commit_record(store_ref, key, entry.start_ts) do
           {:ok, _} -> true
           {:error, :not_found} -> false
         end
@@ -149,39 +149,39 @@ defmodule Store.Transaction.CrashRecovery do
     if all_committed do
       # Already fully committed - just cleanup locks and pending record
       Logger.info("CrashRecovery: txn #{txn_id} already committed, cleaning up")
-      cleanup_locks(entry)
-      clear_pending_commit(txn_id)
+      cleanup_locks(store_ref, entry)
+      clear_pending_commit(store_ref, txn_id)
     else
       # Need to complete the commit
       Logger.info("CrashRecovery: completing commit for txn #{txn_id}")
-      complete_commit(txn_id, entry)
+      complete_commit(store_ref, txn_id, entry)
     end
   end
 
-  defp complete_commit(txn_id, entry) do
+  defp complete_commit(store_ref, txn_id, entry) do
     # Write commit records for all keys
     Enum.each(entry.keys, fn key ->
-      case Executor.get_commit_record(key, entry.start_ts) do
+      case Executor.get_commit_record(store_ref, key, entry.start_ts) do
         {:ok, _} ->
           # Already committed
           :ok
 
         {:error, :not_found} ->
           # Write commit record
-          Executor.write_commit_record(key, entry.start_ts, entry.commit_ts)
+          Executor.write_commit_record(store_ref, key, entry.start_ts, entry.commit_ts)
       end
     end)
 
     # Cleanup locks
-    cleanup_locks(entry)
+    cleanup_locks(store_ref, entry)
 
     # Clear pending record
-    clear_pending_commit(txn_id)
+    clear_pending_commit(store_ref, txn_id)
   end
 
-  defp cleanup_locks(entry) do
+  defp cleanup_locks(store_ref, entry) do
     Enum.each(entry.keys, fn key ->
-      Executor.delete_lock(key, entry.start_ts)
+      Executor.delete_lock(store_ref, key, entry.start_ts)
     end)
   end
 
@@ -229,20 +229,9 @@ defmodule Store.Transaction.CrashRecovery do
 
   # RocksDB helpers
 
-  defp get_db_ref do
-    try do
-      :persistent_term.get(:spiredb_rocksdb_ref)
-    rescue
-      _ -> nil
-    end
-  end
+  defp get_db_ref(%{db: db}), do: db
+  defp get_db_ref(_), do: nil
 
-  defp get_pending_cf do
-    try do
-      cf_map = :persistent_term.get(:spiredb_rocksdb_cf_map, %{})
-      Map.get(cf_map, @pending_cf)
-    rescue
-      _ -> nil
-    end
-  end
+  defp get_pending_cf(%{cfs: cfs}), do: Map.get(cfs, @pending_cf)
+  defp get_pending_cf(_), do: nil
 end

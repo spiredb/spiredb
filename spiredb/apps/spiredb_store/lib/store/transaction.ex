@@ -37,6 +37,7 @@ defmodule Store.Transaction do
     :primary_key,
     write_buffer: %{},
     read_set: MapSet.new(),
+    write_set: MapSet.new(),
     locks: MapSet.new(),
     isolation: :repeatable_read,
     lock_type: :optimistic,
@@ -63,14 +64,18 @@ defmodule Store.Transaction do
   Buffer a write operation.
   """
   def put(txn, key, value) do
-    %{txn | write_buffer: Map.put(txn.write_buffer, key, {:put, value})}
+    txn
+    |> add_to_write_set(key)
+    |> Map.update!(:write_buffer, &Map.put(&1, key, {:put, value}))
   end
 
   @doc """
   Buffer a delete operation.
   """
   def delete(txn, key) do
-    %{txn | write_buffer: Map.put(txn.write_buffer, key, :delete)}
+    txn
+    |> add_to_write_set(key)
+    |> Map.update!(:write_buffer, &Map.put(&1, key, :delete))
   end
 
   @doc """
@@ -131,6 +136,20 @@ defmodule Store.Transaction do
     txn.write_buffer
     |> Map.keys()
     |> Enum.reject(&(&1 == txn.primary_key))
+  end
+
+  @doc """
+  Add a key to the transaction's read set (for Serializable isolation).
+  """
+  def add_to_read_set(txn, key) do
+    %__MODULE__{txn | read_set: MapSet.put(txn.read_set, key)}
+  end
+
+  @doc """
+  Add a key to the transaction's write set.
+  """
+  def add_to_write_set(txn, key) do
+    %__MODULE__{txn | write_set: MapSet.put(txn.write_set, key)}
   end
 
   defp generate_txn_id do

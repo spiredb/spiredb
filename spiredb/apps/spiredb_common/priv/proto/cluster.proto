@@ -39,6 +39,10 @@ service SchemaService {
   rpc DropIndex(DropIndexRequest) returns (Empty);
   rpc GetIndex(GetIndexRequest) returns (IndexSchema);
   rpc ListIndexes(ListIndexesRequest) returns (IndexList);
+
+  // Statistics operations
+  rpc GetTableStats(GetTableStatsRequest) returns (TableStats);
+  rpc UpdateTableStats(UpdateTableStatsRequest) returns (Empty);
 }
 
 // Column types (Arrow/DataFusion compatible)
@@ -150,6 +154,30 @@ message ListIndexesRequest {
 
 message IndexList {
   repeated IndexSchema indexes = 1;
+}
+
+message GetTableStatsRequest {
+  string table_name = 1;
+}
+
+message TableStats {
+  uint64 row_count = 1;
+  uint64 size_bytes = 2;
+  uint64 last_updated = 3;
+  map<string, ColumnStats> column_stats = 4;
+}
+
+message ColumnStats {
+  uint64 distinct_count = 1;   // For cardinality estimation
+  bytes min_value = 2;
+  bytes max_value = 3;
+  uint64 null_count = 4;
+}
+
+message UpdateTableStatsRequest {
+  string table_name = 1;
+  uint64 row_count = 2;
+  uint64 size_bytes = 3;
 }
 
 // =============================================================================

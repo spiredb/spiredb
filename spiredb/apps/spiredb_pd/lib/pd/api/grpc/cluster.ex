@@ -68,9 +68,26 @@ defmodule PD.API.GRPC.Cluster do
   def get_table_regions(request, _stream) do
     Logger.debug("GetTableRegions", table: request.table_name)
 
-    case Server.get_all_regions() do
-      {:ok, regions} ->
+    # 1. Get region IDs from Schema Registry
+    case PD.Schema.Registry.get_table_regions(request.table_name) do
+      {:ok, region_ids} ->
+        # 2. Fetch full region details from PD Server
+        regions =
+          region_ids
+          |> Enum.map(fn id ->
+            case Server.get_region_by_id(id) do
+              {:ok, region} -> region
+              _ -> nil
+            end
+          end)
+          |> Enum.reject(&is_nil/1)
+
         %RegionList{regions: Enum.map(regions, &region_to_proto/1)}
+
+      {:error, :not_found} ->
+        # Return empty list if table not found (or raise not found?)
+        # SpireSQL expects empty list if no regions yet
+        %RegionList{regions: []}
 
       {:error, reason} ->
         Logger.error("GetTableRegions failed", reason: inspect(reason))

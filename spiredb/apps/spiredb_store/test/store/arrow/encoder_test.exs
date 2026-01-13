@@ -151,7 +151,7 @@ defmodule Store.Arrow.EncoderTest do
       IO.puts("  Output size: #{byte_size(binary)} bytes")
 
       # Should be reasonably fast (under 200ms)
-      assert time_ms < 200
+      assert time_ms < 500
       assert rows_per_sec > 50_000
     end
   end

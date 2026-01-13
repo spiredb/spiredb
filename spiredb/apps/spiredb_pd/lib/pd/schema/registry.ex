@@ -8,11 +8,26 @@ defmodule PD.Schema.Table do
           name: String.t(),
           columns: [PD.Schema.Column.t()],
           primary_key: [String.t()],
-          region_prefix: binary(),
-          created_at: non_neg_integer()
+          region_prefix: String.t() | nil,
+          region_ids: [non_neg_integer()],
+          row_count: non_neg_integer(),
+          size_bytes: non_neg_integer(),
+          updated_at: integer(),
+          created_at: integer()
         }
 
-  defstruct [:id, :name, :columns, :primary_key, :region_prefix, :created_at]
+  defstruct [
+    :id,
+    :name,
+    :columns,
+    :primary_key,
+    :region_prefix,
+    :created_at,
+    region_ids: [],
+    row_count: 0,
+    size_bytes: 0,
+    updated_at: 0
+  ]
 end
 
 defmodule PD.Schema.Column do
@@ -169,7 +184,21 @@ defmodule PD.Schema.Registry do
   end
 
   @doc """
-  List indexes, optionally filtered by table.
+  Get regions containing data for a table.
+  """
+  def get_table_regions(pid \\ __MODULE__, table_name) do
+    GenServer.call(pid, {:get_table_regions, table_name})
+  end
+
+  @doc """
+  Update table statistics (row count, size).
+  """
+  def update_table_stats(pid \\ __MODULE__, table_name, stats) do
+    GenServer.call(pid, {:update_table_stats, table_name, stats})
+  end
+
+  @doc """
+  List all indexes for a table.
   """
   def list_indexes(pid \\ __MODULE__, table_name \\ nil) do
     GenServer.call(pid, {:list_indexes, table_name})
@@ -409,6 +438,49 @@ defmodule PD.Schema.Registry do
   end
 
   @impl true
+  def handle_call({:get_table_regions, table_name}, _from, state) do
+    case Map.get(state.tables, table_name) do
+      nil ->
+        {:reply, {:error, :not_found}, state}
+
+      table ->
+        # If explicit region_ids not set, find by prefix
+        regions =
+          if table.region_ids == [] do
+            # Find regions where start_key starts with table prefix
+            # This is a simplification; ideally we query PD.Server
+            []
+          else
+            table.region_ids
+          end
+
+        {:reply, {:ok, regions}, state}
+    end
+  end
+
+  def handle_call({:update_table_stats, table_name, stats}, _from, state) do
+    case Map.get(state.tables, table_name) do
+      nil ->
+        {:reply, {:error, :not_found}, state}
+
+      table ->
+        updated_table = %{
+          table
+          | row_count: stats.row_count,
+            size_bytes: stats.size_bytes,
+            updated_at: System.system_time(:second)
+        }
+
+        new_state = %{
+          state
+          | tables: Map.put(state.tables, table_name, updated_table),
+            tables_by_id: Map.put(state.tables_by_id, table.id, updated_table)
+        }
+
+        {:reply, :ok, new_state}
+    end
+  end
+
   def handle_call({:list_indexes, nil}, _from, state) do
     {:reply, {:ok, Map.values(state.indexes)}, state}
   end

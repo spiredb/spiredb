@@ -53,16 +53,16 @@ defmodule Store.Transaction.SSIConflictDetector do
   Record a read operation for SSI tracking.
   Creates SIREAD lock on the key.
   """
-  def record_read(%Transaction{isolation: :serializable} = txn, key, read_ts) do
+  def record_read(store_ref, %Transaction{isolation: :serializable} = txn, key, read_ts) do
     init()
     # Insert SIREAD lock: {key, txn_id, start_ts, read_ts}
     :ets.insert(@siread_table, {key, txn.id, txn.start_ts, read_ts})
 
     # Check for rw-conflict: Did a concurrent txn write to this key?
-    check_write_before_our_read(txn, key)
+    check_write_before_our_read(store_ref, txn, key)
   end
 
-  def record_read(_txn, _key, _read_ts), do: :ok
+  def record_read(_store_ref, _txn, _key, _read_ts), do: :ok
 
   @doc """
   Record a write operation for SSI tracking.
@@ -81,16 +81,16 @@ defmodule Store.Transaction.SSIConflictDetector do
 
   Returns :ok or {:error, {:serialization_failure, reason}}
   """
-  def validate_commit(%Transaction{isolation: :serializable} = txn) do
+  def validate_commit(store_ref, %Transaction{isolation: :serializable} = txn) do
     Logger.debug("SSI validating commit for txn #{txn.id}")
 
-    with :ok <- check_read_set_modified(txn),
+    with :ok <- check_read_set_modified(store_ref, txn),
          :ok <- check_dangerous_structure(txn) do
       :ok
     end
   end
 
-  def validate_commit(_txn), do: :ok
+  def validate_commit(_store_ref, _txn), do: :ok
 
   @doc """
   Clean up SSI tracking for committed/aborted transaction.
@@ -101,9 +101,14 @@ defmodule Store.Transaction.SSIConflictDetector do
 
     spawn(fn ->
       Process.sleep(5000)
-      :ets.match_delete(@siread_table, {:_, txn_id, :_, :_})
-      :ets.match_delete(@conflict_table, {:_, txn_id, :_, :_})
-      :ets.match_delete(@conflict_table, {txn_id, :_, :_, :_})
+
+      try do
+        :ets.match_delete(@siread_table, {:_, txn_id, :_, :_})
+        :ets.match_delete(@conflict_table, {:_, txn_id, :_, :_})
+        :ets.match_delete(@conflict_table, {txn_id, :_, :_, :_})
+      rescue
+        ArgumentError -> :ok
+      end
     end)
 
     :ok
@@ -111,8 +116,8 @@ defmodule Store.Transaction.SSIConflictDetector do
 
   ## Private Functions
 
-  defp check_write_before_our_read(txn, key) do
-    case Executor.scan_writes_after(key, txn.start_ts) do
+  defp check_write_before_our_read(store_ref, txn, key) do
+    case Executor.scan_writes_after(store_ref, key, txn.start_ts) do
       {:ok, commits} ->
         writers =
           Enum.filter(commits, fn {_commit_ts, start_ts} ->
@@ -146,10 +151,10 @@ defmodule Store.Transaction.SSIConflictDetector do
     :ok
   end
 
-  defp check_read_set_modified(txn) do
+  defp check_read_set_modified(store_ref, txn) do
     # read_set is a MapSet of keys
     Enum.reduce_while(txn.read_set, :ok, fn key, :ok ->
-      case key_modified_after?(key, txn.start_ts) do
+      case key_modified_after?(store_ref, key, txn.start_ts) do
         false -> {:cont, :ok}
         true -> {:halt, {:error, {:serialization_failure, {:read_conflict, key}}}}
       end
@@ -190,8 +195,8 @@ defmodule Store.Transaction.SSIConflictDetector do
     end)
   end
 
-  defp key_modified_after?(key, ts) do
-    case Executor.get_latest_write(key) do
+  defp key_modified_after?(store_ref, key, ts) do
+    case Executor.get_latest_write(store_ref, key) do
       {:ok, nil} -> false
       {:ok, {commit_ts, _start_ts}} -> commit_ts > ts
       {:error, _} -> false

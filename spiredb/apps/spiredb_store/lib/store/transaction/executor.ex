@@ -26,19 +26,26 @@ defmodule Store.Transaction.Executor do
   2. If locked by another txn, resolve or wait
   3. Find the latest committed version <= start_ts
   """
-  def mvcc_get(key, start_ts) do
+  def mvcc_get(store_ref, key, start_ts) do
+    mvcc_get(store_ref, key, nil, start_ts)
+  end
+
+  @doc """
+  MVCC get: Read a key at a specific timestamp, with transaction context.
+  """
+  def mvcc_get(store_ref, key, txn, start_ts) do
     # Check for existing lock
-    case get_lock(key) do
+    case get_lock(store_ref, key) do
       {:ok, nil} ->
         # No lock, read committed value
-        read_committed_value(key, start_ts)
+        mvcc_read(store_ref, key, txn, start_ts)
 
       {:ok, lock} ->
         # Key is locked, try to resolve
-        case resolve_lock(lock) do
+        case resolve_lock(store_ref, lock) do
           :resolved ->
             # Lock was resolved, retry read
-            read_committed_value(key, start_ts)
+            mvcc_read(store_ref, key, txn, start_ts)
 
           {:wait, _ttl_remaining} ->
             # Lock is still valid, return error
@@ -66,27 +73,27 @@ defmodule Store.Transaction.Executor do
   - Return to client immediately
   - Async: cleanup secondary locks
   """
-  def commit(%Transaction{write_buffer: buffer} = txn) when map_size(buffer) == 0 do
+  def commit(_store_ref, %Transaction{write_buffer: buffer} = txn) when map_size(buffer) == 0 do
     # Empty transaction, nothing to commit
     {:ok, txn.start_ts}
   end
 
-  def commit(%Transaction{} = txn) do
+  def commit(store_ref, %Transaction{} = txn) do
     Logger.debug("Committing transaction #{txn.id} with #{map_size(txn.write_buffer)} mutations")
 
-    with :ok <- prewrite_phase(txn),
-         {:ok, commit_ts} <- commit_phase(txn) do
+    with :ok <- prewrite_phase(store_ref, txn),
+         {:ok, commit_ts} <- commit_phase(store_ref, txn) do
       # Spawn async cleanup of secondary locks
-      spawn_async_cleanup(txn, commit_ts)
+      spawn_async_cleanup(store_ref, txn, commit_ts)
       {:ok, commit_ts}
     else
       {:error, {:prewrite_failed, key, reason}} ->
         Logger.warning("Prewrite failed for key #{inspect(key)}: #{inspect(reason)}")
-        cleanup(txn)
+        cleanup(store_ref, txn)
         {:error, {:conflict, key}}
 
       {:error, reason} ->
-        cleanup(txn)
+        cleanup(store_ref, txn)
         {:error, reason}
     end
   end
@@ -94,12 +101,12 @@ defmodule Store.Transaction.Executor do
   @doc """
   Clean up locks from a rolled back or failed transaction.
   """
-  def cleanup(%Transaction{} = txn) do
+  def cleanup(store_ref, %Transaction{} = txn) do
     Logger.debug("Cleaning up transaction #{txn.id}")
 
     Enum.each(txn.write_buffer, fn {key, _} ->
-      delete_lock(key, txn.start_ts)
-      delete_data(key, txn.start_ts)
+      delete_lock(store_ref, key, txn.start_ts)
+      delete_data(store_ref, key, txn.start_ts)
     end)
 
     :ok
@@ -112,9 +119,9 @@ defmodule Store.Transaction.Executor do
   @doc """
   Prewrite a single mutation (for gRPC).
   """
-  def prewrite_single(key, mutation, request) do
-    with :ok <- check_write_conflict(key, request.start_ts),
-         :ok <- check_lock_conflict(key, request.start_ts) do
+  def prewrite_single(store_ref, key, mutation, request) do
+    with :ok <- check_write_conflict(store_ref, key, request.start_ts),
+         :ok <- check_lock_conflict(store_ref, key, request.start_ts) do
       # Create lock
       lock =
         Lock.new(key, request.primary_key, request.start_ts,
@@ -122,11 +129,11 @@ defmodule Store.Transaction.Executor do
           lock_type: if(request.is_pessimistic, do: :pessimistic, else: :prewrite)
         )
 
-      with :ok <- do_write_lock(key, lock) do
+      with :ok <- do_write_lock(store_ref, key, lock) do
         # Write data
         case mutation.type do
-          :MUTATION_PUT -> write_data(key, {:put, mutation.value}, request.start_ts)
-          :MUTATION_DELETE -> write_data(key, :delete, request.start_ts)
+          :MUTATION_PUT -> write_data(store_ref, key, {:put, mutation.value}, request.start_ts)
+          :MUTATION_DELETE -> write_data(store_ref, key, :delete, request.start_ts)
           _ -> :ok
         end
       end
@@ -136,38 +143,38 @@ defmodule Store.Transaction.Executor do
   @doc """
   Commit primary key (for gRPC).
   """
-  def commit_primary(primary_key, start_ts, commit_ts) do
-    write_commit_record(primary_key, start_ts, commit_ts)
+  def commit_primary(store_ref, primary_key, start_ts, commit_ts) do
+    write_commit_record(store_ref, primary_key, start_ts, commit_ts)
   end
 
   @doc """
   Commit secondary key (for gRPC).
   """
-  def commit_secondary(key, start_ts, commit_ts) do
-    write_commit_record(key, start_ts, commit_ts)
-    delete_lock(key, start_ts)
+  def commit_secondary(store_ref, key, start_ts, commit_ts) do
+    write_commit_record(store_ref, key, start_ts, commit_ts)
+    delete_lock(store_ref, key, start_ts)
     :ok
   end
 
   @doc """
   Rollback a key (for gRPC).
   """
-  def rollback_key(key, start_ts) do
-    delete_lock(key, start_ts)
-    delete_data(key, start_ts)
+  def rollback_key(store_ref, key, start_ts) do
+    delete_lock(store_ref, key, start_ts)
+    delete_data(store_ref, key, start_ts)
     :ok
   end
 
   @doc """
   Check transaction status by primary key (for gRPC).
   """
-  def check_txn_status(primary_key, start_ts) do
-    case get_commit_record(primary_key, start_ts) do
+  def check_txn_status(store_ref, primary_key, start_ts) do
+    case get_commit_record(store_ref, primary_key, start_ts) do
       {:ok, commit_ts} ->
         {:committed, commit_ts}
 
       {:error, :not_found} ->
-        case get_lock(primary_key) do
+        case get_lock(store_ref, primary_key) do
           {:ok, nil} ->
             :rolled_back
 
@@ -186,8 +193,8 @@ defmodule Store.Transaction.Executor do
   @doc """
   Acquire pessimistic lock (for gRPC).
   """
-  def acquire_pessimistic_lock(key, start_ts, _for_update_ts, lock_ttl) do
-    case get_lock(key) do
+  def acquire_pessimistic_lock(store_ref, key, start_ts, _for_update_ts, lock_ttl) do
+    case get_lock(store_ref, key) do
       {:ok, nil} ->
         lock =
           Lock.new(key, key, start_ts,
@@ -195,11 +202,11 @@ defmodule Store.Transaction.Executor do
             lock_type: :pessimistic
           )
 
-        do_write_lock(key, lock)
+        do_write_lock(store_ref, key, lock)
 
       {:ok, lock} ->
         if Lock.expired?(lock) do
-          delete_lock(key, lock.start_ts)
+          delete_lock(store_ref, key, lock.start_ts)
 
           new_lock =
             Lock.new(key, key, start_ts,
@@ -207,7 +214,7 @@ defmodule Store.Transaction.Executor do
               lock_type: :pessimistic
             )
 
-          do_write_lock(key, new_lock)
+          do_write_lock(store_ref, key, new_lock)
         else
           {:error, {:locked_by, lock}}
         end
@@ -224,47 +231,47 @@ defmodule Store.Transaction.Executor do
   @doc """
   Get lock for a key (public API for async commit resolution).
   """
-  def get_lock(key) do
-    get_lock_internal(key)
+  def get_lock(store_ref, key) do
+    get_lock_internal(store_ref, key)
   end
 
   @doc """
   Delete lock for a key (public API for async commit).
   """
-  def delete_lock(key, start_ts) do
-    delete_lock_internal(key, start_ts)
+  def delete_lock(store_ref, key, start_ts) do
+    delete_lock_internal(store_ref, key, start_ts)
   end
 
   @doc """
   Delete data for a key (public API for rollback).
   """
-  def delete_data(key, start_ts) do
-    delete_data_internal(key, start_ts)
+  def delete_data(store_ref, key, start_ts) do
+    delete_data_internal(store_ref, key, start_ts)
   end
 
   @doc """
   Write commit record (public API for async commit).
   """
-  def write_commit_record(key, start_ts, commit_ts) do
-    write_commit_record_internal(key, start_ts, commit_ts)
+  def write_commit_record(store_ref, key, start_ts, commit_ts) do
+    write_commit_record_internal(store_ref, key, start_ts, commit_ts)
   end
 
   @doc """
   Get commit record (public API for async commit resolution).
   """
-  def get_commit_record(key, start_ts) do
-    get_commit_record_internal(key, start_ts)
+  def get_commit_record(store_ref, key, start_ts) do
+    get_commit_record_internal(store_ref, key, start_ts)
   end
 
   @doc """
   Prewrite with a pre-built lock (for async commit).
   Used when lock already contains secondaries list.
   """
-  def prewrite_with_lock(key, operation, lock, start_ts) do
-    with :ok <- check_write_conflict(key, start_ts),
-         :ok <- check_lock_conflict(key, start_ts),
-         :ok <- do_write_lock(key, lock),
-         :ok <- write_data(key, operation, start_ts) do
+  def prewrite_with_lock(store_ref, key, operation, lock, start_ts) do
+    with :ok <- check_write_conflict(store_ref, key, start_ts),
+         :ok <- check_lock_conflict(store_ref, key, start_ts),
+         :ok <- do_write_lock(store_ref, key, lock),
+         :ok <- write_data(store_ref, key, operation, start_ts) do
       :ok
     end
   end
@@ -272,23 +279,15 @@ defmodule Store.Transaction.Executor do
   @doc """
   Write rollback record to prevent late prewrites.
   """
-  def write_rollback_record(key, start_ts) do
+  def write_rollback_record(store_ref, key, start_ts) do
     # Use write CF with special marker
     write_key = Encoder.encode_txn_write_key(key, start_ts)
     # Rollback marker: {start_ts, 0} where 0 indicates rollback
     value = :erlang.term_to_binary({start_ts, 0, :rollback})
 
-    case {get_db_ref(), get_write_cf()} do
+    case {get_db_ref(store_ref), get_write_cf(store_ref)} do
       {nil, _} ->
-        try do
-          :ets.insert(:txn_write, {write_key, value})
-          :ok
-        rescue
-          ArgumentError ->
-            :ets.new(:txn_write, [:named_table, :public, :ordered_set])
-            :ets.insert(:txn_write, {write_key, value})
-            :ok
-        end
+        {:error, :db_not_ready}
 
       {db_ref, cf} when not is_nil(cf) ->
         case :rocksdb.put(db_ref, cf, write_key, value, []) do
@@ -307,46 +306,91 @@ defmodule Store.Transaction.Executor do
   @doc """
   Scan for writes after a given timestamp (for SSI conflict detection).
   """
-  def scan_writes_after(key, after_ts) do
+  def scan_writes_after(store_ref, key, after_ts) do
+    # Replaced ETS scan with RocksDB iterator
+    case get_db_ref(store_ref) do
+      nil ->
+        {:ok, []}
+
+      db_ref ->
+        cf = get_write_cf(store_ref)
+        # Using prefix Seek to {key}
+        case :rocksdb.iterator(db_ref, cf, []) do
+          {:ok, iter} ->
+            result = scan_writes_in_iter(iter, key, after_ts)
+            :rocksdb.iterator_close(iter)
+            {:ok, result}
+
+          _ ->
+            {:ok, []}
+        end
+    end
+  end
+
+  defp scan_writes_in_iter(iter, key, after_ts) do
+    # Seek to {key} (which actually finds {key}{latest_ts})
+    case :rocksdb.iterator_move(iter, {:seek, key}) do
+      {:ok, write_key, value} ->
+        collect_writes(iter, key, after_ts, write_key, value, [])
+
+      _ ->
+        []
+    end
+  end
+
+  defp collect_writes(iter, target_key, after_ts, write_key, value, acc) do
     try do
-      records = :ets.tab2list(:txn_write)
+      {stored_key, commit_ts} = Encoder.decode_txn_write_key(write_key)
 
-      commits =
-        records
-        |> Enum.filter(fn {write_key, _value} ->
-          {stored_key, commit_ts} = Encoder.decode_txn_write_key(write_key)
-          stored_key == key and commit_ts > after_ts
-        end)
-        |> Enum.map(fn {_write_key, value} ->
-          case :erlang.binary_to_term(value) do
-            {start_ts, commit_ts} -> {commit_ts, start_ts}
-            {start_ts, commit_ts, _} -> {commit_ts, start_ts}
+      if stored_key == target_key do
+        if commit_ts > after_ts do
+          {start_ts, _} = :erlang.binary_to_term(value)
+          # Found conflict
+          new_acc = [{commit_ts, start_ts} | acc]
+          # Check next
+          case :rocksdb.iterator_move(iter, :next) do
+            {:ok, nk, nv} -> collect_writes(iter, target_key, after_ts, nk, nv, new_acc)
+            _ -> new_acc
           end
-        end)
-        |> Enum.sort_by(fn {commit_ts, _} -> commit_ts end, :desc)
-
-      {:ok, commits}
+        else
+          # commit_ts <= after_ts, since sorted desc, subsequent ones are also smaller
+          acc
+        end
+      else
+        # Different key
+        acc
+      end
     rescue
-      _ -> {:ok, []}
+      _ -> acc
     end
   end
 
   @doc """
   Get latest write for a key (public API for SSI).
   """
-  def get_latest_write(key) do
-    get_latest_write_internal(key)
+  def get_latest_write(store_ref, key) do
+    get_latest_write_internal(store_ref, key)
   end
 
-  defp do_write_lock(key, lock) do
-    try do
-      :ets.insert(:txn_locks, {key, Lock.encode(lock)})
-      :ok
-    rescue
-      ArgumentError ->
-        :ets.new(:txn_locks, [:named_table, :public, :set])
-        :ets.insert(:txn_locks, {key, Lock.encode(lock)})
-        :ok
+  defp do_write_lock(store_ref, key, lock) do
+    lock_key = Encoder.encode_lock_key(key)
+    lock_data = Lock.encode(lock)
+
+    case {get_db_ref(store_ref), get_locks_cf(store_ref)} do
+      {nil, _} ->
+        {:error, :db_not_ready}
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.put(db_ref, cf, lock_key, lock_data, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.put(db_ref, lock_key, lock_data, []) do
+          :ok -> :ok
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 
@@ -354,17 +398,17 @@ defmodule Store.Transaction.Executor do
   # Prewrite Phase
   # ============================================================================
 
-  defp prewrite_phase(%Transaction{} = txn) do
+  defp prewrite_phase(store_ref, %Transaction{} = txn) do
     primary = txn.primary_key
     secondaries = Transaction.secondary_keys(txn)
 
     # Prewrite primary first
-    case prewrite_key(txn, primary, true) do
+    case prewrite_key(store_ref, txn, primary, true) do
       :ok ->
         # Prewrite secondaries in parallel
         results =
           secondaries
-          |> Task.async_stream(fn key -> prewrite_key(txn, key, false) end,
+          |> Task.async_stream(fn key -> prewrite_key(store_ref, txn, key, false) end,
             max_concurrency: 10,
             timeout: txn.timeout_ms
           )
@@ -381,20 +425,20 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp prewrite_key(txn, key, _is_primary) do
+  defp prewrite_key(store_ref, txn, key, _is_primary) do
     mutation = Map.get(txn.write_buffer, key)
 
-    with :ok <- check_write_conflict(key, txn.start_ts),
-         :ok <- check_lock_conflict(key, txn.start_ts),
-         :ok <- write_lock(key, txn),
-         :ok <- write_data(key, mutation, txn.start_ts) do
+    with :ok <- check_write_conflict(store_ref, key, txn.start_ts),
+         :ok <- check_lock_conflict(store_ref, key, txn.start_ts),
+         :ok <- write_lock(store_ref, key, txn),
+         :ok <- write_data(store_ref, key, mutation, txn.start_ts) do
       :ok
     end
   end
 
-  defp check_write_conflict(key, start_ts) do
+  defp check_write_conflict(store_ref, key, start_ts) do
     # Check if there's a commit after our start_ts
-    case get_latest_write(key) do
+    case get_latest_write(store_ref, key) do
       {:ok, nil} ->
         :ok
 
@@ -409,8 +453,8 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp check_lock_conflict(key, _start_ts) do
-    case get_lock(key) do
+  defp check_lock_conflict(store_ref, key, _start_ts) do
+    case get_lock(store_ref, key) do
       {:ok, nil} ->
         :ok
 
@@ -418,7 +462,7 @@ defmodule Store.Transaction.Executor do
         # Another transaction has this key locked
         if Lock.expired?(lock) do
           # Try to clean up expired lock
-          resolve_lock(lock)
+          resolve_lock(store_ref, lock)
           :ok
         else
           {:error, {:locked_by, lock.txn_id}}
@@ -433,12 +477,12 @@ defmodule Store.Transaction.Executor do
   # Commit Phase
   # ============================================================================
 
-  defp commit_phase(%Transaction{} = txn) do
+  defp commit_phase(store_ref, %Transaction{} = txn) do
     # Get commit timestamp
     case PD.TSO.get_timestamp() do
       {:ok, commit_ts} ->
         # Write commit record for primary key only
-        case write_commit_record(txn.primary_key, txn.start_ts, commit_ts) do
+        case write_commit_record(store_ref, txn.primary_key, txn.start_ts, commit_ts) do
           :ok -> {:ok, commit_ts}
           {:error, reason} -> {:error, reason}
         end
@@ -448,19 +492,19 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp spawn_async_cleanup(txn, commit_ts) do
+  defp spawn_async_cleanup(store_ref, txn, commit_ts) do
     Task.start(fn ->
       # Small delay to let primary commit propagate
       Process.sleep(10)
 
       # Commit secondary keys and remove locks
       Enum.each(Transaction.secondary_keys(txn), fn key ->
-        write_commit_record(key, txn.start_ts, commit_ts)
-        delete_lock(key, txn.start_ts)
+        write_commit_record(store_ref, key, txn.start_ts, commit_ts)
+        delete_lock(store_ref, key, txn.start_ts)
       end)
 
       # Delete primary lock
-      delete_lock(txn.primary_key, txn.start_ts)
+      delete_lock(store_ref, txn.primary_key, txn.start_ts)
 
       Logger.debug("Async cleanup completed for txn #{txn.id}")
     end)
@@ -473,22 +517,22 @@ defmodule Store.Transaction.Executor do
   @doc """
   Resolve a lock by checking the primary key's commit status.
   """
-  def resolve_lock(%Lock{} = lock) do
+  def resolve_lock(store_ref, %Lock{} = lock) do
     if Lock.expired?(lock) do
       # Lock expired, roll it back
-      rollback_expired_lock(lock)
+      rollback_expired_lock(store_ref, lock)
       :resolved
     else
       # Check primary key status
-      case get_primary_status(lock.primary_key, lock.start_ts) do
+      case get_primary_status(store_ref, lock.primary_key, lock.start_ts) do
         :committed ->
           # Primary was committed, commit this secondary too
-          commit_from_primary(lock)
+          commit_from_primary(store_ref, lock)
           :resolved
 
         :rolled_back ->
           # Primary was rolled back, clean up this lock
-          delete_lock(lock.key, lock.start_ts)
+          delete_lock(store_ref, lock.key, lock.start_ts)
           :resolved
 
         :pending ->
@@ -501,15 +545,15 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp get_primary_status(primary_key, start_ts) do
+  defp get_primary_status(store_ref, primary_key, start_ts) do
     # Check if primary has a commit record
-    case get_commit_record(primary_key, start_ts) do
+    case get_commit_record(store_ref, primary_key, start_ts) do
       {:ok, _commit_ts} ->
         :committed
 
       {:error, :not_found} ->
         # Check if primary still has a lock
-        case get_lock(primary_key) do
+        case get_lock(store_ref, primary_key) do
           {:ok, nil} ->
             # No lock, no commit = rolled back
             :rolled_back
@@ -527,21 +571,21 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp commit_from_primary(lock) do
+  defp commit_from_primary(store_ref, lock) do
     # Find the commit_ts from a write record
-    case get_commit_record(lock.primary_key, lock.start_ts) do
+    case get_commit_record(store_ref, lock.primary_key, lock.start_ts) do
       {:ok, commit_ts} ->
-        write_commit_record(lock.key, lock.start_ts, commit_ts)
-        delete_lock(lock.key, lock.start_ts)
+        write_commit_record(store_ref, lock.key, lock.start_ts, commit_ts)
+        delete_lock(store_ref, lock.key, lock.start_ts)
 
       _ ->
         :ok
     end
   end
 
-  defp rollback_expired_lock(lock) do
-    delete_lock(lock.key, lock.start_ts)
-    delete_data(lock.key, lock.start_ts)
+  defp rollback_expired_lock(store_ref, lock) do
+    delete_lock(store_ref, lock.key, lock.start_ts)
+    delete_data(store_ref, lock.key, lock.start_ts)
   end
 
   defp elapsed_since_lock(lock) do
@@ -551,36 +595,25 @@ defmodule Store.Transaction.Executor do
   end
 
   # ============================================================================
-  # Storage Operations (RocksDB with ETS fallback for tests)
+  # Storage Operations (RocksDB with proper CFs)
   # ============================================================================
 
-  defp get_db_ref do
-    # Try to get RocksDB from persistent_term, fallback to ETS for tests
-    :persistent_term.get(:spiredb_rocksdb_ref, nil)
-  end
+  defp get_db_ref(%{db: db}), do: db
+  defp get_db_ref(_), do: nil
 
-  defp get_cf(cf_name) do
-    case :persistent_term.get(:spiredb_rocksdb_cf_map, nil) do
-      nil -> nil
-      cf_map -> Map.get(cf_map, cf_name)
-    end
-  end
+  defp get_cf(%{cfs: cfs}, cf_name), do: Map.get(cfs, cf_name)
+  defp get_cf(_, _), do: nil
 
-  defp get_locks_cf, do: get_cf(@cf_locks)
-  defp get_data_cf, do: get_cf(@cf_data)
-  defp get_write_cf, do: get_cf(@cf_write)
+  defp get_locks_cf(store_ref), do: get_cf(store_ref, @cf_locks)
+  defp get_data_cf(store_ref), do: get_cf(store_ref, @cf_data)
+  defp get_write_cf(store_ref), do: get_cf(store_ref, @cf_write)
 
-  defp get_lock_internal(key) do
-    # Use RocksDB if available, otherwise ETS
+  defp get_lock_internal(store_ref, key) do
     lock_key = Encoder.encode_lock_key(key)
 
-    case {get_db_ref(), get_locks_cf()} do
+    case {get_db_ref(store_ref), get_locks_cf(store_ref)} do
       {nil, _} ->
-        # Fallback to ETS for tests
-        case :ets.lookup(:txn_locks, key) do
-          [{^key, lock_data}] -> Lock.decode(key, lock_data)
-          [] -> {:ok, nil}
-        end
+        {:ok, nil}
 
       {db_ref, cf} when not is_nil(cf) ->
         case :rocksdb.get(db_ref, cf, lock_key, []) do
@@ -588,235 +621,114 @@ defmodule Store.Transaction.Executor do
           :not_found -> {:ok, nil}
           {:error, reason} -> {:error, reason}
         end
-
-      {db_ref, nil} ->
-        case :rocksdb.get(db_ref, lock_key, []) do
-          {:ok, lock_data} -> Lock.decode(key, lock_data)
-          :not_found -> {:ok, nil}
-          {:error, reason} -> {:error, reason}
-        end
     end
-  rescue
-    # ETS table doesn't exist
-    ArgumentError -> {:ok, nil}
   end
 
-  defp write_lock(key, txn) do
+  defp write_lock(store_ref, key, txn) do
     lock = Lock.new(key, txn.primary_key, txn.start_ts, txn_id: txn.id)
-    lock_key = Encoder.encode_lock_key(key)
-    lock_data = Lock.encode(lock)
+    do_write_lock(store_ref, key, lock)
+  end
 
-    case {get_db_ref(), get_locks_cf()} do
+  defp delete_lock_internal(store_ref, key, _start_ts) do
+    lock_key = Encoder.encode_lock_key(key)
+
+    case {get_db_ref(store_ref), get_locks_cf(store_ref)} do
       {nil, _} ->
-        # Fallback to ETS for tests
-        try do
-          :ets.insert(:txn_locks, {key, lock_data})
-          :ok
-        rescue
-          ArgumentError ->
-            :ets.new(:txn_locks, [:named_table, :public, :set])
-            :ets.insert(:txn_locks, {key, lock_data})
-            :ok
-        end
+        :ok
 
       {db_ref, cf} when not is_nil(cf) ->
-        case :rocksdb.put(db_ref, cf, lock_key, lock_data, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
-
-      {db_ref, nil} ->
-        case :rocksdb.put(db_ref, lock_key, lock_data, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
-    end
-  end
-
-  defp delete_lock_internal(key, _start_ts) do
-    lock_key = Encoder.encode_lock_key(key)
-
-    case {get_db_ref(), get_locks_cf()} do
-      {nil, _} ->
-        # Fallback to ETS for tests
         try do
-          :ets.delete(:txn_locks, key)
-          :ok
+          case :rocksdb.delete(db_ref, cf, lock_key, []) do
+            :ok -> :ok
+            {:error, reason} -> {:error, reason}
+          end
         rescue
           ArgumentError -> :ok
         end
-
-      {db_ref, cf} when not is_nil(cf) ->
-        case :rocksdb.delete(db_ref, cf, lock_key, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
-
-      {db_ref, nil} ->
-        case :rocksdb.delete(db_ref, lock_key, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
     end
   end
 
-  defp write_data(key, {:put, value}, start_ts) do
+  defp write_data(store_ref, key, {:put, value}, start_ts) do
     data_key = Encoder.encode_txn_data_key(key, start_ts)
 
-    case {get_db_ref(), get_data_cf()} do
+    case {get_db_ref(store_ref), get_data_cf(store_ref)} do
       {nil, _} ->
-        # Fallback to ETS for tests
-        try do
-          :ets.insert(:txn_data, {data_key, value})
-          :ok
-        rescue
-          ArgumentError ->
-            :ets.new(:txn_data, [:named_table, :public, :ordered_set])
-            :ets.insert(:txn_data, {data_key, value})
-            :ok
-        end
+        {:error, :db_not_ready}
 
       {db_ref, cf} when not is_nil(cf) ->
         case :rocksdb.put(db_ref, cf, data_key, value, []) do
           :ok -> :ok
           {:error, reason} -> {:error, reason}
         end
-
-      {db_ref, nil} ->
-        case :rocksdb.put(db_ref, data_key, value, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
     end
   end
 
-  defp write_data(key, :delete, start_ts) do
+  defp write_data(store_ref, key, :delete, start_ts) do
     # For deletes, we write a tombstone marker
     data_key = Encoder.encode_txn_data_key(key, start_ts)
-    # Tombstone marker
     tombstone = <<0xFF, 0xFF, 0xFF, 0xFF>>
 
-    case {get_db_ref(), get_data_cf()} do
+    case {get_db_ref(store_ref), get_data_cf(store_ref)} do
       {nil, _} ->
-        # Fallback to ETS for tests
-        try do
-          :ets.insert(:txn_data, {data_key, :tombstone})
-          :ok
-        rescue
-          ArgumentError ->
-            :ets.new(:txn_data, [:named_table, :public, :ordered_set])
-            :ets.insert(:txn_data, {data_key, :tombstone})
-            :ok
-        end
+        {:error, :db_not_ready}
 
       {db_ref, cf} when not is_nil(cf) ->
         case :rocksdb.put(db_ref, cf, data_key, tombstone, []) do
           :ok -> :ok
           {:error, reason} -> {:error, reason}
         end
-
-      {db_ref, nil} ->
-        case :rocksdb.put(db_ref, data_key, tombstone, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
     end
   end
 
-  defp delete_data_internal(key, start_ts) do
+  defp delete_data_internal(store_ref, key, start_ts) do
     data_key = Encoder.encode_txn_data_key(key, start_ts)
 
-    case {get_db_ref(), get_data_cf()} do
+    case {get_db_ref(store_ref), get_data_cf(store_ref)} do
       {nil, _} ->
+        :ok
+
+      {db_ref, cf} when not is_nil(cf) ->
         try do
-          :ets.delete(:txn_data, data_key)
-          :ok
+          case :rocksdb.delete(db_ref, cf, data_key, []) do
+            :ok -> :ok
+            {:error, reason} -> {:error, reason}
+          end
         rescue
           ArgumentError -> :ok
         end
-
-      {db_ref, cf} when not is_nil(cf) ->
-        case :rocksdb.delete(db_ref, cf, data_key, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
-
-      {db_ref, nil} ->
-        case :rocksdb.delete(db_ref, data_key, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
     end
   end
 
-  defp write_commit_record_internal(key, start_ts, commit_ts) do
+  defp write_commit_record_internal(store_ref, key, start_ts, commit_ts) do
     write_key = Encoder.encode_txn_write_key(key, commit_ts)
     value = :erlang.term_to_binary({start_ts, commit_ts})
 
-    case {get_db_ref(), get_write_cf()} do
+    case {get_db_ref(store_ref), get_write_cf(store_ref)} do
       {nil, _} ->
-        try do
-          :ets.insert(:txn_write, {write_key, value})
-          :ok
-        rescue
-          ArgumentError ->
-            :ets.new(:txn_write, [:named_table, :public, :ordered_set])
-            :ets.insert(:txn_write, {write_key, value})
-            :ok
-        end
+        {:error, :db_not_ready}
 
       {db_ref, cf} when not is_nil(cf) ->
-        case :rocksdb.put(db_ref, cf, write_key, value, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
-        end
-
-      {db_ref, nil} ->
-        case :rocksdb.put(db_ref, write_key, value, []) do
-          :ok -> :ok
-          {:error, reason} -> {:error, reason}
+        try do
+          case :rocksdb.put(db_ref, cf, write_key, value, []) do
+            :ok -> :ok
+            {:error, reason} -> {:error, reason}
+          end
+        rescue
+          ArgumentError -> {:error, :db_closed}
         end
     end
   end
 
-  defp get_commit_record_internal(key, start_ts) do
-    # Find commit record for this key/start_ts combination
-    case get_db_ref() do
+  defp get_commit_record_internal(store_ref, key, start_ts) do
+    case get_db_ref(store_ref) do
       nil ->
-        # Fallback to ETS
-        try do
-          records = :ets.tab2list(:txn_write)
-
-          matching =
-            Enum.find(records, fn {write_key, value} ->
-              {stored_key, _commit_ts} = Encoder.decode_txn_write_key(write_key)
-
-              if stored_key == key do
-                {stored_start_ts, _} = :erlang.binary_to_term(value)
-                stored_start_ts == start_ts
-              else
-                false
-              end
-            end)
-
-          case matching do
-            {_write_key, value} ->
-              {_stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
-              {:ok, commit_ts}
-
-            nil ->
-              {:error, :not_found}
-          end
-        rescue
-          _ -> {:error, :not_found}
-        end
+        {:error, :not_found}
 
       db_ref ->
-        # Scan RocksDB with prefix for this key
-        # Use iterator to find matching record
         prefix = key
+        cf = get_write_cf(store_ref)
 
-        case :rocksdb.iterator(db_ref, [{:prefix_same_as_start, true}]) do
+        case :rocksdb.iterator(db_ref, cf, []) do
           {:ok, iter} ->
             result = find_commit_record_in_iterator(iter, key, start_ts, prefix)
             :rocksdb.iterator_close(iter)
@@ -837,12 +749,9 @@ defmodule Store.Transaction.Executor do
           if stored_key == key do
             {stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
 
-            if stored_start_ts == start_ts do
-              {:ok, commit_ts}
-            else
-              # Continue scanning
-              find_commit_record_next(iter, key, start_ts)
-            end
+            if stored_start_ts == start_ts,
+              do: {:ok, commit_ts},
+              else: find_commit_record_next(iter, key, start_ts)
           else
             {:error, :not_found}
           end
@@ -864,11 +773,9 @@ defmodule Store.Transaction.Executor do
           if stored_key == key do
             {stored_start_ts, commit_ts} = :erlang.binary_to_term(value)
 
-            if stored_start_ts == start_ts do
-              {:ok, commit_ts}
-            else
-              find_commit_record_next(iter, key, start_ts)
-            end
+            if stored_start_ts == start_ts,
+              do: {:ok, commit_ts},
+              else: find_commit_record_next(iter, key, start_ts)
           else
             {:error, :not_found}
           end
@@ -881,28 +788,16 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp get_latest_write_internal(key) do
-    case get_db_ref() do
+  defp get_latest_write_internal(store_ref, key) do
+    case get_db_ref(store_ref) do
       nil ->
-        # Fallback to ETS
-        try do
-          case :ets.match(:txn_write, {{key, :"$1"}, :"$2"}) do
-            [[commit_ts, data] | _] ->
-              {start_ts, _} = :erlang.binary_to_term(data)
-              {:ok, {commit_ts, start_ts}}
-
-            [] ->
-              {:ok, nil}
-          end
-        rescue
-          ArgumentError -> {:ok, nil}
-        end
+        {:ok, nil}
 
       db_ref ->
-        # Scan from key prefix to find latest write
         prefix = key
+        cf = get_write_cf(store_ref)
 
-        case :rocksdb.iterator(db_ref, [{:prefix_same_as_start, true}]) do
+        case :rocksdb.iterator(db_ref, cf, []) do
           {:ok, iter} ->
             result = find_latest_write_in_iterator(iter, key, prefix)
             :rocksdb.iterator_close(iter)
@@ -915,6 +810,22 @@ defmodule Store.Transaction.Executor do
   end
 
   defp find_latest_write_in_iterator(iter, key, prefix) do
+    # Seek to end of prefix range? No, keys are [key][commit_ts_desc].
+    # Wait, encode_txn_write_key uses commit_ts. If it sorts correctly,
+    # latest commit_ts should be first if desc?
+    # RocksDB sorts lexicographically.
+    # Key encoding: {key}{commit_ts}
+    # If commit_ts is big-endian encoded, larger ts -> larger key.
+    # So we need to seek to {key}{MAX_TS} and iterate backwards?
+    # Or assuming standard encoding.
+    # Let's assume we scan forward. If keys are {key}{commit_ts}, then
+    # seek(key) lands on {key}{smallest_ts}.
+    # We want latest. So we should `seek_for_prev` or encode ts as separate component.
+    # Our Encoder implementation details matter here.
+    # Assuming standard behavior: seek(key) finds first, we might need to iterate.
+    # But for "get_latest_write", any write > start_ts is a conflict.
+    # We just need to check if ANY write exists > start_ts.
+
     case :rocksdb.iterator_move(iter, {:seek, prefix}) do
       {:ok, write_key, value} ->
         try do
@@ -935,55 +846,116 @@ defmodule Store.Transaction.Executor do
     end
   end
 
-  defp read_committed_value(key, snapshot_ts) do
-    # Find the latest committed version <= snapshot_ts
-    case get_latest_visible_write(key, snapshot_ts) do
-      {:ok, nil} ->
+  defp mvcc_read(store_ref, key, txn, snapshot_ts) do
+    # Check local write buffer first (Read-Your-Own-Writes)
+    case Map.get((txn && txn.write_buffer) || %{}, key) do
+      {:put, value} ->
+        {:ok, value}
+
+      :delete ->
         {:error, :not_found}
 
-      {:ok, {_commit_ts, start_ts}} ->
-        # Read the data written at start_ts
-        read_data(key, start_ts)
+      nil ->
+        # Read from store using snapshot isolation
+        case get_latest_visible_write(store_ref, key, snapshot_ts) do
+          {:ok, nil} ->
+            {:error, :not_found}
 
-      {:error, reason} ->
-        {:error, reason}
+          {:ok, {_commit_ts, start_ts}} ->
+            # Read the data written at start_ts
+            read_data(store_ref, key, start_ts)
+
+          {:error, reason} ->
+            {:error, reason}
+        end
     end
   end
 
-  defp get_latest_visible_write(key, snapshot_ts) do
+  # Re-implement get_latest_visible_write using simple RocksDB scan since we don't know exact encoding order
+  defp get_latest_visible_write(store_ref, key, snapshot_ts) do
     # Find commits where commit_ts <= snapshot_ts
+    case get_db_ref(store_ref) do
+      nil ->
+        {:error, :not_found}
+
+      db_ref ->
+        # Scan from key prefix to find latest write relative to snapshot
+        prefix = key
+        cf = get_write_cf(store_ref)
+
+        # We find the latest version <= snapshot_ts
+        case :rocksdb.iterator(db_ref, cf, []) do
+          {:ok, iter} ->
+            result = find_visible_write_in_iterator(iter, key, snapshot_ts, prefix)
+            :rocksdb.iterator_close(iter)
+            result
+
+          {:error, _} ->
+            {:ok, nil}
+        end
+    end
+  end
+
+  defp find_visible_write_in_iterator(iter, key, snapshot_ts, prefix) do
+    # Seek to prefix
+    case :rocksdb.iterator_move(iter, {:seek, prefix}) do
+      {:ok, write_key, value} ->
+        check_iterator_visibility(iter, key, snapshot_ts, write_key, value)
+
+      _ ->
+        {:ok, nil}
+    end
+  end
+
+  defp check_iterator_visibility(iter, key, snapshot_ts, write_key, value) do
     try do
-      results = :ets.match(:txn_write, {{key, :"$1"}, :"$2"})
+      {stored_key, commit_ts} = Encoder.decode_txn_write_key(write_key)
 
-      visible =
-        results
-        |> Enum.map(fn [commit_ts, data] ->
-          {start_ts, _} = :erlang.binary_to_term(data)
-          {commit_ts, start_ts}
-        end)
-        |> Enum.filter(fn {commit_ts, _} -> commit_ts <= snapshot_ts end)
-        |> Enum.sort_by(fn {commit_ts, _} -> commit_ts end, :desc)
+      if stored_key == key do
+        if commit_ts <= snapshot_ts do
+          {start_ts, _} = :erlang.binary_to_term(value)
+          {:ok, {commit_ts, start_ts}}
+        else
+          # This version is too new, check next (commit_ts should be desc for same key)
+          case :rocksdb.iterator_move(iter, :next) do
+            {:ok, next_key, next_val} ->
+              check_iterator_visibility(iter, key, snapshot_ts, next_key, next_val)
 
-      case visible do
-        [latest | _] -> {:ok, latest}
-        [] -> {:ok, nil}
+            _ ->
+              {:ok, nil}
+          end
+        end
+      else
+        {:ok, nil}
       end
     rescue
-      ArgumentError -> {:ok, nil}
+      _ -> {:ok, nil}
     end
   end
 
-  defp read_data(key, start_ts) do
+  defp read_data(store_ref, key, start_ts) do
     data_key = Encoder.encode_txn_data_key(key, start_ts)
 
-    try do
-      case :ets.lookup(:txn_data, data_key) do
-        [{^data_key, :tombstone}] -> {:error, :not_found}
-        [{^data_key, value}] -> {:ok, value}
-        [] -> {:error, :not_found}
-      end
-    rescue
-      ArgumentError -> {:error, :not_found}
+    case {get_db_ref(store_ref), get_data_cf(store_ref)} do
+      {nil, _} ->
+        {:error, :db_not_ready}
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.get(db_ref, cf, data_key, []) do
+          # Tombstone
+          {:ok, <<0xFF, 0xFF, 0xFF, 0xFF>>} -> {:error, :not_found}
+          {:ok, value} -> {:ok, value}
+          :not_found -> {:error, :not_found}
+          {:error, reason} -> {:error, reason}
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.get(db_ref, data_key, []) do
+          {:ok, <<0xFF, 0xFF, 0xFF, 0xFF>>} -> {:error, :not_found}
+          {:ok, value} -> {:ok, value}
+          :not_found -> {:error, :not_found}
+          {:error, reason} -> {:error, reason}
+        end
     end
   end
 end

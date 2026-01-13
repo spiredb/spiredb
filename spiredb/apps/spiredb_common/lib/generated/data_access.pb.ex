@@ -39,6 +39,47 @@ defmodule Spiredb.Data.MutationType do
   field(:MUTATION_LOCK, 2)
 end
 
+defmodule Spiredb.Data.ConflictType do
+  @moduledoc false
+
+  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.EnumDescriptorProto{
+      name: "ConflictType",
+      value: [
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "CONFLICT_WRITE_WRITE",
+          number: 0,
+          options: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "CONFLICT_WRITE_READ",
+          number: 1,
+          options: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.EnumValueDescriptorProto{
+          name: "CONFLICT_READ_WRITE",
+          number: 2,
+          options: nil,
+          __unknown_fields__: []
+        }
+      ],
+      options: nil,
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:CONFLICT_WRITE_WRITE, 0)
+  field(:CONFLICT_WRITE_READ, 1)
+  field(:CONFLICT_READ_WRITE, 2)
+end
+
 defmodule Spiredb.Data.TxnState do
   @moduledoc false
 
@@ -1873,6 +1914,34 @@ defmodule Spiredb.Data.CommitRequest do
           json_name: "keys",
           proto3_optional: nil,
           __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "read_keys",
+          extendee: nil,
+          number: 10,
+          label: :LABEL_REPEATED,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "readKeys",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "write_keys",
+          extendee: nil,
+          number: 11,
+          label: :LABEL_REPEATED,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "writeKeys",
+          proto3_optional: nil,
+          __unknown_fields__: []
         }
       ],
       nested_type: [],
@@ -1891,6 +1960,8 @@ defmodule Spiredb.Data.CommitRequest do
   field(:start_ts, 2, type: :uint64, json_name: "startTs")
   field(:commit_ts, 3, type: :uint64, json_name: "commitTs")
   field(:keys, 4, repeated: true, type: :bytes)
+  field(:read_keys, 10, repeated: true, type: :bytes, json_name: "readKeys")
+  field(:write_keys, 11, repeated: true, type: :bytes, json_name: "writeKeys")
 end
 
 defmodule Spiredb.Data.CommitResponse do
@@ -1918,9 +1989,23 @@ defmodule Spiredb.Data.CommitResponse do
           __unknown_fields__: []
         },
         %Google.Protobuf.FieldDescriptorProto{
-          name: "error",
+          name: "commit_ts",
           extendee: nil,
           number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "commitTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "error",
+          extendee: nil,
+          number: 3,
           label: :LABEL_OPTIONAL,
           type: :TYPE_STRING,
           type_name: nil,
@@ -1928,6 +2013,20 @@ defmodule Spiredb.Data.CommitResponse do
           options: nil,
           oneof_index: nil,
           json_name: "error",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "conflict",
+          extendee: nil,
+          number: 4,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_MESSAGE,
+          type_name: ".spiredb.data.ConflictInfo",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "conflict",
           proto3_optional: nil,
           __unknown_fields__: []
         }
@@ -1945,7 +2044,79 @@ defmodule Spiredb.Data.CommitResponse do
   end
 
   field(:success, 1, type: :bool)
-  field(:error, 2, type: :string)
+  field(:commit_ts, 2, type: :uint64, json_name: "commitTs")
+  field(:error, 3, type: :string)
+  field(:conflict, 4, type: Spiredb.Data.ConflictInfo)
+end
+
+defmodule Spiredb.Data.ConflictInfo do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "ConflictInfo",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "conflicting_key",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "conflictingKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "conflicting_ts",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "conflictingTs",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "type",
+          extendee: nil,
+          number: 3,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_ENUM,
+          type_name: ".spiredb.data.ConflictType",
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "type",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:conflicting_key, 1, type: :bytes, json_name: "conflictingKey")
+  field(:conflicting_ts, 2, type: :uint64, json_name: "conflictingTs")
+  field(:type, 3, type: Spiredb.Data.ConflictType, enum: true)
 end
 
 defmodule Spiredb.Data.RollbackRequest do

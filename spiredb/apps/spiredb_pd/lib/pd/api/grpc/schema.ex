@@ -16,7 +16,10 @@ defmodule PD.API.GRPC.Schema do
     IndexSchema,
     IndexList,
     ColumnDef,
-    Empty
+    Empty,
+    TableStats,
+    GetTableStatsRequest,
+    UpdateTableStatsRequest
   }
 
   # Table operations
@@ -104,6 +107,37 @@ defmodule PD.API.GRPC.Schema do
 
       {:error, :not_found} ->
         raise GRPC.RPCError, status: :not_found, message: "Index not found"
+    end
+  end
+
+  def get_table_stats(request, _stream) do
+    case Registry.get_table(request.table_name) do
+      {:ok, table} ->
+        %TableStats{
+          row_count: table.row_count,
+          size_bytes: table.size_bytes,
+          last_updated: table.updated_at,
+          # Future: retrieve column stats
+          column_stats: %{}
+        }
+
+      {:error, :not_found} ->
+        raise GRPC.RPCError, status: :not_found, message: "Table not found"
+    end
+  end
+
+  def update_table_stats(request, _stream) do
+    stats = %{
+      row_count: request.row_count,
+      size_bytes: request.size_bytes
+    }
+
+    case Registry.update_table_stats(request.table_name, stats) do
+      :ok ->
+        %Empty{}
+
+      {:error, :not_found} ->
+        raise GRPC.RPCError, status: :not_found, message: "Table not found"
     end
   end
 

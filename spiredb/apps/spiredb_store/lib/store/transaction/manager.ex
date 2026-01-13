@@ -21,13 +21,15 @@ defmodule Store.Transaction.Manager do
 
   defstruct [
     # txn_id -> Transaction
-    transactions: %{}
+    transactions: %{},
+    # RocksDB reference %{db: ref, cfs: %{name -> cf}}
+    store_ref: nil
   ]
 
   ## Client API
 
   def start_link(opts \\ []) do
-    name = opts[:name] || __MODULE__
+    name = Keyword.get(opts, :name, __MODULE__)
     GenServer.start_link(__MODULE__, opts, name: name)
   end
 
@@ -90,17 +92,22 @@ defmodule Store.Transaction.Manager do
   ## Server Callbacks
 
   @impl true
-  def init(_opts) do
+  def init(opts) do
     Logger.info("Transaction Manager started")
+    store_ref = resolve_store_ref(opts)
 
     # Run crash recovery for any pending commits from previous run
-    spawn(fn ->
-      # Wait for RocksDB to be ready
-      Process.sleep(500)
-      Store.Transaction.CrashRecovery.recover_pending_commits()
-    end)
+    # Skip if running in test environment (detected via process name registry presence check or env)
+    unless Application.get_env(:spiredb_common, :environment) == :test do
+      spawn(fn ->
+        # Wait for RocksDB to be ready
+        Process.sleep(500)
+        # Crash recovery needs the global store ref for now, or update it too
+        Store.Transaction.CrashRecovery.recover_pending_commits(store_ref)
+      end)
+    end
 
-    {:ok, %__MODULE__{}}
+    {:ok, %__MODULE__{store_ref: store_ref}}
   end
 
   @impl true
@@ -124,13 +131,13 @@ defmodule Store.Transaction.Manager do
   @impl true
   def handle_call({:get, txn_id, key}, _from, state) do
     with {:ok, txn} <- get_txn(state, txn_id),
-         {:ok, value} <- Executor.mvcc_get(key, txn.start_ts) do
+         {:ok, value} <- Executor.mvcc_get(state.store_ref, key, txn.start_ts) do
       # Record in read set for conflict detection
       updated_txn = Transaction.record_read(txn, key)
       new_state = update_txn(state, updated_txn)
 
       # Track read for SSI
-      SSIConflictDetector.record_read(txn, key, txn.start_ts)
+      SSIConflictDetector.record_read(state.store_ref, txn, key, txn.start_ts)
 
       {:reply, {:ok, value}, new_state}
     else
@@ -205,9 +212,9 @@ defmodule Store.Transaction.Manager do
   @impl true
   def handle_call({:commit, txn_id}, _from, state) do
     with {:ok, txn} <- get_txn(state, txn_id),
-         :ok <- SSIConflictDetector.validate_commit(txn) do
+         :ok <- SSIConflictDetector.validate_commit(state.store_ref, txn) do
       # Choose commit strategy based on transaction characteristics
-      result = commit_transaction(txn)
+      result = commit_transaction(state.store_ref, txn)
 
       case result do
         {:ok, commit_ts} ->
@@ -220,7 +227,7 @@ defmodule Store.Transaction.Manager do
         {:error, reason} ->
           # Transaction failed, clean up
           SSIConflictDetector.cleanup_transaction(txn_id)
-          Task.start(fn -> Executor.cleanup(txn) end)
+          Task.start(fn -> Executor.cleanup(state.store_ref, txn) end)
           new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
           {:reply, {:error, reason}, new_state}
       end
@@ -229,7 +236,7 @@ defmodule Store.Transaction.Manager do
         # SSI validation failed
         with {:ok, txn} <- get_txn(state, txn_id) do
           SSIConflictDetector.cleanup_transaction(txn_id)
-          Task.start(fn -> Executor.cleanup(txn) end)
+          Task.start(fn -> Executor.cleanup(state.store_ref, txn) end)
           new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
           {:reply, {:error, reason}, new_state}
         end
@@ -243,7 +250,7 @@ defmodule Store.Transaction.Manager do
   def handle_call({:rollback, txn_id}, _from, state) do
     with {:ok, txn} <- get_txn(state, txn_id) do
       SSIConflictDetector.cleanup_transaction(txn_id)
-      Task.start(fn -> Executor.cleanup(txn) end)
+      Task.start(fn -> Executor.cleanup(state.store_ref, txn) end)
       new_state = %{state | transactions: Map.delete(state.transactions, txn_id)}
       Logger.debug("Transaction #{txn_id} rolled back")
       {:reply, :ok, new_state}
@@ -254,7 +261,19 @@ defmodule Store.Transaction.Manager do
 
   # Private helpers
 
-  defp commit_transaction(txn) do
+  defp resolve_store_ref(opts) do
+    case opts[:store_ref] do
+      ref when is_map(ref) ->
+        ref
+
+      _ ->
+        db = :persistent_term.get(:spiredb_rocksdb_ref, nil)
+        cfs = :persistent_term.get(:spiredb_rocksdb_cf_map, %{})
+        %{db: db, cfs: cfs}
+    end
+  end
+
+  defp commit_transaction(store_ref, txn) do
     key_count = map_size(txn.write_buffer)
 
     cond do
@@ -264,11 +283,11 @@ defmodule Store.Transaction.Manager do
 
       key_count > 1 and use_async_commit?() ->
         # Multi-key transaction: use async commit for lower latency
-        AsyncCommitCoordinator.commit(txn)
+        AsyncCommitCoordinator.commit(store_ref, txn)
 
       true ->
         # Standard 2PC
-        Executor.commit(txn)
+        Executor.commit(store_ref, txn)
     end
   end
 

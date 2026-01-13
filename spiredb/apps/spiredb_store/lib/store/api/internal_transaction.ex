@@ -20,6 +20,7 @@ defmodule Store.API.InternalTransaction do
   """
   def async_prewrite(request, _stream) do
     Logger.debug("InternalTransaction.async_prewrite for #{length(request.mutations)} mutations")
+    store_ref = get_store_ref()
 
     results =
       Enum.map(request.mutations, fn mutation ->
@@ -34,7 +35,7 @@ defmodule Store.API.InternalTransaction do
             ttl: request.lock_ttl
           )
 
-        case Executor.prewrite_with_lock(key, operation, lock, request.start_ts) do
+        case Executor.prewrite_with_lock(store_ref, key, operation, lock, request.start_ts) do
           :ok -> {:ok, key}
           {:error, {:locked_by, txn_id}} -> {:error, key, "locked_by:#{txn_id}"}
           {:error, :write_conflict} -> {:error, key, "write_conflict"}
@@ -63,12 +64,14 @@ defmodule Store.API.InternalTransaction do
   Check status of secondary locks for async commit resolution.
   """
   def check_secondary_locks(request, _stream) do
+    store_ref = get_store_ref()
+
     statuses =
       Enum.map(request.secondary_keys, fn key ->
-        case Executor.get_lock(key) do
+        case Executor.get_lock(store_ref, key) do
           {:ok, nil} ->
             # No lock - check if committed
-            case Executor.get_commit_record(key, request.start_ts) do
+            case Executor.get_commit_record(store_ref, key, request.start_ts) do
               {:ok, commit_ts} ->
                 %Spiredb.Cluster.SecondaryLockStatus{
                   key: key,
@@ -120,25 +123,32 @@ defmodule Store.API.InternalTransaction do
   Resolve a lock (commit or rollback).
   """
   def resolve_lock(request, _stream) do
+    store_ref = get_store_ref()
     key = request.key
     start_ts = request.start_ts
     commit_ts = request.commit_ts
 
     if commit_ts > 0 do
       # Commit
-      Executor.write_commit_record(key, start_ts, commit_ts)
-      Executor.delete_lock(key, start_ts)
+      Executor.write_commit_record(store_ref, key, start_ts, commit_ts)
+      Executor.delete_lock(store_ref, key, start_ts)
     else
       # Rollback
-      Executor.delete_lock(key, start_ts)
-      Executor.delete_data(key, start_ts)
-      Executor.write_rollback_record(key, start_ts)
+      Executor.delete_lock(store_ref, key, start_ts)
+      Executor.delete_data(store_ref, key, start_ts)
+      Executor.write_rollback_record(store_ref, key, start_ts)
     end
 
     %Spiredb.Cluster.Empty{}
   end
 
   ## Private helpers
+
+  defp get_store_ref do
+    db = :persistent_term.get(:spiredb_rocksdb_ref, nil)
+    cfs = :persistent_term.get(:spiredb_rocksdb_cf_map, %{})
+    %{db: db, cfs: cfs}
+  end
 
   defp convert_mutation_type(%{type: :INTERNAL_MUTATION_PUT, value: value}), do: {:put, value}
   defp convert_mutation_type(%{type: :INTERNAL_MUTATION_DELETE}), do: :delete

@@ -81,6 +81,28 @@ defmodule PD.Schema.RegistryTest do
       assert "list1" in names
       assert "list2" in names
     end
+
+    test "updates table stats" do
+      columns = [%Column{name: "id", type: :int64}]
+      Registry.create_table("stats_table", columns, ["id"])
+
+      stats = %{row_count: 100, size_bytes: 1024}
+      assert :ok = Registry.update_table_stats("stats_table", stats)
+
+      {:ok, table} = Registry.get_table("stats_table")
+      assert table.row_count == 100
+      assert table.size_bytes == 1024
+      assert table.updated_at > 0
+    end
+
+    test "gets table regions" do
+      columns = [%Column{name: "id", type: :int64}]
+      Registry.create_table("region_table", columns, ["id"])
+
+      # Initially empty or based on prefix
+      {:ok, regions} = Registry.get_table_regions("region_table")
+      assert is_list(regions)
+    end
   end
 
   describe "index management" do

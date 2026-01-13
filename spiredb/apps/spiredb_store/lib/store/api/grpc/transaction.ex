@@ -27,11 +27,12 @@ defmodule Store.API.GRPC.Transaction do
   """
   def prewrite(request, _stream) do
     Logger.debug("Prewrite: #{length(request.mutations)} mutations, start_ts=#{request.start_ts}")
+    store_ref = get_store_ref()
 
     errors =
       request.mutations
       |> Enum.map(fn mutation ->
-        case Executor.prewrite_single(mutation.key, mutation, request) do
+        case Executor.prewrite_single(store_ref, mutation.key, mutation, request) do
           :ok ->
             nil
 
@@ -71,13 +72,20 @@ defmodule Store.API.GRPC.Transaction do
       "Commit: primary=#{inspect(request.primary_key)}, start_ts=#{request.start_ts}, commit_ts=#{request.commit_ts}"
     )
 
-    case Executor.commit_primary(request.primary_key, request.start_ts, request.commit_ts) do
+    store_ref = get_store_ref()
+
+    case Executor.commit_primary(
+           store_ref,
+           request.primary_key,
+           request.start_ts,
+           request.commit_ts
+         ) do
       :ok ->
         # Spawn async secondary key resolution
         if length(request.keys) > 0 do
           spawn(fn ->
             Enum.each(request.keys, fn key ->
-              Executor.commit_secondary(key, request.start_ts, request.commit_ts)
+              Executor.commit_secondary(store_ref, key, request.start_ts, request.commit_ts)
             end)
           end)
         end
@@ -94,9 +102,10 @@ defmodule Store.API.GRPC.Transaction do
   """
   def rollback(request, _stream) do
     Logger.debug("Rollback: start_ts=#{request.start_ts}, #{length(request.keys)} keys")
+    store_ref = get_store_ref()
 
     Enum.each(request.keys, fn key ->
-      Executor.rollback_key(key, request.start_ts)
+      Executor.rollback_key(store_ref, key, request.start_ts)
     end)
 
     %Empty{}
@@ -110,7 +119,9 @@ defmodule Store.API.GRPC.Transaction do
       "CheckTxnStatus: primary=#{inspect(request.primary_key)}, start_ts=#{request.start_ts}"
     )
 
-    case Executor.check_txn_status(request.primary_key, request.start_ts) do
+    store_ref = get_store_ref()
+
+    case Executor.check_txn_status(store_ref, request.primary_key, request.start_ts) do
       {:committed, commit_ts} ->
         %TxnStatus{state: :TXN_COMMITTED, commit_ts: commit_ts}
 
@@ -130,13 +141,14 @@ defmodule Store.API.GRPC.Transaction do
   """
   def resolve_lock(request, _stream) do
     Logger.debug("ResolveLock: key=#{inspect(request.key)}, start_ts=#{request.start_ts}")
+    store_ref = get_store_ref()
 
     if request.commit_ts > 0 do
       # Commit the secondary key
-      Executor.commit_secondary(request.key, request.start_ts, request.commit_ts)
+      Executor.commit_secondary(store_ref, request.key, request.start_ts, request.commit_ts)
     else
       # Rollback the key
-      Executor.rollback_key(request.key, request.start_ts)
+      Executor.rollback_key(store_ref, request.key, request.start_ts)
     end
 
     %Empty{}
@@ -147,11 +159,13 @@ defmodule Store.API.GRPC.Transaction do
   """
   def acquire_pessimistic_lock(request, _stream) do
     Logger.debug("AcquirePessimisticLock: #{length(request.keys)} keys")
+    store_ref = get_store_ref()
 
     errors =
       request.keys
       |> Enum.map(fn key ->
         case Executor.acquire_pessimistic_lock(
+               store_ref,
                key,
                request.start_ts,
                request.for_update_ts,
@@ -181,5 +195,11 @@ defmodule Store.API.GRPC.Transaction do
       success: errors == [],
       errors: errors
     }
+  end
+
+  defp get_store_ref do
+    db = :persistent_term.get(:spiredb_rocksdb_ref, nil)
+    cfs = :persistent_term.get(:spiredb_rocksdb_cf_map, %{})
+    %{db: db, cfs: cfs}
   end
 end

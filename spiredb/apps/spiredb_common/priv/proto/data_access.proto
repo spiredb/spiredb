@@ -197,11 +197,27 @@ message CommitRequest {
   uint64 start_ts = 2;
   uint64 commit_ts = 3;
   repeated bytes keys = 4;  // For async secondary commit
+  repeated bytes read_keys = 10;   // Keys read during transaction (for SSI)
+  repeated bytes write_keys = 11;  // Explicit write set (if different from keys)
 }
 
 message CommitResponse {
   bool success = 1;
-  string error = 2;
+  uint64 commit_ts = 2;
+  string error = 3;
+  ConflictInfo conflict = 4;
+}
+
+message ConflictInfo {
+  bytes conflicting_key = 1;
+  uint64 conflicting_ts = 2;
+  ConflictType type = 3;
+}
+
+enum ConflictType {
+  CONFLICT_WRITE_WRITE = 0;
+  CONFLICT_WRITE_READ = 1;
+  CONFLICT_READ_WRITE = 2;
 }
 
 message RollbackRequest {

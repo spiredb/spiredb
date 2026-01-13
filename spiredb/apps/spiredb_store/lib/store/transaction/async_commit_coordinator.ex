@@ -23,7 +23,11 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
   Returns {:ok, min_commit_ts} immediately after prewrite.
   Actual commit happens asynchronously.
   """
-  def commit(%Transaction{} = txn) do
+  def commit(_store_ref, %Transaction{write_buffer: buffer} = txn) when map_size(buffer) == 0 do
+    {:ok, txn.start_ts}
+  end
+
+  def commit(store_ref, %Transaction{} = txn) do
     Logger.debug("AsyncCommitCoordinator: starting async commit for #{txn.id}")
 
     # Determine primary key and secondary keys
@@ -35,16 +39,16 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
     min_commit_ts = calculate_min_commit_ts(txn, all_keys)
 
     # Phase 1: Prewrite all keys with async commit metadata
-    case prewrite_async_commit(txn, primary_key, secondary_keys, min_commit_ts) do
+    case prewrite_async_commit(store_ref, txn, primary_key, secondary_keys, min_commit_ts) do
       :ok ->
         # SUCCESS! Return to client immediately
         # Spawn background commit
-        spawn_async_finalize(txn, primary_key, min_commit_ts)
+        spawn_async_finalize(store_ref, txn, primary_key, min_commit_ts)
         {:ok, min_commit_ts}
 
       {:error, reason} ->
         # Prewrite failed - rollback
-        rollback_all(txn)
+        rollback_all(store_ref, txn)
         {:error, reason}
     end
   end
@@ -54,28 +58,28 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
 
   Called when reader encounters lock with use_async_commit=true.
   """
-  def resolve_async_commit(%Lock{use_async_commit: true} = lock) do
+  def resolve_async_commit(store_ref, %Lock{use_async_commit: true} = lock) do
     Logger.debug("Resolving async commit for txn starting at #{lock.start_ts}")
 
     # Check primary lock status
-    case check_primary_status(lock.primary_key, lock.start_ts) do
+    case check_primary_status(store_ref, lock.primary_key, lock.start_ts) do
       {:committed, commit_ts} ->
         # Already committed - resolve this secondary
-        resolve_to_committed(lock.key, lock.start_ts, commit_ts)
+        resolve_to_committed(store_ref, lock.key, lock.start_ts, commit_ts)
         {:committed, commit_ts}
 
       {:pending, primary_lock} ->
         # Check if all secondaries are locked (implicit commit)
-        case check_all_secondaries(primary_lock) do
+        case check_all_secondaries(store_ref, primary_lock) do
           :all_present ->
             # Transaction is implicitly committed
             commit_ts = calculate_final_commit_ts(primary_lock)
-            finalize_async_commit(primary_lock, commit_ts)
+            finalize_async_commit(store_ref, primary_lock, commit_ts)
             {:committed, commit_ts}
 
           {:missing, _missing_keys} ->
             if Lock.expired?(primary_lock) do
-              rollback_async_commit(primary_lock)
+              rollback_async_commit(store_ref, primary_lock)
               :rolled_back
             else
               {:pending, primary_lock.ttl}
@@ -86,14 +90,14 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
         :rolled_back
 
       :not_found ->
-        case Executor.get_commit_record(lock.primary_key, lock.start_ts) do
+        case Executor.get_commit_record(store_ref, lock.primary_key, lock.start_ts) do
           {:ok, commit_ts} -> {:committed, commit_ts}
           {:error, :not_found} -> :rolled_back
         end
     end
   end
 
-  def resolve_async_commit(%Lock{use_async_commit: false} = _lock) do
+  def resolve_async_commit(_store_ref, %Lock{use_async_commit: false} = _lock) do
     # Not an async commit lock, use standard resolution
     :not_async
   end
@@ -122,15 +126,24 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
     max(txn.start_ts, max_read_ts) + 1
   end
 
-  defp prewrite_async_commit(txn, primary_key, secondary_keys, min_commit_ts) do
+  defp prewrite_async_commit(store_ref, txn, primary_key, secondary_keys, min_commit_ts) do
     # Prewrite primary first
-    case prewrite_key_async(txn, primary_key, primary_key, secondary_keys, min_commit_ts) do
+    case prewrite_key_async(
+           store_ref,
+           txn,
+           primary_key,
+           primary_key,
+           secondary_keys,
+           min_commit_ts
+         ) do
       :ok ->
         # Prewrite secondaries in parallel
         results =
           secondary_keys
           |> Task.async_stream(
-            fn key -> prewrite_key_async(txn, key, primary_key, nil, min_commit_ts) end,
+            fn key ->
+              prewrite_key_async(store_ref, txn, key, primary_key, nil, min_commit_ts)
+            end,
             max_concurrency: 10,
             timeout: 10_000
           )
@@ -146,7 +159,7 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
     end
   end
 
-  defp prewrite_key_async(txn, key, primary_key, secondaries, min_commit_ts) do
+  defp prewrite_key_async(store_ref, txn, key, primary_key, secondaries, min_commit_ts) do
     operation = Map.get(txn.write_buffer, key)
 
     # Check if key belongs to local or remote store
@@ -160,7 +173,7 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
             secondaries: secondaries
           )
 
-        Executor.prewrite_with_lock(key, operation, lock, txn.start_ts)
+        Executor.prewrite_with_lock(store_ref, key, operation, lock, txn.start_ts)
 
       {:remote, store_address} ->
         # Remote prewrite via gRPC
@@ -287,7 +300,7 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
 
   alias Store.Transaction.InternalClient
 
-  defp spawn_async_finalize(txn, primary_key, min_commit_ts) do
+  defp spawn_async_finalize(store_ref, txn, primary_key, min_commit_ts) do
     spawn(fn ->
       # Small delay to allow any in-flight reads to complete
       Process.sleep(1)
@@ -296,35 +309,35 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
       commit_ts = calculate_final_commit_ts_for_txn(txn, min_commit_ts)
 
       # Write commit records
-      do_async_finalize(txn, primary_key, commit_ts)
+      do_async_finalize(store_ref, txn, primary_key, commit_ts)
     end)
   end
 
-  defp do_async_finalize(txn, primary_key, commit_ts) do
+  defp do_async_finalize(store_ref, txn, primary_key, commit_ts) do
     # Write commit record for primary first
-    :ok = Executor.write_commit_record(primary_key, txn.start_ts, commit_ts)
+    :ok = Executor.write_commit_record(store_ref, primary_key, txn.start_ts, commit_ts)
 
     # Delete primary lock
-    :ok = Executor.delete_lock(primary_key, txn.start_ts)
+    :ok = Executor.delete_lock(store_ref, primary_key, txn.start_ts)
 
     # Async finalize secondaries
     secondary_keys = Map.keys(txn.write_buffer) -- [primary_key]
 
     Enum.each(secondary_keys, fn key ->
-      Executor.write_commit_record(key, txn.start_ts, commit_ts)
-      Executor.delete_lock(key, txn.start_ts)
+      Executor.write_commit_record(store_ref, key, txn.start_ts, commit_ts)
+      Executor.delete_lock(store_ref, key, txn.start_ts)
     end)
 
     Logger.debug("Async commit finalized for txn #{txn.id} at commit_ts=#{commit_ts}")
   end
 
-  defp check_primary_status(primary_key, start_ts) do
-    case Executor.get_commit_record(primary_key, start_ts) do
+  defp check_primary_status(store_ref, primary_key, start_ts) do
+    case Executor.get_commit_record(store_ref, primary_key, start_ts) do
       {:ok, commit_ts} ->
         {:committed, commit_ts}
 
       {:error, :not_found} ->
-        case Executor.get_lock(primary_key) do
+        case Executor.get_lock(store_ref, primary_key) do
           {:ok, nil} -> :not_found
           {:ok, lock} when lock.start_ts == start_ts -> {:pending, lock}
           {:ok, _} -> :rolled_back
@@ -333,18 +346,18 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
     end
   end
 
-  defp check_all_secondaries(%Lock{secondaries: nil}), do: :all_present
-  defp check_all_secondaries(%Lock{secondaries: []}), do: :all_present
+  defp check_all_secondaries(_store_ref, %Lock{secondaries: nil}), do: :all_present
+  defp check_all_secondaries(_store_ref, %Lock{secondaries: []}), do: :all_present
 
-  defp check_all_secondaries(%Lock{secondaries: secondaries, start_ts: start_ts}) do
+  defp check_all_secondaries(store_ref, %Lock{secondaries: secondaries, start_ts: start_ts}) do
     missing =
       Enum.filter(secondaries, fn key ->
-        case Executor.get_lock(key) do
+        case Executor.get_lock(store_ref, key) do
           {:ok, lock} when lock.start_ts == start_ts ->
             false
 
           _ ->
-            case Executor.get_commit_record(key, start_ts) do
+            case Executor.get_commit_record(store_ref, key, start_ts) do
               {:ok, _} -> false
               {:error, :not_found} -> true
             end
@@ -379,34 +392,34 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
     })
   end
 
-  defp finalize_async_commit(primary_lock, commit_ts) do
+  defp finalize_async_commit(store_ref, primary_lock, commit_ts) do
     all_keys = [primary_lock.key | primary_lock.secondaries || []]
 
     Enum.each(all_keys, fn key ->
-      Executor.write_commit_record(key, primary_lock.start_ts, commit_ts)
-      Executor.delete_lock(key, primary_lock.start_ts)
+      Executor.write_commit_record(store_ref, key, primary_lock.start_ts, commit_ts)
+      Executor.delete_lock(store_ref, key, primary_lock.start_ts)
     end)
   end
 
-  defp rollback_async_commit(primary_lock) do
+  defp rollback_async_commit(store_ref, primary_lock) do
     all_keys = [primary_lock.key | primary_lock.secondaries || []]
 
     Enum.each(all_keys, fn key ->
-      Executor.delete_lock(key, primary_lock.start_ts)
-      Executor.delete_data(key, primary_lock.start_ts)
-      Executor.write_rollback_record(key, primary_lock.start_ts)
+      Executor.delete_lock(store_ref, key, primary_lock.start_ts)
+      Executor.delete_data(store_ref, key, primary_lock.start_ts)
+      Executor.write_rollback_record(store_ref, key, primary_lock.start_ts)
     end)
   end
 
-  defp resolve_to_committed(key, start_ts, commit_ts) do
-    Executor.write_commit_record(key, start_ts, commit_ts)
-    Executor.delete_lock(key, start_ts)
+  defp resolve_to_committed(store_ref, key, start_ts, commit_ts) do
+    Executor.write_commit_record(store_ref, key, start_ts, commit_ts)
+    Executor.delete_lock(store_ref, key, start_ts)
   end
 
-  defp rollback_all(txn) do
+  defp rollback_all(store_ref, txn) do
     Enum.each(txn.write_buffer, fn {key, _} ->
-      Executor.delete_lock(key, txn.start_ts)
-      Executor.delete_data(key, txn.start_ts)
+      Executor.delete_lock(store_ref, key, txn.start_ts)
+      Executor.delete_data(store_ref, key, txn.start_ts)
     end)
   end
 
