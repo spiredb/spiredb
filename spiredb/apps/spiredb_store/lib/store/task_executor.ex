@@ -240,24 +240,42 @@ defmodule Store.TaskExecutor do
     )
 
     # Region merge requires:
-    # 1. Stop source region Raft
-    # 2. Transfer data from source to target
-    # 3. Update PD metadata
+    # 1. Migrate data from source to target (for cross-node merges)
+    # 2. Stop source region Raft
+    # 3. Update PD metadata to expand target's key range
 
     try do
-      source_server = Store.Region.Raft.server_id(merge.source_region_id)
+      # Step 1: Migrate data (noop for same-node, actual transfer for cross-node)
+      case Store.Region.DataMigration.migrate_to_target(
+             merge.source_region_id,
+             merge.target_region_id
+           ) do
+        {:ok, migrated_count} ->
+          Logger.info("Migrated #{migrated_count} keys",
+            source: merge.source_region_id,
+            target: merge.target_region_id
+          )
 
-      # Stop the source region's Raft server
-      case :ra.stop_server(:default, source_server) do
-        :ok ->
-          Logger.info("Stopped source region Raft", region: merge.source_region_id)
-          # Note: actual data transfer would happen here
-          # For now, the data stays in RocksDB and target region expands its key range
-          :ok
+          # Step 2: Stop the source region's Raft server
+          source_server = Store.Region.Raft.server_id(merge.source_region_id)
+
+          case :ra.stop_server(:default, source_server) do
+            :ok ->
+              Logger.info("Stopped source region Raft and completed merge",
+                source: merge.source_region_id,
+                target: merge.target_region_id
+              )
+
+              :ok
+
+            {:error, reason} ->
+              Logger.error("Failed to stop source region: #{inspect(reason)}")
+              {:error, {:stop_failed, reason}}
+          end
 
         {:error, reason} ->
-          Logger.error("Failed to stop source region: #{inspect(reason)}")
-          {:error, {:stop_failed, reason}}
+          Logger.error("Data migration failed: #{inspect(reason)}")
+          {:error, {:migration_failed, reason}}
       end
     catch
       kind, reason ->

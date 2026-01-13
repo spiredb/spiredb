@@ -212,6 +212,117 @@ defmodule Store.Stream do
     end
   end
 
+  @doc """
+  Delete specific entries from a stream by ID (XDEL).
+
+  Returns the number of entries actually deleted.
+
+  ## Examples
+
+      iex> Store.Stream.xdel("mystream", ["1234567890123-0", "1234567890123-1"])
+      {:ok, 2}
+  """
+  @spec xdel(String.t(), [String.t()]) :: {:ok, non_neg_integer()} | {:error, term()}
+  def xdel(stream_name, ids) when is_binary(stream_name) and is_list(ids) do
+    with {:ok, db_ref, cf_map} <- get_db_refs() do
+      streams_cf = Map.get(cf_map, @streams_cf)
+
+      # Parse all IDs first
+      parsed_ids =
+        Enum.map(ids, fn id_str ->
+          case Event.parse_id(id_str) do
+            {_ts, _seq} = id -> {:ok, id, id_str}
+            :error -> {:error, id_str}
+          end
+        end)
+
+      # Filter out valid IDs
+      valid_ids = Enum.filter(parsed_ids, &match?({:ok, _, _}, &1))
+
+      # Delete each entry
+      deleted_count =
+        Enum.reduce(valid_ids, 0, fn {:ok, id, _id_str}, count ->
+          key = Event.build_key(stream_name, id)
+
+          case :rocksdb.delete(db_ref, streams_cf, key, []) do
+            :ok -> count + 1
+            {:error, _} -> count
+          end
+        end)
+
+      # Update metadata if we deleted any entries
+      if deleted_count > 0 do
+        update_meta_after_delete(db_ref, cf_map, stream_name, deleted_count)
+      end
+
+      {:ok, deleted_count}
+    end
+  end
+
+  defp update_meta_after_delete(db_ref, cf_map, stream_name, deleted_count) do
+    case get_meta(db_ref, cf_map, stream_name) do
+      {:ok, meta} ->
+        new_length = max(0, Map.get(meta, :length, 0) - deleted_count)
+
+        # If stream is now empty, clear first/last
+        {new_first, new_last} =
+          if new_length == 0 do
+            {nil, nil}
+          else
+            # Re-find first and last entries
+            first = find_first_entry_id(db_ref, cf_map, stream_name)
+            last = find_last_entry_id(db_ref, cf_map, stream_name)
+            {first, last}
+          end
+
+        new_meta = %{
+          meta
+          | length: new_length,
+            first_id: new_first,
+            last_id: new_last
+        }
+
+        meta_cf = Map.get(cf_map, @stream_meta_cf)
+        :rocksdb.put(db_ref, meta_cf, stream_name, encode_meta(new_meta), [])
+
+      _ ->
+        :ok
+    end
+  end
+
+  defp find_last_entry_id(db_ref, cf_map, stream_name) do
+    streams_cf = Map.get(cf_map, @streams_cf)
+    # Seek to end of stream prefix range
+    prefix = "#{stream_name}:"
+    # ';' is after ':' in ASCII
+    end_prefix = "#{stream_name};"
+
+    case :rocksdb.iterator(db_ref, streams_cf, []) do
+      {:ok, iter} ->
+        result =
+          case :rocksdb.iterator_move(iter, {:seek_for_prev, end_prefix}) do
+            {:ok, key, _value} when is_binary(key) ->
+              if String.starts_with?(key, prefix) do
+                case Event.parse_key(key) do
+                  {:ok, _, id} -> id
+                  :error -> nil
+                end
+              else
+                nil
+              end
+
+            _ ->
+              nil
+          end
+
+        :rocksdb.iterator_close(iter)
+        result
+
+      _ ->
+        nil
+    end
+  end
+
   ## Private Implementation
 
   defp get_db_refs do

@@ -260,15 +260,22 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
       Map.keys(state.regions)
     catch
       # Default: assume all local
-      _, _ -> 1..16 |> Enum.to_list()
+      _, _ ->
+        # Fallback to configured region count
+        num_regions = Application.get_env(:spiredb_pd, :num_regions, 16)
+        1..num_regions |> Enum.to_list()
     end
   end
 
   defp get_store_address_for_region(region_id) do
     try do
-      case PD.Server.get_region_store(region_id) do
-        {:ok, store_node} when store_node != node() ->
-          InternalClient.get_store_address(store_node)
+      case PD.Server.get_region_by_id(region_id) do
+        {:ok, region} when region != nil ->
+          # Get first store that isn't this node
+          case Enum.find(region.stores || [], &(&1 != node())) do
+            nil -> nil
+            store_node -> Store.Transaction.InternalClient.get_store_address(store_node)
+          end
 
         _ ->
           nil

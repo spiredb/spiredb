@@ -80,9 +80,15 @@ defmodule Store.API.RESP.StreamCommands do
   end
 
   # XDEL key id [id ...]
-  def execute(["XDEL", _stream_name | _ids]) do
-    # TODO: Implement individual entry deletion
-    {:error, "ERR XDEL not yet implemented"}
+  def execute(["XDEL", stream_name | ids]) when length(ids) > 0 do
+    case Store.Stream.xdel(stream_name, ids) do
+      {:ok, deleted_count} -> deleted_count
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  def execute(["XDEL", _stream_name]) do
+    {:error, "ERR wrong number of arguments for 'xdel' command"}
   end
 
   def execute([cmd | _]) do

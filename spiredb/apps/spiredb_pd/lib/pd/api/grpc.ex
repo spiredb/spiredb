@@ -81,18 +81,54 @@ defmodule PD.API.GRPC.Cluster do
   @doc """
   Get store by ID.
   """
-  def get_store(_request, _stream) do
-    # PD.Server doesn't have a get_store function - stores are tracked by node name
-    raise GRPC.RPCError, status: :unimplemented, message: "GetStore not implemented"
+  def get_store(request, _stream) do
+    case Server.get_store_by_id(request.store_id) do
+      {:ok, nil} ->
+        raise GRPC.RPCError, status: :not_found, message: "Store not found"
+
+      {:ok, store} ->
+        store_to_proto(store)
+
+      {:error, :not_found} ->
+        raise GRPC.RPCError, status: :not_found, message: "Store not found"
+
+      {:error, reason} ->
+        Logger.error("GetStore failed", reason: inspect(reason))
+        raise GRPC.RPCError, status: :internal, message: "Failed: #{inspect(reason)}"
+    end
   end
 
   @doc """
   List all stores.
   """
   def list_stores(_request, _stream) do
-    # Query via Ra - need to add this to PD.Server
-    # For now, return empty list
-    %StoreList{stores: []}
+    case Server.get_all_stores() do
+      {:ok, stores} ->
+        proto_stores = Enum.map(stores, &store_to_proto/1)
+        %StoreList{stores: proto_stores}
+
+      {:error, reason} ->
+        Logger.error("ListStores failed", reason: inspect(reason))
+        raise GRPC.RPCError, status: :internal, message: "Failed: #{inspect(reason)}"
+    end
+  end
+
+  defp store_to_proto(store) do
+    store_id = if is_atom(store.node), do: :erlang.phash2(store.node), else: store.node
+    address = if is_atom(store.node), do: Atom.to_string(store.node), else: "#{store.node}"
+
+    region_count = length(store.regions || [])
+    state = if store.state == :up, do: :STORE_UP, else: :STORE_DOWN
+
+    %Spiredb.Cluster.Store{
+      id: store_id,
+      address: address,
+      state: state,
+      capacity: 0,
+      available: 0,
+      region_count: region_count,
+      labels: %{}
+    }
   end
 
   @doc """
