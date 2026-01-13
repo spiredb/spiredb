@@ -118,9 +118,8 @@ defmodule Store.VectorIndexTest do
 
     test "finds nearest neighbors" do
       query = [1.0, 0.0, 0.0]
-      {:ok, results} = VectorIndex.search(@pid, "search_idx", query, 2)
-
-      assert length(results) == 2
+      # Use wait_for_results to handle CI timing
+      {:ok, results} = wait_for_results(@pid, "search_idx", query, 2, expected_count: 2)
 
       [{first_id, first_dist, _} | _] = results
       assert first_id == "doc:a"
@@ -129,7 +128,9 @@ defmodule Store.VectorIndexTest do
 
     test "returns payloads when requested" do
       query = [0.0, 1.0, 0.0]
-      {:ok, results} = VectorIndex.search(@pid, "search_idx", query, 1, return_payload: true)
+
+      {:ok, results} =
+        wait_for_results(@pid, "search_idx", query, 1, return_payload: true, expected_count: 1)
 
       [{_id, _dist, payload}] = results
       assert payload != nil
@@ -138,14 +139,13 @@ defmodule Store.VectorIndexTest do
 
     test "respects k limit" do
       query = [0.5, 0.5, 0.0]
-      {:ok, results} = VectorIndex.search(@pid, "search_idx", query, 3)
-
+      {:ok, results} = wait_for_results(@pid, "search_idx", query, 3, expected_count: 3)
       assert length(results) == 3
     end
 
     test "results sorted by distance" do
       query = [1.0, 0.0, 0.0]
-      {:ok, results} = VectorIndex.search(@pid, "search_idx", query, 4)
+      {:ok, results} = wait_for_results(@pid, "search_idx", query, 4, expected_count: 4)
 
       distances = Enum.map(results, fn {_, d, _} -> d end)
       assert distances == Enum.sort(distances)
@@ -164,16 +164,44 @@ defmodule Store.VectorIndexTest do
       {:ok, _} = VectorIndex.insert(@pid, "bin_idx", "bin:1", bin_vector)
 
       query = <<1.0::float-32-native, 2.0::float-32-native>>
-      {:ok, results} = VectorIndex.search(@pid, "bin_idx", query, 1)
 
-      # Accept 0 or 1 results - Anodex may not return results for single-vector cold-start
-      assert length(results) in [0, 1]
+      # Wait for the result to appear
+      {:ok, results} = wait_for_results(@pid, "bin_idx", query, 1, expected_count: 1)
 
-      if length(results) == 1 do
-        [{id, dist, _}] = results
-        assert id == "bin:1"
-        assert dist < 0.01
-      end
+      [{id, dist, _}] = results
+      assert id == "bin:1"
+      assert dist < 0.01
     end
+  end
+
+  # Helper to poll for search results until they appear or timeout
+  # Essential for CI where async indexing may be slower
+  defp wait_for_results(pid, index, query, k, opts) do
+    expected_count = Keyword.get(opts, :expected_count, 1)
+    # Remove our test-specific opt before passing to search
+    search_opts = Keyword.delete(opts, :expected_count)
+
+    # If nil (timed out), make one last call to return the actual result/error for assertion
+    Stream.unfold(0, fn
+      # Timeout after 20 attempts * 100ms = 2s
+      20 ->
+        nil
+
+      n ->
+        case VectorIndex.search(pid, index, query, k, search_opts) do
+          {:ok, results} when length(results) >= expected_count ->
+            # Found enough results
+            # Done
+            {{:ok, results}, 20}
+
+          # Not enough results or error, wait and retry
+          _ ->
+            Process.sleep(100)
+            {nil, n + 1}
+        end
+    end)
+    |> Enum.take(1)
+    |> List.first() ||
+      VectorIndex.search(pid, index, query, k, search_opts)
   end
 end
