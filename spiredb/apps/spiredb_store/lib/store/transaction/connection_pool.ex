@@ -156,9 +156,15 @@ defmodule Store.Transaction.ConnectionPool do
   end
 
   defp create_connection(address) do
-    case GRPC.Stub.connect(address, interceptors: []) do
-      {:ok, channel} -> {:ok, channel}
-      {:error, reason} -> {:error, reason}
+    try do
+      case GRPC.Stub.connect(address, interceptors: []) do
+        {:ok, channel} -> {:ok, channel}
+        {:error, reason} -> {:error, reason}
+      end
+    rescue
+      RuntimeError -> {:error, :grpc_supervisor_not_running}
+    catch
+      :exit, reason -> {:error, {:exit, reason}}
     end
   end
 
