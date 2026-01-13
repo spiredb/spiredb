@@ -10,6 +10,7 @@ defmodule Store.KV.Scanner do
   """
 
   require Logger
+  alias Store.KV.IteratorPool
 
   @doc """
   Stream scan results lazily.
@@ -35,13 +36,18 @@ defmodule Store.KV.Scanner do
 
     Stream.resource(
       # Start function - create iterator
-      fn -> init_iterator(db_ref, start_key, end_key) end,
+      fn -> {db_ref, init_iterator(db_ref, start_key, end_key)} end,
 
       # Next function - fetch next batch
-      fn state -> next_batch(state, end_key, batch_size, limit) end,
+      fn {db_ref, state} ->
+        case next_batch(state, end_key, batch_size, limit) do
+          {:halt, new_state} -> {:halt, {db_ref, new_state}}
+          {rows, new_state} -> {rows, {db_ref, new_state}}
+        end
+      end,
 
       # Cleanup function - close iterator
-      fn state -> cleanup_iterator(state) end
+      fn {db_ref, state} -> cleanup_iterator(state, db_ref) end
     )
   end
 
@@ -89,19 +95,19 @@ defmodule Store.KV.Scanner do
   # Stream.resource callbacks
 
   defp init_iterator(db_ref, start_key, end_key) do
-    case :rocksdb.iterator(db_ref, []) do
+    case IteratorPool.checkout(db_ref) do
       {:ok, iter} ->
         case :rocksdb.iterator_move(iter, {:seek, start_key}) do
           {:ok, first_key, first_value} ->
             if end_key != "" and first_key > end_key do
-              :rocksdb.iterator_close(iter)
+              IteratorPool.checkin(iter, db_ref)
               {:done, nil}
             else
               {:continue, iter, first_key, first_value, 0}
             end
 
           {:error, :invalid_iterator} ->
-            :rocksdb.iterator_close(iter)
+            IteratorPool.checkin(iter, db_ref)
             {:done, nil}
         end
 
@@ -200,16 +206,16 @@ defmodule Store.KV.Scanner do
     end
   end
 
-  defp cleanup_iterator({:done, nil}), do: :ok
-  defp cleanup_iterator({:error, _}), do: :ok
+  defp cleanup_iterator({:done, nil}, _db_ref), do: :ok
+  defp cleanup_iterator({:error, _}, _db_ref), do: :ok
 
-  defp cleanup_iterator({:done, iter}) when not is_nil(iter) do
-    :rocksdb.iterator_close(iter)
+  defp cleanup_iterator({:done, iter}, db_ref) when not is_nil(iter) do
+    IteratorPool.checkin(iter, db_ref)
     :ok
   end
 
-  defp cleanup_iterator({:continue, iter, _, _, _}) do
-    :rocksdb.iterator_close(iter)
+  defp cleanup_iterator({:continue, iter, _, _, _}, db_ref) do
+    IteratorPool.checkin(iter, db_ref)
     :ok
   end
 

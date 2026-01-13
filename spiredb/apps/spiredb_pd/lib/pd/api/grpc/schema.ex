@@ -17,9 +17,7 @@ defmodule PD.API.GRPC.Schema do
     IndexList,
     ColumnDef,
     Empty,
-    TableStats,
-    GetTableStatsRequest,
-    UpdateTableStatsRequest
+    TableStats
   }
 
   # Table operations

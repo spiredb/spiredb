@@ -143,6 +143,7 @@ defmodule Store.KV.Engine do
       block_size: config.block_size,
       block_cache: cache,
       bloom_filter_policy: config.bloom_bits_per_key,
+      whole_key_filtering: true,
       cache_index_and_filter_blocks: true,
       format_version: 5
     ]

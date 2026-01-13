@@ -254,7 +254,7 @@ defmodule Store.ChangeStream do
   end
 
   @impl true
-  def handle_call({:subscribe_consumer, pid, consumer_id, offset, opts}, _from, state) do
+  def handle_call({:subscribe_consumer, pid, consumer_id, offset, _opts}, _from, state) do
     ref = Process.monitor(pid)
 
     # Store initial offset if provided (or overwrite?)
@@ -289,16 +289,6 @@ defmodule Store.ChangeStream do
       end
 
     {:reply, offset, state}
-  end
-
-  @impl true
-  def handle_cast({:acknowledge, consumer_id, offset}, state) do
-    case get_store_ref() do
-      nil -> :ok
-      store_ref -> OffsetStore.store_offset(store_ref, consumer_id, offset)
-    end
-
-    {:noreply, state}
   end
 
   @impl true

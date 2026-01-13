@@ -50,6 +50,9 @@ defmodule Store.Supervisor do
       # CDC Change Stream (for realtime change capture)
       {Store.ChangeStream, []},
 
+      # Stream Watermark tracking
+      {Store.Stream.Watermark, []},
+
       # TTL background cleanup
       {Store.KV.TTLFilter, []},
 
