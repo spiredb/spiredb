@@ -1,4 +1,5 @@
 defmodule Store.API.ReflectionV1Alpha do
+  @moduledoc false
   use GrpcReflection.Server,
     version: :v1alpha,
     services: [

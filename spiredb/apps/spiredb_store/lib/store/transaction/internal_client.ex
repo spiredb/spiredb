@@ -84,7 +84,7 @@ defmodule Store.Transaction.InternalClient do
       end
 
     # Internal gRPC port (same as DataAccess port)
-    port = Application.get_env(:spiredb_store, :grpc_port, 50052)
+    port = Application.get_env(:spiredb_store, :grpc_port, 50_052)
 
     "#{host}:#{port}"
   end

@@ -35,19 +35,19 @@ defmodule Store.API.RESP.Commands do
     handle_set_with_options(key, value, opts)
   end
 
-  def execute(["DEL" | keys]) when length(keys) > 0 do
+  def execute(["DEL" | keys]) when keys != [] do
     handle_del(keys)
   end
 
-  def execute(["EXISTS" | keys]) when length(keys) > 0 do
+  def execute(["EXISTS" | keys]) when keys != [] do
     handle_exists(keys)
   end
 
-  def execute(["MGET" | keys]) when length(keys) > 0 do
+  def execute(["MGET" | keys]) when keys != [] do
     handle_mget(keys)
   end
 
-  def execute(["MSET" | args]) when rem(length(args), 2) == 0 and length(args) > 0 do
+  def execute(["MSET" | args]) when rem(length(args), 2) == 0 and args != [] do
     handle_mset(args)
   end
 

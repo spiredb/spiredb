@@ -49,6 +49,12 @@ proto:
 format:
 	cd spiredb && mix format
 
+check-format:
+	cd spiredb && mix format --check-formatted
+
+lint:
+	cd spiredb && mix credo
+
 docker-build:
 	docker build -t spiredb:latest -f docker/Dockerfile spiredb/
 

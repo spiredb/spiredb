@@ -1,14 +1,14 @@
-name: Test
+name: Checks
 
 on:
   pull_request:
-    branches: [main, master]
+    branches: [master]
   push:
-    branches: [main, master]
+    branches: [master]
 
 jobs:
-  test:
-    name: Unit Tests
+  checks:
+    name: Checks
     runs-on: ubuntu-latest
 
     env:
@@ -48,4 +48,8 @@ jobs:
 
       - name: Check formatting
         run: |
-          cd spiredb && mix format --check-formatted
+          make check-format
+
+      - name: Run linter
+        run: |
+          make lint

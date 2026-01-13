@@ -31,6 +31,8 @@ defmodule Spiredb.MixProject do
   #
   # Run "mix help deps" for examples and options.
   defp deps do
-    []
+    [
+      {:credo, "~> 1.7", only: [:dev, :test], runtime: false}
+    ]
   end
 end

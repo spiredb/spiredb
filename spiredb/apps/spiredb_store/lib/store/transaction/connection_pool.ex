@@ -192,7 +192,7 @@ defmodule Store.Transaction.ConnectionPool do
       end
     end)
 
-    if length(stale) > 0 do
+    if stale != [] do
       Logger.debug("Cleaned up #{length(stale)} stale gRPC connections")
     end
   end

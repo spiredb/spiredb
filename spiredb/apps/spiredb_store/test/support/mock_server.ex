@@ -1,4 +1,5 @@
 defmodule Store.Test.MockServer do
+  @moduledoc false
   use GenServer
 
   def start_link(_opts \\ []) do

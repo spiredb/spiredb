@@ -80,7 +80,7 @@ defmodule Store.API.RESP.StreamCommands do
   end
 
   # XDEL key id [id ...]
-  def execute(["XDEL", stream_name | ids]) when length(ids) > 0 do
+  def execute(["XDEL", stream_name | ids]) when ids != [] do
     case Store.Stream.xdel(stream_name, ids) do
       {:ok, deleted_count} -> deleted_count
       {:error, reason} -> {:error, "ERR #{inspect(reason)}"}

@@ -109,7 +109,7 @@ defmodule Store.Schema.Validator do
     do: value >= -128 and value <= 127
 
   defp validate_type(value, :int16, _col) when is_integer(value),
-    do: value >= -32768 and value <= 32767
+    do: value >= -32_768 and value <= 32_767
 
   defp validate_type(value, :int32, _col) when is_integer(value),
     do: value >= -2_147_483_648 and value <= 2_147_483_647
@@ -118,7 +118,7 @@ defmodule Store.Schema.Validator do
   defp validate_type(value, :uint8, _col) when is_integer(value), do: value >= 0 and value <= 255
 
   defp validate_type(value, :uint16, _col) when is_integer(value),
-    do: value >= 0 and value <= 65535
+    do: value >= 0 and value <= 65_535
 
   defp validate_type(value, :uint32, _col) when is_integer(value),
     do: value >= 0 and value <= 4_294_967_295

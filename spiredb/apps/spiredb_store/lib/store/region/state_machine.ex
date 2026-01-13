@@ -1,4 +1,5 @@
 defmodule Store.Region.StateMachine do
+  @moduledoc false
   @behaviour :ra_machine
 
   alias Store.KV.Engine

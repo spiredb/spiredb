@@ -1,4 +1,5 @@
 defmodule SpiredbPd.Diagnostic do
+  @moduledoc false
   require Logger
 
   def run do

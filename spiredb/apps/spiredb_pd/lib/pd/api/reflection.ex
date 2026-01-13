@@ -1,4 +1,5 @@
 defmodule PD.API.Reflection do
+  @moduledoc false
   use GrpcReflection.Server,
     version: :v1,
     services: [

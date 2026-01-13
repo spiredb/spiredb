@@ -208,9 +208,8 @@ defmodule Store.ChangeStream do
     # Combine and limit
     all_changes =
       (stored_changes ++ buffer_changes)
-      |> Enum.filter(fn c -> c.seq > from_seq end)
       |> Enum.filter(fn c ->
-        cf_filter == nil or c.cf == cf_filter
+        c.seq > from_seq and (cf_filter == nil or c.cf == cf_filter)
       end)
       |> Enum.take(limit)
 
