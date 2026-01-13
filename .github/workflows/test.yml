@@ -1,0 +1,51 @@
+name: Test
+
+on:
+  pull_request:
+    branches: [main, master]
+  push:
+    branches: [main, master]
+
+jobs:
+  test:
+    name: Unit Tests
+    runs-on: ubuntu-latest
+
+    env:
+      MIX_ENV: test
+      SPIRE_PD_START_RAFT: false
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Elixir
+        uses: erlef/setup-beam@v1
+        with:
+          elixir-version: '1.17'
+          otp-version: '27'
+
+      - name: Cache deps
+        uses: actions/cache@v4
+        with:
+          path: |
+            spiredb/deps
+            spiredb/_build
+          key: ${{ runner.os }}-mix-${{ hashFiles('spiredb/mix.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-mix-
+
+      - name: Install dependencies
+        run: |
+          cd spiredb && mix deps.get
+
+      - name: Compile
+        run: |
+          cd spiredb && mix compile --warnings-as-errors
+
+      - name: Run unit tests
+        run: |
+          cd spiredb && mix test --exclude raft --exclude resp_integration
+
+      - name: Check formatting
+        run: |
+          cd spiredb && mix format --check-formatted
