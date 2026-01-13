@@ -4,11 +4,43 @@ defmodule Store.Arrow.Encoder do
 
   Provides zero-copy data transfer to SpireSQL (Rust) using Arrow's
   binary IPC format via the Explorer DataFrame library.
+
+  ## Performance Optimizations
+  - Cached empty batch templates (avoid repeated allocations)
+  - Direct binary series construction
+  - Fallback to simple binary format for internal use
   """
 
   require Logger
   alias Explorer.DataFrame, as: DF
   alias Explorer.Series
+
+  # Cache empty batches at compile time via module attributes
+  @empty_scan_batch (fn ->
+                       df =
+                         DF.new(%{
+                           "key" => Series.from_list([], dtype: :binary),
+                           "value" => Series.from_list([], dtype: :binary)
+                         })
+
+                       {:ok, binary} = DF.dump_ipc_stream(df)
+                       binary
+                     end).()
+
+  @empty_batch_get (fn ->
+                      df =
+                        DF.new(
+                          %{
+                            "key" => Series.from_list([], dtype: :binary),
+                            "value" => Series.from_list([], dtype: :binary),
+                            "found" => Series.from_list([], dtype: :boolean)
+                          },
+                          dtypes: [{"key", :binary}, {"value", :binary}, {"found", :boolean}]
+                        )
+
+                      {:ok, binary} = DF.dump_ipc_stream(df)
+                      binary
+                    end).()
 
   @doc """
   Encode scan results as Arrow RecordBatch IPC stream.
@@ -17,26 +49,22 @@ defmodule Store.Arrow.Encoder do
 
   Returns binary in Arrow IPC stream format.
   """
+  def encode_scan_batch([]), do: @empty_scan_batch
+
   def encode_scan_batch(rows) when is_list(rows) do
-    if rows == [] do
-      # Return empty Arrow stream
-      encode_empty_scan_batch()
-    else
-      # Extract keys and values
-      keys = Enum.map(rows, fn {k, _v} -> k end)
-      values = Enum.map(rows, fn {_k, v} -> v end)
+    # Use unzip for single pass extraction (more efficient than 2x Enum.map)
+    {keys, values} = Enum.unzip(rows)
 
-      # Create DataFrame with binary series
-      df =
-        DF.new(%{
-          "key" => Series.from_list(keys, dtype: :binary),
-          "value" => Series.from_list(values, dtype: :binary)
-        })
+    # Create DataFrame with binary series
+    df =
+      DF.new(%{
+        "key" => Series.from_list(keys, dtype: :binary),
+        "value" => Series.from_list(values, dtype: :binary)
+      })
 
-      # Export as Arrow IPC stream (returns binary)
-      {:ok, binary} = DF.dump_ipc_stream(df)
-      binary
-    end
+    # Export as Arrow IPC stream (returns binary)
+    {:ok, binary} = DF.dump_ipc_stream(df)
+    binary
   rescue
     error ->
       Logger.error("Failed to encode scan batch",
@@ -54,30 +82,34 @@ defmodule Store.Arrow.Encoder do
 
   Returns binary in Arrow IPC stream format.
   """
+  def encode_batch_get_result([]), do: @empty_batch_get
+
   def encode_batch_get_result(results) when is_list(results) do
-    if results == [] do
-      encode_empty_batch_get()
-    else
-      # Extract keys, values, and found flags
-      keys = Enum.map(results, fn {k, _v, _f} -> k end)
-      values = Enum.map(results, fn {_k, v, _f} -> v end)
-      founds = Enum.map(results, fn {_k, _v, f} -> f end)
+    # Single-pass extraction using reduce
+    {keys, values, founds} =
+      Enum.reduce(results, {[], [], []}, fn {k, v, f}, {ks, vs, fs} ->
+        {[k | ks], [v | vs], [f | fs]}
+      end)
 
-      # Create DataFrame (column order matters for tests)
-      df =
-        DF.new(
-          %{
-            "key" => Series.from_list(keys, dtype: :binary),
-            "value" => Series.from_list(values, dtype: :binary),
-            "found" => Series.from_list(founds, dtype: :boolean)
-          },
-          dtypes: [{"key", :binary}, {"value", :binary}, {"found", :boolean}]
-        )
+    # Reverse to maintain order (reduce builds reversed lists)
+    keys = Enum.reverse(keys)
+    values = Enum.reverse(values)
+    founds = Enum.reverse(founds)
 
-      # Export as Arrow IPC stream
-      {:ok, binary} = DF.dump_ipc_stream(df)
-      binary
-    end
+    # Create DataFrame (column order matters for tests)
+    df =
+      DF.new(
+        %{
+          "key" => Series.from_list(keys, dtype: :binary),
+          "value" => Series.from_list(values, dtype: :binary),
+          "found" => Series.from_list(founds, dtype: :boolean)
+        },
+        dtypes: [{"key", :binary}, {"value", :binary}, {"found", :boolean}]
+      )
+
+    # Export as Arrow IPC stream
+    {:ok, binary} = DF.dump_ipc_stream(df)
+    binary
   rescue
     error ->
       Logger.error("Failed to encode batch get result",
@@ -88,31 +120,42 @@ defmodule Store.Arrow.Encoder do
       {:error, :encoding_failed}
   end
 
-  # Private helpers
+  @doc """
+  Fast binary format for internal use (no Arrow overhead).
 
-  defp encode_empty_scan_batch do
-    df =
-      DF.new(%{
-        "key" => Series.from_list([], dtype: :binary),
-        "value" => Series.from_list([], dtype: :binary)
-      })
+  Format: count:32, (key_len:32, key, value_len:32, value)*
 
-    {:ok, binary} = DF.dump_ipc_stream(df)
-    binary
+  Use this for internal RPC where Arrow IPC is overkill.
+  """
+  def encode_binary_batch(rows) when is_list(rows) do
+    count = length(rows)
+
+    data =
+      Enum.map(rows, fn {key, value} ->
+        <<byte_size(key)::32, key::binary, byte_size(value)::32, value::binary>>
+      end)
+
+    <<count::32, IO.iodata_to_binary(data)::binary>>
   end
 
-  defp encode_empty_batch_get do
-    df =
-      DF.new(
-        %{
-          "key" => Series.from_list([], dtype: :binary),
-          "value" => Series.from_list([], dtype: :binary),
-          "found" => Series.from_list([], dtype: :boolean)
-        },
-        dtypes: [{"key", :binary}, {"value", :binary}, {"found", :boolean}]
-      )
-
-    {:ok, binary} = DF.dump_ipc_stream(df)
-    binary
+  @doc """
+  Decode fast binary format.
+  """
+  def decode_binary_batch(<<count::32, rest::binary>>) do
+    decode_binary_rows(rest, count, [])
   end
+
+  defp decode_binary_rows(<<>>, 0, acc), do: Enum.reverse(acc)
+
+  defp decode_binary_rows(
+         <<key_len::32, key::binary-size(key_len), value_len::32, value::binary-size(value_len),
+           rest::binary>>,
+         remaining,
+         acc
+       )
+       when remaining > 0 do
+    decode_binary_rows(rest, remaining - 1, [{key, value} | acc])
+  end
+
+  defp decode_binary_rows(_, _, acc), do: Enum.reverse(acc)
 end

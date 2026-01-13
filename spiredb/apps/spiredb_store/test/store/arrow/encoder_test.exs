@@ -155,4 +155,43 @@ defmodule Store.Arrow.EncoderTest do
       assert rows_per_sec > 50_000
     end
   end
+
+  describe "encode_binary_batch/1 and decode_binary_batch/1" do
+    test "roundtrip empty list" do
+      rows = []
+      encoded = Encoder.encode_binary_batch(rows)
+      assert <<0::32>> = encoded
+      decoded = Encoder.decode_binary_batch(encoded)
+      assert decoded == []
+    end
+
+    test "roundtrip single row" do
+      rows = [{"key1", "value1"}]
+      encoded = Encoder.encode_binary_batch(rows)
+      decoded = Encoder.decode_binary_batch(encoded)
+      assert decoded == rows
+    end
+
+    test "roundtrip multiple rows" do
+      rows = [{"key1", "value1"}, {"key2", "value2"}, {"key3", "value3"}]
+      encoded = Encoder.encode_binary_batch(rows)
+      decoded = Encoder.decode_binary_batch(encoded)
+      assert decoded == rows
+    end
+
+    test "roundtrip binary data" do
+      rows = [{<<0, 1, 2>>, <<255, 254, 253>>}]
+      encoded = Encoder.encode_binary_batch(rows)
+      decoded = Encoder.decode_binary_batch(encoded)
+      assert decoded == rows
+    end
+
+    test "binary format is more compact than Arrow for small batches" do
+      rows = [{"k", "v"}]
+      binary_size = byte_size(Encoder.encode_binary_batch(rows))
+      arrow_size = byte_size(Encoder.encode_scan_batch(rows))
+      # Binary format should be much smaller for tiny data
+      assert binary_size < arrow_size
+    end
+  end
 end
