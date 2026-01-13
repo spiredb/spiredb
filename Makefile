@@ -9,7 +9,7 @@ deps:
 	cd spiredb && mix deps.get
 
 build:
-	cd spiredb && mix compile
+	cd spiredb && mix compile --warnings-as-errors
 
 run:
 	@echo "Running SpireDB..."
