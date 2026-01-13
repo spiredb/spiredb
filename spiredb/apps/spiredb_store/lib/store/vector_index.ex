@@ -301,12 +301,30 @@ defmodule Store.VectorIndex do
     for <<f::float-32-native <- vector>>, do: f
   end
 
-  defp delete_from_anodex(_ref, _doc_id) do
-    # Anodex might not support deletion in v0.1.1
-    # Docs only mentioned insert/search/shutdown
-    # If not supported, we just rely on payload deletion and maybe eventual compaction/rebuild
-    # For now, return :ok to satisfy API
-    :ok
+  defp delete_from_anodex(ref, doc_id) do
+    # Convert doc_id to int_id (same as insert)
+    int_id = if is_integer(doc_id), do: doc_id, else: :erlang.phash2(doc_id)
+
+    case Anodex.Manode.delete(ref, int_id) do
+      :ok ->
+        :ok
+
+      # Some versions return empty tuple on success
+      {} ->
+        :ok
+
+      {:ok, _} ->
+        :ok
+
+      {:error, reason} ->
+        Logger.warning("Anodex delete failed for id #{int_id}: #{inspect(reason)}")
+        # Don't fail the operation
+        :ok
+
+      # Handle any other return value gracefully
+      _ ->
+        :ok
+    end
   end
 
   defp search_anodex(ref, query_vector, k) do

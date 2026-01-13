@@ -127,6 +127,27 @@ defmodule PD.Schema.Registry do
   end
 
   @doc """
+  Add a column to an existing table.
+  """
+  def add_column(pid \\ __MODULE__, table_name, column) do
+    GenServer.call(pid, {:add_column, table_name, column})
+  end
+
+  @doc """
+  Drop a column from an existing table.
+  """
+  def drop_column(pid \\ __MODULE__, table_name, column_name) do
+    GenServer.call(pid, {:drop_column, table_name, column_name})
+  end
+
+  @doc """
+  Rename a column.
+  """
+  def rename_column(pid \\ __MODULE__, table_name, old_name, new_name) do
+    GenServer.call(pid, {:rename_column, table_name, old_name, new_name})
+  end
+
+  @doc """
   Create an index.
   """
   def create_index(pid \\ __MODULE__, name, table_name, type, columns, params \\ %{}) do
@@ -235,6 +256,102 @@ defmodule PD.Schema.Registry do
   @impl true
   def handle_call(:list_tables, _from, state) do
     {:reply, {:ok, Map.values(state.tables)}, state}
+  end
+
+  @impl true
+  def handle_call({:add_column, table_name, column}, _from, state) do
+    case Map.get(state.tables, table_name) do
+      nil ->
+        {:reply, {:error, :table_not_found}, state}
+
+      table ->
+        # Check if column already exists
+        if Enum.any?(table.columns, &(&1.name == column.name)) do
+          {:reply, {:error, :column_exists}, state}
+        else
+          updated_table = %{table | columns: table.columns ++ [column]}
+
+          new_state = %{
+            state
+            | tables: Map.put(state.tables, table_name, updated_table),
+              tables_by_id: Map.put(state.tables_by_id, table.id, updated_table)
+          }
+
+          Logger.info("Added column #{column.name} to table #{table_name}")
+          {:reply, :ok, new_state}
+        end
+    end
+  end
+
+  @impl true
+  def handle_call({:drop_column, table_name, column_name}, _from, state) do
+    case Map.get(state.tables, table_name) do
+      nil ->
+        {:reply, {:error, :table_not_found}, state}
+
+      table ->
+        # Check if column is part of primary key
+        if column_name in table.primary_key do
+          {:reply, {:error, :cannot_drop_pk_column}, state}
+        else
+          new_columns = Enum.reject(table.columns, &(&1.name == column_name))
+
+          if length(new_columns) == length(table.columns) do
+            {:reply, {:error, :column_not_found}, state}
+          else
+            updated_table = %{table | columns: new_columns}
+
+            new_state = %{
+              state
+              | tables: Map.put(state.tables, table_name, updated_table),
+                tables_by_id: Map.put(state.tables_by_id, table.id, updated_table)
+            }
+
+            Logger.info("Dropped column #{column_name} from table #{table_name}")
+            {:reply, :ok, new_state}
+          end
+        end
+    end
+  end
+
+  @impl true
+  def handle_call({:rename_column, table_name, old_name, new_name}, _from, state) do
+    case Map.get(state.tables, table_name) do
+      nil ->
+        {:reply, {:error, :table_not_found}, state}
+
+      table ->
+        # Find and rename column
+        {found, new_columns} =
+          Enum.map_reduce(table.columns, false, fn col, found ->
+            if col.name == old_name do
+              {%{col | name: new_name}, true}
+            else
+              {col, found}
+            end
+          end)
+
+        if not found do
+          {:reply, {:error, :column_not_found}, state}
+        else
+          # Update primary key if renamed column is part of it
+          new_pk =
+            Enum.map(table.primary_key, fn pk_col ->
+              if pk_col == old_name, do: new_name, else: pk_col
+            end)
+
+          updated_table = %{table | columns: new_columns, primary_key: new_pk}
+
+          new_state = %{
+            state
+            | tables: Map.put(state.tables, table_name, updated_table),
+              tables_by_id: Map.put(state.tables_by_id, table.id, updated_table)
+          }
+
+          Logger.info("Renamed column #{old_name} to #{new_name} in table #{table_name}")
+          {:reply, :ok, new_state}
+        end
+    end
   end
 
   @impl true
