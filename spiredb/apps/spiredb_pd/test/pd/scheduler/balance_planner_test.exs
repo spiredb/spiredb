@@ -42,7 +42,7 @@ defmodule PD.Scheduler.BalancePlannerTest do
 
       plan = BalancePlanner.compute_plan(metrics, [])
 
-      assert transfers != []
+      assert plan.operations != []
       assert plan.reason == :rebalance_needed
 
       op = hd(plan.operations)

@@ -6,6 +6,9 @@ defmodule Store.StreamTest do
   @test_stream "test_stream_#{:erlang.unique_integer([:positive])}"
 
   setup do
+    # Setup RocksDB
+    {:ok, _db, _cf_map} = Store.Test.RocksDBHelper.setup_rocksdb("stream_test")
+
     # Clean up test stream
     Stream.delete_stream(@test_stream)
 
