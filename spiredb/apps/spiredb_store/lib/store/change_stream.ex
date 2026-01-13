@@ -26,6 +26,8 @@ defmodule Store.ChangeStream do
 
   use GenServer
   require Logger
+  alias Store.Stream.OffsetStore
+  alias Store.Stream.Watermark
 
   @change_log_cf "change_log"
   @change_meta_key "__change_stream_meta__"
@@ -99,6 +101,27 @@ defmodule Store.ChangeStream do
     GenServer.call(__MODULE__, {:unsubscribe, self()})
   end
 
+  @doc """
+  Subscribe as a named consumer from a specific offset.
+  """
+  def subscribe_from_offset(consumer_id, offset, opts \\ []) do
+    GenServer.call(__MODULE__, {:subscribe_consumer, self(), consumer_id, offset, opts})
+  end
+
+  @doc """
+  Acknowledge processing up to an offset for a named consumer.
+  """
+  def acknowledge(consumer_id, offset) do
+    GenServer.cast(__MODULE__, {:acknowledge, consumer_id, offset})
+  end
+
+  @doc """
+  Get the last acknowledged offset for a consumer.
+  """
+  def get_consumer_offset(consumer_id) do
+    GenServer.call(__MODULE__, {:get_consumer_offset, consumer_id})
+  end
+
   ## Server Callbacks
 
   @impl true
@@ -131,6 +154,9 @@ defmodule Store.ChangeStream do
       value: value,
       timestamp: System.system_time(:millisecond)
     }
+
+    # Update Watermark
+    Watermark.update_high_watermark(change.timestamp)
 
     # Add to buffer
     new_buffer = [change | state.buffer]
@@ -207,6 +233,10 @@ defmodule Store.ChangeStream do
     subscriber = %{pid: pid, ref: ref, from_seq: start_seq}
     new_subscribers = Map.put(state.subscribers, pid, subscriber)
 
+    # Replay history
+    changes = read_recent_history(state, start_seq)
+    Enum.each(changes, fn change -> send(pid, {:change, change}) end)
+
     {:reply, :ok, %{state | subscribers: new_subscribers}}
   end
 
@@ -221,6 +251,54 @@ defmodule Store.ChangeStream do
         new_subscribers = Map.delete(state.subscribers, pid)
         {:reply, :ok, %{state | subscribers: new_subscribers}}
     end
+  end
+
+  @impl true
+  def handle_call({:subscribe_consumer, pid, consumer_id, offset, opts}, _from, state) do
+    ref = Process.monitor(pid)
+
+    # Store initial offset if provided (or overwrite?)
+    # Usually we want to resume, so if offset is nil, we might look it up.
+    # But the API is subscribe_from_offset, implying explicit start.
+    # We should probably persist this start if it's new/higher?
+    # For now, just register the subscriber in memory.
+
+    subscriber = %{pid: pid, ref: ref, from_seq: offset, consumer_id: consumer_id}
+    new_subscribers = Map.put(state.subscribers, pid, subscriber)
+
+    # Replay history
+    changes = read_recent_history(state, offset)
+    Enum.each(changes, fn change -> send(pid, {:change, change}) end)
+
+    {:reply, :ok, %{state | subscribers: new_subscribers}}
+  end
+
+  @impl true
+  def handle_call({:get_consumer_offset, consumer_id}, _from, state) do
+    offset =
+      case get_store_ref() do
+        nil ->
+          {:error, :db_not_ready}
+
+        store_ref ->
+          case OffsetStore.get_offset(store_ref, consumer_id) do
+            {:ok, off} -> {:ok, off}
+            # Default to 0 if not found
+            _ -> {:ok, 0}
+          end
+      end
+
+    {:reply, offset, state}
+  end
+
+  @impl true
+  def handle_cast({:acknowledge, consumer_id, offset}, state) do
+    case get_store_ref() do
+      nil -> :ok
+      store_ref -> OffsetStore.store_offset(store_ref, consumer_id, offset)
+    end
+
+    {:noreply, state}
   end
 
   @impl true
@@ -378,12 +456,42 @@ defmodule Store.ChangeStream do
     end)
   end
 
+  defp read_recent_history(state, from_seq) do
+    # 1. Read from storage
+    # Use a default limit for replay (e.g., 1000) or assume unlimited?
+    # For now 1000 is safe.
+    stored = read_stored_changes(from_seq, 1000, nil)
+
+    # 2. Read from buffer
+    buffered =
+      state.buffer
+      |> Enum.filter(fn c -> c.seq > from_seq end)
+      |> Enum.reverse()
+
+    # If any overlap, we prefer buffer? No, stored are definitely older or same.
+    # But read_stored_changes does scan.
+    # We should deduplicate if necessary, but sequential logic holds (flush clears buffer).
+
+    # However, read_stored_changes looks at *persisted* data.
+    # Buffer contains *unpersisted* data.
+    # So they are disjoint sets.
+
+    stored ++ buffered
+  end
+
   defp get_db_refs do
     case {:persistent_term.get(:spiredb_rocksdb_ref, nil),
           :persistent_term.get(:spiredb_rocksdb_cf_map, nil)} do
       {nil, _} -> {:error, :db_not_available}
       {_, nil} -> {:error, :cf_map_not_available}
       {db_ref, cf_map} -> {:ok, db_ref, cf_map}
+    end
+  end
+
+  defp get_store_ref do
+    case get_db_refs() do
+      {:ok, db, cfs} -> %{db: db, cfs: cfs}
+      _ -> nil
     end
   end
 end

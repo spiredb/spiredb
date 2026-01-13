@@ -133,4 +133,40 @@ defmodule Store.ChangeStreamTest do
       assert seq >= 0
     end
   end
+
+  describe "offset-based subscription" do
+    test "subscribe_from_offset/3 resumes from offset" do
+      consumer_id = "test_consumer_1"
+      {:ok, initial_seq} = ChangeStream.current_seq()
+
+      # Record a change
+      ChangeStream.record_change(:put, "default", "resume_key", "value")
+      Process.sleep(50)
+      {:ok, seq} = ChangeStream.current_seq()
+      assert seq > initial_seq
+
+      # Subscribe from *before* the change (initial_seq is old seq)
+      # If current seq is 101, and we subscribe from 100, we should get 101.
+      :ok = ChangeStream.subscribe_from_offset(consumer_id, initial_seq, [])
+
+      # Should receive the change
+      assert_receive {:change, change}, 500
+      assert change.seq == seq
+      assert change.key == "resume_key"
+
+      ChangeStream.unsubscribe()
+    end
+
+    test "acknowledge/2 stores offset" do
+      consumer_id = "test_consumer_2"
+      offset = 12345
+
+      :ok = ChangeStream.acknowledge(consumer_id, offset)
+      # Allow async write
+      Process.sleep(50)
+
+      # Verify stored offset using ChangeStream API
+      assert {:ok, ^offset} = ChangeStream.get_consumer_offset(consumer_id)
+    end
+  end
 end

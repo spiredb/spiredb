@@ -18,6 +18,11 @@ defmodule Store.API.RESP.Handler do
   @command_timeout 30_000
   @idle_timeout 300_000
 
+  # Rate limiting
+  # 1 second
+  @rate_limit_window 1_000
+  @rate_limit_ops Application.compile_env(:spiredb_store, :resp_rate_limit, 100_000)
+
   def start_link(ref, transport, opts) do
     pid = spawn_link(__MODULE__, :init, [ref, transport, opts])
     {:ok, pid}
@@ -34,7 +39,9 @@ defmodule Store.API.RESP.Handler do
       transport: transport,
       buffer: <<>>,
       pending_count: 0,
-      last_activity: System.monotonic_time(:millisecond)
+      last_activity: System.monotonic_time(:millisecond),
+      ops_this_window: 0,
+      window_start: System.monotonic_time(:millisecond)
     }
 
     loop(state)
@@ -93,9 +100,22 @@ defmodule Store.API.RESP.Handler do
     else
       case Redix.Protocol.parse(buffer) do
         {:ok, command, rest} ->
-          response = execute_command_with_timeout(command)
-          new_state = %{state | pending_count: state.pending_count + 1}
-          process_buffer(rest, [response | responses], new_state)
+          case check_rate_limit(state) do
+            {:rate_limited, state} ->
+              response = {:error, "ERR rate limit exceeded"}
+              process_buffer(rest, [response | responses], state)
+
+            {:ok, state} ->
+              response = execute_command_with_timeout(command)
+
+              new_state = %{
+                state
+                | pending_count: state.pending_count + 1,
+                  ops_this_window: state.ops_this_window + 1
+              }
+
+              process_buffer(rest, [response | responses], new_state)
+          end
 
         {:continuation, _cont} ->
           if responses == [] do
@@ -104,6 +124,20 @@ defmodule Store.API.RESP.Handler do
             # Reset pending count after successful batch
             {:ok, Enum.reverse(responses), buffer, %{state | pending_count: 0}}
           end
+      end
+    end
+  end
+
+  defp check_rate_limit(state) do
+    now = System.monotonic_time(:millisecond)
+
+    if now - state.window_start >= @rate_limit_window do
+      {:ok, %{state | ops_this_window: 0, window_start: now}}
+    else
+      if state.ops_this_window >= @rate_limit_ops do
+        {:rate_limited, state}
+      else
+        {:ok, state}
       end
     end
   end
