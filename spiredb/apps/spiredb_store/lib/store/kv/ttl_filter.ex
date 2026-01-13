@@ -169,23 +169,27 @@ defmodule Store.KV.TTLFilter do
   defp collect_expired_keys(_iter, 0, acc), do: acc
 
   defp collect_expired_keys(iter, remaining, acc) do
-    move_result =
-      if acc == [] do
-        :rocksdb.iterator_move(iter, :first)
-      else
-        :rocksdb.iterator_move(iter, :next)
-      end
-
-    case move_result do
-      {:ok, key, value} ->
-        if TTL.expired?(value) do
-          collect_expired_keys(iter, remaining - 1, [key | acc])
+    try do
+      move_result =
+        if acc == [] do
+          :rocksdb.iterator_move(iter, :first)
         else
-          collect_expired_keys(iter, remaining, acc)
+          :rocksdb.iterator_move(iter, :next)
         end
 
-      _ ->
-        acc
+      case move_result do
+        {:ok, key, value} ->
+          if TTL.expired?(value) do
+            collect_expired_keys(iter, remaining - 1, [key | acc])
+          else
+            collect_expired_keys(iter, remaining, acc)
+          end
+
+        _ ->
+          acc
+      end
+    rescue
+      ArgumentError -> acc
     end
   end
 

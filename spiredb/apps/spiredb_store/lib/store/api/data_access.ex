@@ -206,16 +206,9 @@ defmodule Store.API.DataAccess do
 
         case get_db_ref_direct() do
           nil ->
-            # No RocksDB - use ETS fallback
-            try do
-              :ets.insert(:table_data, {key, value})
-              count + 1
-            rescue
-              ArgumentError ->
-                :ets.new(:table_data, [:named_table, :public, :set])
-                :ets.insert(:table_data, {key, value})
-                count + 1
-            end
+            # No RocksDB
+            Logger.error("TableInsert failed: No RocksDB store_ref found")
+            count
 
           db_ref ->
             case :rocksdb.put(db_ref, key, value, []) do
@@ -239,19 +232,7 @@ defmodule Store.API.DataAccess do
 
     case get_db_ref_direct() do
       nil ->
-        # ETS fallback
-        try do
-          case :ets.lookup(:table_data, key) do
-            [{^key, _}] ->
-              :ets.insert(:table_data, {key, request.arrow_batch})
-              %TableUpdateResponse{updated: true}
-
-            [] ->
-              %TableUpdateResponse{updated: false}
-          end
-        rescue
-          ArgumentError -> %TableUpdateResponse{updated: false}
-        end
+        %TableUpdateResponse{updated: false}
 
       db_ref ->
         # Check if exists then update
@@ -279,19 +260,7 @@ defmodule Store.API.DataAccess do
 
     case get_db_ref_direct() do
       nil ->
-        # ETS fallback
-        try do
-          case :ets.lookup(:table_data, key) do
-            [{^key, _}] ->
-              :ets.delete(:table_data, key)
-              %TableDeleteResponse{deleted: true}
-
-            [] ->
-              %TableDeleteResponse{deleted: false}
-          end
-        rescue
-          ArgumentError -> %TableDeleteResponse{deleted: false}
-        end
+        %TableDeleteResponse{deleted: false}
 
       db_ref ->
         case :rocksdb.get(db_ref, key, []) do

@@ -315,18 +315,28 @@ defmodule Store.Transaction.AsyncCommitCoordinator do
 
   defp do_async_finalize(store_ref, txn, primary_key, commit_ts) do
     # Write commit record for primary first
-    :ok = Executor.write_commit_record(store_ref, primary_key, txn.start_ts, commit_ts)
+    with :ok <- Executor.write_commit_record(store_ref, primary_key, txn.start_ts, commit_ts),
+         :ok <- Executor.delete_lock(store_ref, primary_key, txn.start_ts) do
+      # Async finalize secondaries
+      secondary_keys = Map.keys(txn.write_buffer) -- [primary_key]
 
-    # Delete primary lock
-    :ok = Executor.delete_lock(store_ref, primary_key, txn.start_ts)
-
-    # Async finalize secondaries
-    secondary_keys = Map.keys(txn.write_buffer) -- [primary_key]
-
-    Enum.each(secondary_keys, fn key ->
-      Executor.write_commit_record(store_ref, key, txn.start_ts, commit_ts)
-      Executor.delete_lock(store_ref, key, txn.start_ts)
-    end)
+      Enum.each(secondary_keys, fn key ->
+        # Best effort for secondaries
+        with :ok <- Executor.write_commit_record(store_ref, key, txn.start_ts, commit_ts) do
+          Executor.delete_lock(store_ref, key, txn.start_ts)
+        else
+          error ->
+            Logger.warning(
+              "AsyncCommitCoordinator: failed to finalize secondary #{inspect(key)}: #{inspect(error)}"
+            )
+        end
+      end)
+    else
+      error ->
+        Logger.warning(
+          "AsyncCommitCoordinator: failed to finalize primary #{inspect(primary_key)}: #{inspect(error)}"
+        )
+    end
 
     Logger.debug("Async commit finalized for txn #{txn.id} at commit_ts=#{commit_ts}")
   end

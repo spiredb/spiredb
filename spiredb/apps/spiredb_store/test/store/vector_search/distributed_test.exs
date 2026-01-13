@@ -9,10 +9,10 @@ defmodule Store.VectorSearch.DistributedTest do
       result =
         try do
           Distributed.search("nonexistent_index", [1.0, 2.0, 3.0], k: 5)
-        catch
-          :exit, _ -> {:error, :genserver_not_running}
         rescue
           _ -> {:error, :exception_raised}
+        catch
+          :exit, _ -> {:error, :genserver_not_running}
         end
 
       # Will error because index doesn't exist, but shouldn't crash
@@ -31,10 +31,10 @@ defmodule Store.VectorSearch.DistributedTest do
       result =
         try do
           Distributed.search_stores([node()], "test_index", [1.0, 2.0], k: 5)
-        catch
-          :exit, _ -> {:ok, []}
         rescue
           _ -> {:ok, []}
+        catch
+          :exit, _ -> {:ok, []}
         end
 
       # Should not crash, may return error or empty results

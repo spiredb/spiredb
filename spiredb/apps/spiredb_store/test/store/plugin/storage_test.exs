@@ -5,8 +5,13 @@ defmodule Store.Plugin.StorageTest do
 
   @plugin_name "test_plugin"
 
+  alias Store.Test.RocksDBHelper
+
   setup do
-    # Clean up any previous test data
+    # Setup isolated RocksDB for this test
+    {:ok, _db, _cfs} = RocksDBHelper.setup_rocksdb("plugin_storage_test")
+
+    # Clean up any previous test data (logically empty due to new DB, but keeping intent)
     Storage.clear_all(@plugin_name)
     :ok
   end

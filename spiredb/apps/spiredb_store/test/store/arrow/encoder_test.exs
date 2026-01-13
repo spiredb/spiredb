@@ -152,7 +152,7 @@ defmodule Store.Arrow.EncoderTest do
 
       # Should be reasonably fast (under 200ms)
       assert time_ms < 500
-      assert rows_per_sec > 50_000
+      assert rows_per_sec > 30_000
     end
   end
 

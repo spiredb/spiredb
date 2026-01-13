@@ -34,7 +34,7 @@ defmodule PD.Scheduler.LeaderCoordinatorTest do
 
     test "calculate_leader_transfers balances leaders" do
       # Mock data for testing the algorithm
-      stores = [
+      _stores = [
         %{node: :store1, state: :up},
         %{node: :store2, state: :up},
         %{node: :store3, state: :up}

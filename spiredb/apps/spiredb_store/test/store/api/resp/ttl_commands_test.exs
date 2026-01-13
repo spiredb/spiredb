@@ -26,11 +26,6 @@ defmodule Store.API.RESP.TTLCommandsTest do
     {:ok, "OK"}
   end
 
-  defp mock_delete(store, key) do
-    :ets.delete(store, key)
-    {:ok, :ok}
-  end
-
   describe "SET with EX (seconds TTL) encoding" do
     test "encodes value with TTL when EX option provided", %{store: store} do
       # Simulate SET key value EX 300

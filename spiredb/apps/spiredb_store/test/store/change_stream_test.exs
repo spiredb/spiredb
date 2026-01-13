@@ -3,11 +3,15 @@ defmodule Store.ChangeStreamTest do
 
   alias Store.ChangeStream
 
+  alias Store.Test.RocksDBHelper
+
   setup do
-    # Clear any previous state by restarting
-    if Process.whereis(ChangeStream) do
-      # Just use it as-is since it's supervised
-      :ok
+    # Setup isolated RocksDB for this test
+    {:ok, _db, _cfs} = RocksDBHelper.setup_rocksdb("change_stream_test")
+
+    # Check if ChangeStream is running
+    unless Process.whereis(ChangeStream) do
+      start_supervised!({ChangeStream, name: ChangeStream})
     end
 
     :ok

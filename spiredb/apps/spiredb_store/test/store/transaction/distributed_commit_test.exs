@@ -143,7 +143,7 @@ defmodule Store.Transaction.DistributedCommitTest do
       assert lock != nil or commit_completed()
     end
 
-    test "handles empty transaction gracefully", %{store_ref: store_ref, test_id: test_id} do
+    test "handles empty transaction gracefully", %{store_ref: store_ref} do
       txn = %Transaction{
         id: "empty_txn",
         start_ts: 1000,
@@ -493,7 +493,7 @@ defmodule Store.Transaction.DistributedCommitTest do
 
   defp k(key, test_id), do: key <> "_" <> test_id
 
-  defp create_transaction(key_values, test_id \\ nil) do
+  defp create_transaction(key_values, test_id) do
     suffix = if test_id, do: "_" <> test_id, else: ""
 
     write_buffer =
@@ -519,7 +519,7 @@ defmodule Store.Transaction.DistributedCommitTest do
     }
   end
 
-  defp create_serializable_transaction(key_values, test_id \\ nil) do
+  defp create_serializable_transaction(key_values, test_id) do
     txn = create_transaction(key_values, test_id)
     %{txn | isolation: :serializable}
   end

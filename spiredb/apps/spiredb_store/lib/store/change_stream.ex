@@ -182,6 +182,16 @@ defmodule Store.ChangeStream do
   end
 
   @impl true
+  def handle_cast({:acknowledge, consumer_id, offset}, state) do
+    case get_store_ref() do
+      nil -> :ok
+      store_ref -> OffsetStore.store_offset(store_ref, consumer_id, offset)
+    end
+
+    {:noreply, state}
+  end
+
+  @impl true
   def handle_call({:get_changes, from_seq, opts}, _from, state) do
     limit = Keyword.get(opts, :limit, 1000)
     cf_filter = Keyword.get(opts, :cf)

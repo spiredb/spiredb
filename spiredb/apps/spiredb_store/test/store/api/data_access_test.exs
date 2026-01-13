@@ -7,28 +7,38 @@ defmodule Store.API.DataAccessTest do
   alias Store.Test.MockGRPC
 
   setup do
-    # Tests pass engine directly in requests, no need to start Store.Server
+    # Setup RocksDB (helper handles persistent_term which Engine logic might ignore if we bypass Store.Server)
+    # But here we are instantiating Engine directly, so we need to be careful.
+    # The original test instantiated Engine directly. Let's keep that pattern but ensure it works with the new strictness.
+    # Actually, `DataAccess` heavily relies on `Store.Server.get_engine_for_key` OR `get_db_ref_direct`.
+    # The `engine` override in requests helps bypass `Store.Server`.
+    # HOWEVER, `table_insert` etc use `get_db_ref_direct` which uses persistent_term!
+    # So we MUST set up persistent_term for `table_*` calls to work.
 
-    # Start a unique Engine for this test process
     unique_name = :"TestEngine_#{System.unique_integer([:positive])}"
     path = "/tmp/spiredb_test_data_access_#{System.unique_integer([:positive])}"
-
     File.rm_rf!(path)
+
     {:ok, pid} = Engine.start_link(path: path, name: unique_name)
 
-    # Configure MockGRPC
+    # Extract db_ref from Engine state (hacky? or just use RocksDBHelper to set pterm?)
+    # Easier: RocksDBHelper sets up a DB and puts it in pterm.
+    # BUT, we want `raw_scan` to use `engine` param, and `table_*` to use pterm.
+    # Let's align them.
+
+    db_ref = Engine.get_db_ref(pid)
+    :persistent_term.put(:spiredb_rocksdb_ref, db_ref)
+
     Application.put_env(:spiredb_store, :grpc_module, MockGRPC)
 
     on_exit(fn ->
-      if Process.alive?(pid) do
-        Process.exit(pid, :kill)
-      end
-
+      if Process.alive?(pid), do: Process.exit(pid, :kill)
       Application.put_env(:spiredb_store, :grpc_module, GRPC.Server)
       File.rm_rf!(path)
+      :persistent_term.erase(:spiredb_rocksdb_ref)
     end)
 
-    {:ok, engine: unique_name}
+    {:ok, engine: unique_name, db_ref: db_ref}
   end
 
   test "scan returns batches", %{engine: engine} do

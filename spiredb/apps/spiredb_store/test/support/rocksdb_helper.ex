@@ -15,7 +15,16 @@ defmodule Store.Test.RocksDBHelper do
     {:ok, db} = :rocksdb.open(String.to_charlist(path), create_if_missing: true)
 
     # Create Column Families
-    cfs = ["txn_locks", "txn_data", "txn_write", "meta", "change_log"]
+    cfs = [
+      "txn_locks",
+      "txn_data",
+      "txn_write",
+      "meta",
+      "change_log",
+      "streams",
+      "stream_meta",
+      "plugin_state"
+    ]
 
     cf_map =
       Enum.reduce(cfs, %{}, fn cf_name, acc ->

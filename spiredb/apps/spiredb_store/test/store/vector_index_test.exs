@@ -5,35 +5,22 @@ defmodule Store.VectorIndexTest do
 
   use ExUnit.Case, async: false
 
+  alias Store.Test.RocksDBHelper
   alias Store.VectorIndex
 
-  @pid Store.VectorIndex
+  @pid :test_vector_index
 
   setup do
-    # Only start if not already running (may be started by application supervisor)
-    unless Process.whereis(@pid) do
-      start_supervised!({VectorIndex, name: @pid})
-    end
+    # Setup test-specific RocksDB
+    {:ok, _db, _cfs} = RocksDBHelper.setup_rocksdb("vector_index_test")
 
-    # Clean up any existing indexes from previous tests
-    case VectorIndex.list_indexes(@pid) do
-      {:ok, indexes} ->
-        Enum.each(indexes, fn idx ->
-          VectorIndex.drop_index(@pid, idx.name)
-        end)
+    # Use a unique data directory for this test run
+    data_dir = "/tmp/spiredb_test_vectors_#{System.unique_integer([:positive])}"
+    File.rm_rf!(data_dir)
 
-      _ ->
-        :ok
-    end
-
-    # Clean up ETS tables
-    for table <- [:vector_payloads] do
-      try do
-        :ets.delete_all_objects(table)
-      catch
-        :error, :badarg -> :ok
-      end
-    end
+    # Start a fresh VectorIndex process for this test
+    # We use a unique name (@pid) to avoid clashing with the global Store.VectorIndex
+    start_supervised!({Store.VectorIndex, name: @pid, data_dir: data_dir})
 
     :ok
   end

@@ -5,14 +5,13 @@ defmodule Store.StreamXdelTest do
 
   @test_stream "xdel_test_stream"
 
-  setup do
-    # Ensure KV engine is running
-    case Store.KV.Engine.start_link(path: "/tmp/xdel_test_#{System.unique_integer()}") do
-      {:ok, _pid} -> :ok
-      {:error, {:already_started, _}} -> :ok
-    end
+  alias Store.Test.RocksDBHelper
 
-    # Clean up any existing stream
+  setup do
+    # Setup isolated RocksDB
+    {:ok, _db, _cfs} = RocksDBHelper.setup_rocksdb("xdel_test")
+
+    # Clean up any existing stream (now against the isolated DB)
     Stream.delete_stream(@test_stream)
     :ok
   end
@@ -44,9 +43,9 @@ defmodule Store.StreamXdelTest do
 
     test "deletes multiple entries" do
       {:ok, id1} = Stream.xadd(@test_stream, [{"f", "1"}])
-      {:ok, id2} = Stream.xadd(@test_stream, [{"f", "2"}])
+      {:ok, _id2} = Stream.xadd(@test_stream, [{"f", "2"}])
       {:ok, id3} = Stream.xadd(@test_stream, [{"f", "3"}])
-      {:ok, id4} = Stream.xadd(@test_stream, [{"f", "4"}])
+      {:ok, _id4} = Stream.xadd(@test_stream, [{"f", "4"}])
 
       {:ok, deleted} = Stream.xdel(@test_stream, [id1, id3])
       assert deleted == 2

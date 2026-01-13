@@ -353,13 +353,8 @@ defmodule Store.VectorIndex do
 
     case {get_db_ref(), get_vectors_cf()} do
       {nil, _} ->
-        try do
-          :ets.insert(:vector_payloads, {key, value})
-        rescue
-          ArgumentError ->
-            :ets.new(:vector_payloads, [:named_table, :public, :set])
-            :ets.insert(:vector_payloads, {key, value})
-        end
+        Logger.error("Cannot store payload: No RocksDB store_ref found")
+        :error
 
       {db_ref, cf} when not is_nil(cf) ->
         :rocksdb.put(db_ref, cf, key, value, [])
@@ -375,14 +370,7 @@ defmodule Store.VectorIndex do
 
     case {get_db_ref(), get_vectors_cf()} do
       {nil, _} ->
-        try do
-          case :ets.lookup(:vector_payloads, key) do
-            [{^key, value}] -> value
-            [] -> nil
-          end
-        rescue
-          ArgumentError -> nil
-        end
+        nil
 
       {db_ref, cf} when not is_nil(cf) ->
         case :rocksdb.get(db_ref, cf, key, []) do
@@ -403,11 +391,7 @@ defmodule Store.VectorIndex do
 
     case {get_db_ref(), get_vectors_cf()} do
       {nil, _} ->
-        try do
-          :ets.delete(:vector_payloads, key)
-        rescue
-          ArgumentError -> :ok
-        end
+        :ok
 
       {db_ref, cf} when not is_nil(cf) ->
         :rocksdb.delete(db_ref, cf, key, [])
@@ -430,14 +414,8 @@ defmodule Store.VectorIndex do
 
     case {get_db_ref(), get_vectors_cf()} do
       {nil, _} ->
-        # ETS fallback for tests
-        try do
-          :ets.insert(:vector_id_mappings, {key, value})
-        rescue
-          ArgumentError ->
-            :ets.new(:vector_id_mappings, [:named_table, :public, :set])
-            :ets.insert(:vector_id_mappings, {key, value})
-        end
+        Logger.error("Cannot store ID mapping: No RocksDB store_ref found")
+        :error
 
       {db_ref, cf} when not is_nil(cf) ->
         :rocksdb.put(db_ref, cf, key, value, [])
@@ -452,24 +430,7 @@ defmodule Store.VectorIndex do
 
     case {get_db_ref(), get_vectors_cf()} do
       {nil, _} ->
-        # ETS fallback for tests
-        try do
-          :ets.foldl(
-            fn {key, value}, acc ->
-              if String.starts_with?(key, prefix) do
-                int_id = key |> String.replace(prefix, "") |> String.to_integer()
-                doc_id = :erlang.binary_to_term(value)
-                Map.put(acc, int_id, doc_id)
-              else
-                acc
-              end
-            end,
-            %{},
-            :vector_id_mappings
-          )
-        rescue
-          ArgumentError -> %{}
-        end
+        %{}
 
       {db_ref, cf} when not is_nil(cf) ->
         # Scan RocksDB with prefix using vectors CF
