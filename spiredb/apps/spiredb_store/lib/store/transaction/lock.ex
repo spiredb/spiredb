@@ -5,8 +5,6 @@ defmodule Store.Transaction.Lock do
   Primary lock stores secondary key list for distributed commit truth.
   """
 
-  import Bitwise
-
   @type lock_type :: :prewrite | :pessimistic
 
   @type t :: %__MODULE__{

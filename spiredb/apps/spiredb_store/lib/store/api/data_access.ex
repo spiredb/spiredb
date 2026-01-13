@@ -365,13 +365,23 @@ defmodule Store.API.DataAccess do
     end)
   end
 
-  defp stream_table_batches(stream, batches, _columns, _start_time) do
+  defp stream_table_batches(stream, batches, columns, _start_time) do
     total = length(batches)
 
     Enum.with_index(batches)
     |> Enum.each(fn {{rows, stats}, idx} ->
-      # TODO: Apply column projection and encode with schema
-      arrow_batch = Encoder.encode_scan_batch(rows)
+      # Apply column projection if columns specified
+      projected_rows =
+        if columns && columns != [] do
+          Enum.map(rows, fn {key, value} ->
+            projected_value = apply_column_projection(value, columns)
+            {key, projected_value}
+          end)
+        else
+          rows
+        end
+
+      arrow_batch = Encoder.encode_scan_batch(projected_rows)
 
       response = %TableScanResponse{
         arrow_batch: arrow_batch,
@@ -386,6 +396,29 @@ defmodule Store.API.DataAccess do
       grpc_module().send_reply(stream, response)
     end)
   end
+
+  # Apply column projection to row value
+  # Value is expected to be term_to_binary encoded map or raw binary
+  defp apply_column_projection(value, columns) when is_binary(value) do
+    try do
+      case :erlang.binary_to_term(value, [:safe]) do
+        row when is_map(row) ->
+          # Project only requested columns
+          projected = Map.take(row, columns)
+          :erlang.term_to_binary(projected)
+
+        _other ->
+          # Not a map, return as-is
+          value
+      end
+    rescue
+      ArgumentError ->
+        # Not a valid term, return as-is
+        value
+    end
+  end
+
+  defp apply_column_projection(value, _columns), do: value
 
   defp grpc_module do
     Application.get_env(:spiredb_store, :grpc_module, GRPC.Server)

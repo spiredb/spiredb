@@ -11,7 +11,6 @@ defmodule Store.Transaction.ConnectionPool do
   require Logger
 
   @pool_table :grpc_connection_pool
-  @max_connections_per_store 5
   @connection_ttl_ms 60_000
   @cleanup_interval_ms 30_000
 

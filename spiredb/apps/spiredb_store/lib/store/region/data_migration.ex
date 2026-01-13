@@ -7,8 +7,6 @@ defmodule Store.Region.DataMigration do
 
   require Logger
 
-  @batch_size 1000
-
   @doc """
   Migrate data from source region to target region.
   Used during region merge operations.

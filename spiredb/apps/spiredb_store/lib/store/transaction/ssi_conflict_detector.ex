@@ -157,11 +157,7 @@ defmodule Store.Transaction.SSIConflictDetector do
   end
 
   defp check_dangerous_structure(txn) do
-    outgoing =
-      :ets.match(@conflict_table, {txn.id, :"$1", :rw, :_})
-      |> List.flatten()
-      |> Enum.uniq()
-
+    # Get incoming rw-antidependency edges (other txns that read data we wrote)
     incoming =
       :ets.match(@conflict_table, {:"$1", txn.id, :rw, :_})
       |> List.flatten()

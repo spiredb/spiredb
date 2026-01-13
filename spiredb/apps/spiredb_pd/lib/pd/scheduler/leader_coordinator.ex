@@ -204,9 +204,10 @@ defmodule PD.Scheduler.LeaderCoordinator do
     end)
   end
 
-  defp do_transfer(region_id, _from_store, target_store) do
-    # Actually transfer leadership via Raft
-    server_id = Store.Region.Raft.server_id(region_id)
+  defp do_transfer(region_id, from_store, target_store) do
+    # Compute server_id locally (format: {region_id, node})
+    # This avoids cross-app dependency on Store.Region.Raft
+    server_id = {region_id, from_store}
     target_server_id = {region_id, target_store}
 
     try do

@@ -313,7 +313,7 @@ defmodule Store.Transaction.Executor do
 
       commits =
         records
-        |> Enum.filter(fn {write_key, value} ->
+        |> Enum.filter(fn {write_key, _value} ->
           {stored_key, commit_ts} = Encoder.decode_txn_write_key(write_key)
           stored_key == key and commit_ts > after_ts
         end)

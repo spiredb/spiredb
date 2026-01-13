@@ -101,10 +101,10 @@ defmodule Store.VectorSearch.Distributed do
       # Local query
       try do
         VectorIndex.search(index_name, query_vector, k, opts)
-      catch
-        :exit, reason -> {:error, {:exit, reason}}
       rescue
         e -> {:error, {:exception, Exception.message(e)}}
+      catch
+        :exit, reason -> {:error, {:exit, reason}}
       end
     else
       # Remote query via RPC

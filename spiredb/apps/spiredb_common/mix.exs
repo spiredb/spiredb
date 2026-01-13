@@ -11,7 +11,9 @@ defmodule SpiredbCommon.MixProject do
       lockfile: "../../mix.lock",
       elixir: "~> 1.14",
       start_permanent: Mix.env() == :prod,
-      deps: deps()
+      deps: deps(),
+      # Ignore xref warnings for optional Ra dependency
+      xref: [exclude: [:ra, :ra_system, :ra_directory]]
     ]
   end
 

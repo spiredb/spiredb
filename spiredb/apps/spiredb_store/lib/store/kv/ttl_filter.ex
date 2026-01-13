@@ -45,7 +45,7 @@ defmodule Store.KV.TTLFilter do
   ## Server Callbacks
 
   @impl true
-  def init(opts) do
+  def init(_opts) do
     config = Application.get_env(:spiredb_store, __MODULE__, [])
 
     state = %{
