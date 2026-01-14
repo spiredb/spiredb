@@ -202,6 +202,7 @@ impl DistributedExecutor {
     }
 
     /// Scan a single region and consume its stream.
+    #[allow(clippy::too_many_arguments)]
     async fn scan_single_region(
         router: &RegionRouter,
         pool: &ConnectionPool,

@@ -67,5 +67,19 @@ test-rust:
 clean-rust:
 	cd compute && cargo clean
 
+clippy-rust:
+	cd compute && cargo clippy --all-targets --all-features -- -D warnings
+
+clippy-fix-rust:
+	cd compute && __CARGO_FIX_YOLO=1 cargo clippy --fix --allow-dirty --allow-staged --all-targets --all-features
+
+fmt-rust:
+	cd compute && cargo fmt --all
+
+check-fmt-rust:
+	cd compute && cargo fmt --all -- --check
+
+fullchecks: build format lint clippy-fix-rust clippy-rust fmt-rust test-rust
+
 pf:
 	kubectl port-forward svc/spiredb 6379:6379

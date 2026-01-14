@@ -16,6 +16,43 @@ use tonic::transport::Channel;
 /// Default cache capacity for statistics.
 const DEFAULT_STATS_CACHE_CAPACITY: usize = 128;
 
+/// Decode a statistics value from JSON bytes.
+///
+/// JSON encoding format (consistent with filter values):
+/// - `{"int": 42}`
+/// - `{"float": 3.14}`
+/// - `{"str": "hello"}`
+/// - `{"bytes": "base64..."}`
+/// - `{"bool": true}`
+fn decode_stat_value(bytes: &[u8]) -> Option<ScalarValue> {
+    if bytes.is_empty() {
+        return None;
+    }
+
+    let json: serde_json::Value = serde_json::from_slice(bytes).ok()?;
+
+    if let Some(v) = json.get("int").and_then(|v| v.as_i64()) {
+        return Some(ScalarValue::Int64(Some(v)));
+    }
+    if let Some(v) = json.get("float").and_then(|v| v.as_f64()) {
+        return Some(ScalarValue::Float64(Some(v)));
+    }
+    if let Some(v) = json.get("str").and_then(|v| v.as_str()) {
+        return Some(ScalarValue::Utf8(Some(v.to_string())));
+    }
+    if let Some(v) = json.get("bool").and_then(|v| v.as_bool()) {
+        return Some(ScalarValue::Boolean(Some(v)));
+    }
+    if let Some(v) = json.get("bytes").and_then(|v| v.as_str()) {
+        use base64::Engine;
+        if let Ok(decoded) = base64::engine::general_purpose::STANDARD.decode(v) {
+            return Some(ScalarValue::Binary(Some(decoded)));
+        }
+    }
+
+    None
+}
+
 /// Cached statistics for a table.
 #[derive(Clone, Debug)]
 pub struct CachedStats {
@@ -80,7 +117,7 @@ impl StatisticsProvider {
         let mut client = self.pd_client.clone();
         let response: TableStats = client.get_table_stats(request).await?.into_inner();
 
-        // Convert column stats
+        // Convert column stats with min/max decoding
         let column_stats: HashMap<String, ColumnStatistics> = response
             .column_stats
             .into_iter()
@@ -89,8 +126,8 @@ impl StatisticsProvider {
                     name,
                     ColumnStatistics {
                         distinct_count: cs.distinct_count,
-                        min_value: None, // TODO: Decode bytes to ScalarValue
-                        max_value: None, // TODO: Decode bytes to ScalarValue
+                        min_value: decode_stat_value(&cs.min_value),
+                        max_value: decode_stat_value(&cs.max_value),
                         null_count: cs.null_count,
                     },
                 )

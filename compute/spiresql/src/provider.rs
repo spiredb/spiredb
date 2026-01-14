@@ -153,7 +153,7 @@ impl TableProvider for SpireProvider {
             return Some(Statistics {
                 num_rows: Precision::Exact(cached.row_count as usize),
                 total_byte_size: Precision::Exact(cached.size_bytes as usize),
-                column_statistics: column_statistics,
+                column_statistics,
             });
         }
 

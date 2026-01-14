@@ -156,7 +156,7 @@ fn binary_to_json(left: &Expr, op: Operator, right: &Expr) -> Value {
     }
 
     // Comparison: extract column and value
-    match (left.as_ref(), right.as_ref()) {
+    match (left, right) {
         (Expr::Column(col), val) => {
             json!({
                 "op": op_str,
@@ -202,8 +202,14 @@ fn scalar_to_json(scalar: &ScalarValue) -> Value {
         ScalarValue::Utf8(Some(v)) => json!({"str": v}),
         ScalarValue::LargeUtf8(Some(v)) => json!({"str": v}),
         ScalarValue::Boolean(Some(v)) => json!({"bool": *v}),
-        ScalarValue::Binary(Some(v)) => json!({"bytes": base64::encode(v)}),
-        ScalarValue::LargeBinary(Some(v)) => json!({"bytes": base64::encode(v)}),
+        ScalarValue::Binary(Some(v)) => {
+            use base64::Engine;
+            json!({"bytes": base64::engine::general_purpose::STANDARD.encode(v)})
+        }
+        ScalarValue::LargeBinary(Some(v)) => {
+            use base64::Engine;
+            json!({"bytes": base64::engine::general_purpose::STANDARD.encode(v)})
+        }
         ScalarValue::Null => json!({"null": true}),
         _ => json!({"null": true}), // Unknown/None values treated as null
     }

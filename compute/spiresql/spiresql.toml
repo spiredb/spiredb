@@ -1,0 +1,21 @@
+# SpireSQL Configuration
+# Distributed SQL query engine for SpireDB
+
+# PostgreSQL wire protocol listen address
+listen_addr = "0.0.0.0:5432"
+
+# SpireDB DataAccess gRPC endpoint (for data queries)
+data_access_addr = "http://spiredb:50052"
+
+# SpireDB PD (Placement Driver / Schema Service) gRPC endpoint
+pd_addr = "http://spiredb:50051"
+
+# Query result cache settings
+query_cache_capacity = 65536
+enable_cache = true
+
+# Logging level: trace, debug, info, warn, error
+log_level = "info"
+
+# Worker threads (0 = auto-detect CPU cores)
+num_workers = 0

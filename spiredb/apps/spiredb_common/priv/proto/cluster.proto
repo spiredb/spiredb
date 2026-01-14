@@ -169,9 +169,11 @@ message TableStats {
 
 message ColumnStats {
   uint64 distinct_count = 1;   // For cardinality estimation
-  bytes min_value = 2;
-  bytes max_value = 3;
+  bytes min_value = 2;         // JSON encoded: {"int": 42}, {"str": "hello"}, etc.
+  bytes max_value = 3;         // JSON encoded: {"int": 42}, {"str": "hello"}, etc.
   uint64 null_count = 4;
+  bytes sum_value = 5;         // JSON encoded sum for numeric columns (NEW)
+  uint64 byte_size = 6;        // Column size in bytes (NEW)
 }
 
 message UpdateTableStatsRequest {

@@ -1,10 +1,17 @@
-name: Build SpireDB Docker Image
+name: Build SpireSQL Docker Image
 
 on:
   push:
     branches: [ "master" ]
+    paths:
+      - 'compute/**'
+      - 'docker/SpireSQL.Dockerfile'
+      - '.github/workflows/spiresql-docker-build.yml'
   pull_request:
     branches: [ "master" ]
+    paths:
+      - 'compute/**'
+      - 'docker/SpireSQL.Dockerfile'
 
 jobs:
   build:
@@ -30,8 +37,11 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: spiredb
-          file: docker/SpireDB.Dockerfile
+          context: .
+          file: docker/SpireSQL.Dockerfile
           push: ${{ github.event_name == 'push' }}
-          tags: ghcr.io/spiredb/spiredb:latest
+          tags: |
+            ghcr.io/spiredb/spiresql:latest
+            ghcr.io/spiredb/spiresql:${{ github.sha }}
           no-cache: true
+          platforms: linux/amd64

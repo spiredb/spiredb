@@ -367,7 +367,7 @@ struct SpireSqlProcessorFactory {
 }
 
 impl PgWireServerHandlers for SpireSqlProcessorFactory {
-    fn simple_query_handler(&self) -> Arc<impl SimpleQueryHandler + Send + Sync> {
+    fn simple_query_handler(&self) -> Arc<impl SimpleQueryHandler> {
         self.handler.clone()
     }
 }
