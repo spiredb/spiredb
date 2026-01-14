@@ -15,6 +15,7 @@ defmodule Store.API.DataAccess do
   alias Store.KV.Engine
   alias Store.Schema.Encoder
   alias Store.Server
+  alias Store.Filter.Parser, as: FilterParser
 
   alias Spiredb.Data.{
     RawGetResponse,
@@ -134,11 +135,19 @@ defmodule Store.API.DataAccess do
   # ==========================================================================
 
   @doc """
-  Table scan with schema-aware Arrow output.
+  Table scan with schema-aware Arrow output and filter pushdown.
   """
   def table_scan(request, stream) do
     start_time = System.monotonic_time(:millisecond)
-    Logger.debug("TableScan", table: request.table_name, columns: request.columns)
+
+    # Parse filter expression if provided
+    filter = FilterParser.parse(request.filter_expr)
+
+    Logger.debug("TableScan",
+      table: request.table_name,
+      columns: request.columns,
+      has_filter: filter != nil
+    )
 
     # Use table ID prefix for scan range
     # Table names map to IDs via schema - for now use hash
@@ -151,7 +160,7 @@ defmodule Store.API.DataAccess do
 
     case Engine.scan_range(engine, table_prefix, table_end, opts) do
       {:ok, batches} ->
-        stream_table_batches(stream, batches, request.columns, start_time)
+        stream_table_batches(stream, batches, request.columns, filter, start_time)
 
       {:error, reason} ->
         Logger.error("TableScan failed", reason: inspect(reason))
@@ -334,20 +343,31 @@ defmodule Store.API.DataAccess do
     end)
   end
 
-  defp stream_table_batches(stream, batches, columns, _start_time) do
+  defp stream_table_batches(stream, batches, columns, filter, _start_time) do
     total = length(batches)
 
     Enum.with_index(batches)
     |> Enum.each(fn {{rows, stats}, idx} ->
+      # Apply filter if provided
+      filtered_rows =
+        if filter do
+          Enum.filter(rows, fn {_key, value} ->
+            row = decode_row_value(value)
+            FilterParser.matches?(filter, row)
+          end)
+        else
+          rows
+        end
+
       # Apply column projection if columns specified
       projected_rows =
         if columns && columns != [] do
-          Enum.map(rows, fn {key, value} ->
+          Enum.map(filtered_rows, fn {key, value} ->
             projected_value = apply_column_projection(value, columns)
             {key, projected_value}
           end)
         else
-          rows
+          filtered_rows
         end
 
       arrow_batch = Encoder.encode_scan_batch(projected_rows)
@@ -356,7 +376,7 @@ defmodule Store.API.DataAccess do
         arrow_batch: arrow_batch,
         has_more: idx < total - 1,
         stats: %ScanStats{
-          rows_returned: stats.rows_returned,
+          rows_returned: length(projected_rows),
           bytes_read: stats.bytes_read,
           scan_time_ms: stats.scan_time_ms
         }
@@ -365,6 +385,20 @@ defmodule Store.API.DataAccess do
       grpc_module().send_reply(stream, response)
     end)
   end
+
+  # Decode row value to map for filter evaluation
+  defp decode_row_value(value) when is_binary(value) do
+    try do
+      case :erlang.binary_to_term(value, [:safe]) do
+        row when is_map(row) -> row
+        _ -> %{}
+      end
+    rescue
+      ArgumentError -> %{}
+    end
+  end
+
+  defp decode_row_value(_), do: %{}
 
   # Apply column projection to row value
   # Value is expected to be term_to_binary encoded map or raw binary

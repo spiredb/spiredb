@@ -38,6 +38,8 @@ core_affinity = "0.8"
 num_cpus = "1.17"
 ahash = "0.8"
 async-stream = "0.3"
+base64 = "0.22"
+serde_json = "1.0"
 byteorder = "1.5"
 socket2 = { version = "0.6", features = ["all"] }
 

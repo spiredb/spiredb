@@ -25,6 +25,7 @@ mod context;
 mod distributed;
 mod distributed_exec;
 mod exec;
+mod filter;
 mod pool;
 mod provider;
 mod pruning;

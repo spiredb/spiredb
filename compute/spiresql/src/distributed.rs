@@ -92,8 +92,8 @@ impl DistributedExecutor {
         columns: Vec<String>,
         limit: u32,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
-        // No pruning - scan all regions
-        self.table_scan_with_bounds(table_name, columns, limit, &[], &[])
+        // No pruning - scan all regions (no filter)
+        self.table_scan_with_bounds(table_name, columns, limit, &[], &[], Vec::new())
             .await
     }
 
@@ -107,6 +107,7 @@ impl DistributedExecutor {
         limit: u32,
         start_key: &[u8],
         end_key: &[u8],
+        filter_expr: Vec<u8>,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         // Get regions, optionally filtered by key range
         let regions = if start_key.is_empty() && end_key.is_empty() {
@@ -150,7 +151,7 @@ impl DistributedExecutor {
 
         // Execute scans in parallel (limited by max_parallel_shards)
         let batches = self
-            .parallel_scan(table_name, &regions, columns, limit)
+            .parallel_scan(table_name, &regions, columns, limit, filter_expr)
             .await?;
 
         Ok(batches)
@@ -163,6 +164,7 @@ impl DistributedExecutor {
         regions: &[RegionInfo],
         columns: Vec<String>,
         limit: u32,
+        filter_expr: Vec<u8>,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         let mut futures = FuturesUnordered::new();
         let mut all_batches = Vec::new();
@@ -175,10 +177,13 @@ impl DistributedExecutor {
             let cols = columns.clone();
             let store_id = region.leader_store_id;
             let region_id = region.region_id;
+            let filter = filter_expr.clone();
 
             futures.push(async move {
-                Self::scan_single_region(&router, &pool, store_id, region_id, &table, cols, limit)
-                    .await
+                Self::scan_single_region(
+                    &router, &pool, store_id, region_id, &table, cols, limit, filter,
+                )
+                .await
             });
         }
 
@@ -205,6 +210,7 @@ impl DistributedExecutor {
         table_name: &str,
         columns: Vec<String>,
         limit: u32,
+        filter_expr: Vec<u8>,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         // Get store address from router
         let addr = router
@@ -218,11 +224,11 @@ impl DistributedExecutor {
             .await
             .map_err(DistributedError::Connection)?;
 
-        // Create request
+        // Create request with filter
         let request = TableScanRequest {
             table_name: table_name.to_string(),
             columns,
-            filter_expr: Vec::new(), // TODO: support filter pushdown
+            filter_expr,
             limit,
             snapshot_ts: 0, // Latest
             read_follower: false,

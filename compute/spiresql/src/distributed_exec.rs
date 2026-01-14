@@ -24,6 +24,7 @@ use futures::stream::Stream;
 use std::fmt;
 
 use crate::distributed::DistributedExecutor;
+use crate::filter::serialize_filter;
 use crate::pruning::{extract_key_bounds, KeyBounds};
 
 /// Distributed execution plan that queries multiple shards in parallel.
@@ -36,6 +37,8 @@ pub struct DistributedSpireExec {
     limit: u32,
     /// Key bounds for region pruning (extracted from filters).
     key_bounds: KeyBounds,
+    /// Serialized filter expression for pushdown.
+    filter_expr: Vec<u8>,
     properties: PlanProperties,
 }
 
@@ -80,6 +83,9 @@ impl DistributedSpireExec {
             );
         }
 
+        // Serialize filters for pushdown to storage
+        let filter_expr = serialize_filter(filters);
+
         let properties = PlanProperties::new(
             EquivalenceProperties::new(schema.clone()),
             Partitioning::UnknownPartitioning(1),
@@ -94,6 +100,7 @@ impl DistributedSpireExec {
             columns,
             limit: limit.unwrap_or(0) as u32,
             key_bounds,
+            filter_expr,
             properties,
         }
     }
@@ -160,6 +167,7 @@ impl ExecutionPlan for DistributedSpireExec {
             self.columns.clone(),
             self.limit,
             self.key_bounds.clone(),
+            self.filter_expr.clone(),
         );
         Ok(Box::pin(stream))
     }
@@ -183,15 +191,17 @@ impl DistributedStream {
         columns: Vec<String>,
         limit: u32,
         key_bounds: KeyBounds,
+        filter_expr: Vec<u8>,
     ) -> Self {
         let schema_captured = schema.clone();
 
         let stream = async_stream::try_stream! {
             log::debug!(
-                "Starting distributed scan on table '{}' with {} columns, limit {}",
+                "Starting distributed scan on table '{}' with {} columns, limit {}, filter_len={}",
                 table_name,
                 columns.len(),
-                limit
+                limit,
+                filter_expr.len()
             );
 
             // Use pruning if bounds are available
@@ -199,7 +209,7 @@ impl DistributedStream {
             let end_key = key_bounds.end_key.as_deref().unwrap_or(&[]);
 
             let batches = executor
-                .table_scan_with_bounds(&table_name, columns, limit, start_key, end_key)
+                .table_scan_with_bounds(&table_name, columns, limit, start_key, end_key, filter_expr)
                 .await
                 .map_err(|e| DataFusionError::External(Box::new(e)))?;
 
