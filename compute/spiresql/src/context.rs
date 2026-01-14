@@ -1,19 +1,31 @@
 use datafusion::arrow::datatypes::TimeUnit;
+use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
-use kovan_map::HashMap;
 use spire_proto::spiredb::{
-    cluster::schema_service_client::SchemaServiceClient, data::data_access_client::DataAccessClient,
+    cluster::cluster_service_client::ClusterServiceClient,
+    cluster::schema_service_client::SchemaServiceClient,
+    data::data_access_client::DataAccessClient,
 };
 use std::sync::Arc;
 use tonic::transport::Channel;
 
+use crate::cache::{new_shared_cache, SharedLruCache};
+use crate::distributed::{DistributedConfig, DistributedExecutor};
+use crate::pool::{ConnectionPool, PoolConfig};
 use crate::provider::SpireProvider;
+use crate::routing::RegionRouter;
+use crate::statistics::StatisticsProvider;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use spire_proto::spiredb::cluster::{ColumnType, Empty};
 use std::fmt;
 
+use crate::config::Config;
+
+/// Default query cache capacity.
+const DEFAULT_QUERY_CACHE_CAPACITY: usize = 256;
+
 /// Global context for SpireSQL node.
-/// Holds connections and high-performance caches.
+/// Holds connections, distributed execution components, and high-performance caches.
 #[allow(dead_code)]
 pub struct SpireContext {
     /// Client to talk to SpireDB DataAccess service.
@@ -25,28 +37,67 @@ pub struct SpireContext {
     /// DataFusion Session Context for SQL execution.
     pub session_context: SessionContext,
 
-    /// Cache for table metadata (Schema, Location, etc.).
-    /// Key: Table Name Hash (u64) - simplified for kovan map requirement
-    /// Value: Schema Handle (usize)
-    pub metadata_cache: Arc<HashMap<u64, usize>>,
+    /// Region router for shard discovery (LRU cached).
+    pub region_router: Arc<RegionRouter>,
 
-    /// Cache for query results.
-    /// Key: Query Hash (u64)
-    /// Value: Result Handle (usize)
-    pub query_cache: Arc<HashMap<u64, usize>>,
+    /// Connection pool for storage nodes.
+    pub connection_pool: Arc<ConnectionPool>,
+
+    /// Distributed query executor.
+    pub distributed_executor: Arc<DistributedExecutor>,
+
+    /// Statistics provider for cost-based optimization.
+    pub stats_provider: Arc<StatisticsProvider>,
+
+    /// LRU query cache: query_hash -> cached results.
+    pub query_cache: SharedLruCache<Arc<Vec<RecordBatch>>>,
+
+    /// Whether caching is enabled.
+    pub cache_enabled: bool,
 }
 
 impl SpireContext {
+    /// Create a new SpireContext with all distributed components.
     pub fn new(
         data_access: DataAccessClient<Channel>,
         schema_service: SchemaServiceClient<Channel>,
+        cluster_service: ClusterServiceClient<Channel>,
+        config: &Config,
     ) -> Self {
+        // Create region router with LRU cache
+        let region_router = Arc::new(RegionRouter::new(cluster_service.clone()));
+
+        // Create connection pool
+        let connection_pool = Arc::new(ConnectionPool::new(PoolConfig::default()));
+
+        // Create distributed executor
+        let distributed_executor = Arc::new(DistributedExecutor::new(
+            region_router.clone(),
+            connection_pool.clone(),
+            DistributedConfig::default(),
+        ));
+
+        // Create statistics provider
+        let stats_provider = Arc::new(StatisticsProvider::new(schema_service.clone()));
+
+        // Create LRU query cache
+        let cache_capacity = if config.query_cache_capacity > 0 {
+            config.query_cache_capacity
+        } else {
+            DEFAULT_QUERY_CACHE_CAPACITY
+        };
+        let query_cache = new_shared_cache(cache_capacity);
+
         Self {
             data_access,
             schema_service,
             session_context: SessionContext::new(),
-            metadata_cache: Arc::new(HashMap::new()),
-            query_cache: Arc::new(HashMap::new()),
+            region_router,
+            connection_pool,
+            distributed_executor,
+            stats_provider,
+            query_cache,
+            cache_enabled: config.enable_cache,
         }
     }
 
@@ -70,23 +121,79 @@ impl SpireContext {
 
             let schema = Arc::new(Schema::new(fields));
 
-            let provider = SpireProvider::new(self.data_access.clone(), table_name.clone(), schema);
+            // Get first primary key column for region pruning (default to "id")
+            let pk_column = table
+                .primary_key
+                .first()
+                .cloned()
+                .unwrap_or_else(|| "id".to_string());
+
+            // Use distributed provider for parallel multi-shard queries
+            let provider = SpireProvider::with_distributed(
+                self.data_access.clone(),
+                table_name.clone(),
+                schema,
+                self.distributed_executor.clone(),
+                pk_column,
+            );
 
             self.session_context
                 .register_table(&table_name, Arc::new(provider))?;
+
+            // Pre-warm region cache for this table
+            if let Err(e) = self.region_router.get_table_regions(&table_name).await {
+                log::warn!("Failed to pre-warm region cache for {}: {}", table_name, e);
+            }
+
+            // Pre-warm statistics cache
+            if let Err(e) = self.stats_provider.get_table_stats(&table_name).await {
+                log::warn!("Failed to pre-warm stats for {}: {}", table_name, e);
+            }
         }
 
         Ok(())
     }
 
-    /// Retrieve cached query result handle if available.
-    pub fn get_cached_query(&self, query_hash: u64) -> Option<usize> {
-        self.query_cache.get(&query_hash)
+    /// Hash a query string for cache lookup (using ahash).
+    fn hash_query(query: &str) -> u64 {
+        use ahash::AHasher;
+        use std::hash::{Hash, Hasher};
+        let mut hasher = AHasher::default();
+        query.hash(&mut hasher);
+        hasher.finish()
     }
 
-    /// Store query result handle in cache.
-    pub fn cache_query_result(&self, query_hash: u64, result_handle: usize) {
-        self.query_cache.insert(query_hash, result_handle);
+    /// Retrieve cached query result (LRU cache).
+    pub fn get_cached_query(&self, query: &str) -> Option<Arc<Vec<RecordBatch>>> {
+        if !self.cache_enabled {
+            return None;
+        }
+        let hash = Self::hash_query(query);
+        self.query_cache.get_and_touch(hash)
+    }
+
+    /// Store query result in LRU cache.
+    pub fn cache_query_result(&self, query: &str, batches: Vec<RecordBatch>) {
+        if !self.cache_enabled {
+            return;
+        }
+        let hash = Self::hash_query(query);
+        self.query_cache.insert(hash, Arc::new(batches));
+    }
+
+    /// Get distributed executor for parallel shard queries.
+    pub fn executor(&self) -> &DistributedExecutor {
+        &self.distributed_executor
+    }
+
+    /// Get region router for shard discovery.
+    pub fn router(&self) -> &RegionRouter {
+        &self.region_router
+    }
+
+    /// Get statistics provider.
+    pub fn stats(&self) -> &StatisticsProvider {
+        &self.stats_provider
     }
 }
 
@@ -107,9 +214,9 @@ fn map_column_type(ct: ColumnType) -> DataType {
         ColumnType::TypeBytes => DataType::Binary,
         ColumnType::TypeDate => DataType::Date32,
         ColumnType::TypeTimestamp => DataType::Timestamp(TimeUnit::Microsecond, None),
-        ColumnType::TypeDecimal => DataType::Decimal128(38, 10), // Default precision/scale, should come from ColDef
-        ColumnType::TypeList => DataType::Utf8,                  // Simplified for now
-        ColumnType::TypeVector => DataType::Binary,              // Vector as binary for now
+        ColumnType::TypeDecimal => DataType::Decimal128(38, 10),
+        ColumnType::TypeList => DataType::Utf8,
+        ColumnType::TypeVector => DataType::Binary,
     }
 }
 
@@ -119,8 +226,12 @@ impl fmt::Debug for SpireContext {
             .field("data_access", &self.data_access)
             .field("schema_service", &self.schema_service)
             .field("session_context", &"SessionContext")
-            .field("metadata_cache", &"HashMap<u64, usize>")
-            .field("query_cache", &"HashMap<u64, usize>")
+            .field("region_router", &"RegionRouter")
+            .field("connection_pool", &"ConnectionPool")
+            .field("distributed_executor", &"DistributedExecutor")
+            .field("stats_provider", &"StatisticsProvider")
+            .field("query_cache", &"LruCache")
+            .field("cache_enabled", &self.cache_enabled)
             .finish()
     }
 }

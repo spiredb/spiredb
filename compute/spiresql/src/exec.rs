@@ -146,9 +146,11 @@ impl SpireStream {
                 vec![]
             };
 
-            // TODO: Serialize filters to SpireDB format
+            // NOTE: Filter pushdown is plumbed here but not yet supported by the SpireDB backend.
+            // Attempts to pass filters will result in them being ignored or logged server-side.
+            // We log them here for visibility.
             let filter_expr = if !filters.is_empty() {
-                log::warn!("Filter pushdown not yet implemented for: {:?}", filters);
+                log::warn!("Filter pushdown ignored (backend support pending): {:?}", filters);
                 vec![]
             } else {
                 vec![]

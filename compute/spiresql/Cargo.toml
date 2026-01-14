@@ -23,5 +23,15 @@ mimalloc = { workspace = true }
 kovan = { workspace = true }
 kovan-map = { workspace = true }
 kovan-channel = { workspace = true }
-async-stream = "0.3"
-byteorder = "1.5"
+clap = { workspace = true }
+serde = { workspace = true }
+toml = { workspace = true }
+parking_lot = { workspace = true }
+monoio = { workspace = true }
+core_affinity = { workspace = true }
+num_cpus = { workspace = true }
+ahash = { workspace = true }
+lru = { workspace = true }
+async-stream = { workspace = true }
+byteorder = { workspace = true }
+socket2 = { workspace = true }
