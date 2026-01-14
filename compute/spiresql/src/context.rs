@@ -1,3 +1,4 @@
+use datafusion::arrow::datatypes::TimeUnit;
 use datafusion::prelude::SessionContext;
 use kovan_map::HashMap;
 use spire_proto::spiredb::{
@@ -105,9 +106,7 @@ fn map_column_type(ct: ColumnType) -> DataType {
         ColumnType::TypeString => DataType::Utf8,
         ColumnType::TypeBytes => DataType::Binary,
         ColumnType::TypeDate => DataType::Date32,
-        ColumnType::TypeTimestamp => {
-            DataType::Timestamp(datafusion::arrow::datatypes::TimeUnit::Microsecond, None)
-        }
+        ColumnType::TypeTimestamp => DataType::Timestamp(TimeUnit::Microsecond, None),
         ColumnType::TypeDecimal => DataType::Decimal128(38, 10), // Default precision/scale, should come from ColDef
         ColumnType::TypeList => DataType::Utf8,                  // Simplified for now
         ColumnType::TypeVector => DataType::Binary,              // Vector as binary for now

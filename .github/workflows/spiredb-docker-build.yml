@@ -1,4 +1,4 @@
-name: Build Docker Image
+name: Build SpireDB Docker Image
 
 on:
   push:
