@@ -395,22 +395,41 @@ defmodule PD.Server do
         {:error, :already_started} ->
           :ok
 
+        {:error, {:already_started, _pid}} ->
+          :ok
+
         {:error, reason} ->
           Logger.error("Failed to start PD Raft server: #{inspect(reason)}")
-          retry_start(node_name, config, retries, reason)
+          # Force cleanup stale server and retry
+          force_cleanup_and_retry(node_name, config, retries, reason)
       end
     catch
       :exit, reason ->
-        retry_start(node_name, config, retries, reason)
+        # Raft server might be in bad state from previous run
+        Logger.warning("PD Raft start caught exception: #{inspect(reason)}")
+        force_cleanup_and_retry(node_name, config, retries, reason)
     end
   end
 
-  defp retry_start(node_name, config, retries, reason) do
+  defp force_cleanup_and_retry(node_name, config, retries, reason) do
     if retries > 0 do
+      server_id = config.id
+
+      # Try to force stop/delete any stale Ra server
+      Logger.info("Attempting to cleanup stale Ra server before retry...")
+
+      try do
+        :ra.force_delete_server(:pd_system, server_id)
+        Logger.info("Force deleted stale Ra server")
+      catch
+        _, err ->
+          Logger.debug("Force delete returned: #{inspect(err)}")
+      end
+
       Process.sleep(2000)
       start_cluster_with_retry(node_name, config, retries - 1)
     else
-      raise "Failed to start PD Raft server: #{inspect(reason)}"
+      raise "Failed to start PD Raft server after retries: #{inspect(reason)}"
     end
   end
 

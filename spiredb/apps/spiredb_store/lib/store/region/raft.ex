@@ -75,7 +75,33 @@ defmodule Store.Region.Raft do
 
     Logger.info("Starting :ra.start_server with config: #{inspect(config)}")
 
-    :ra.start_server(system_name, config)
+    case :ra.start_server(system_name, config) do
+      :ok ->
+        :ok
+
+      {:error, :already_started} ->
+        :ok
+
+      {:error, {:already_started, pid}} ->
+        {:ok, pid}
+
+      {:error, reason} ->
+        Logger.warning(
+          "Region #{region_id} Raft start failed: #{inspect(reason)}, attempting cleanup..."
+        )
+
+        # Force delete stale server and retry once
+        try do
+          :ra.force_delete_server(system_name, server_id)
+          Logger.info("Force deleted stale region #{region_id} Ra server, retrying...")
+          Process.sleep(500)
+          :ra.start_server(system_name, config)
+        catch
+          _, err ->
+            Logger.error("Region #{region_id} cleanup failed: #{inspect(err)}")
+            {:error, reason}
+        end
+    end
   end
 
   def process_command(region_id, command, timeout \\ 3000) do
