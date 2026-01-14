@@ -135,6 +135,7 @@ impl SpireContext {
                 schema,
                 self.distributed_executor.clone(),
                 pk_column,
+                self.stats_provider.clone(),
             );
 
             self.session_context
@@ -182,16 +183,19 @@ impl SpireContext {
     }
 
     /// Get distributed executor for parallel shard queries.
+    #[allow(dead_code)]
     pub fn executor(&self) -> &DistributedExecutor {
         &self.distributed_executor
     }
 
     /// Get region router for shard discovery.
+    #[allow(dead_code)]
     pub fn router(&self) -> &RegionRouter {
         &self.region_router
     }
 
     /// Get statistics provider.
+    #[allow(dead_code)]
     pub fn stats(&self) -> &StatisticsProvider {
         &self.stats_provider
     }

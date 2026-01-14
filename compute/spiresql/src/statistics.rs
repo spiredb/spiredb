@@ -125,12 +125,14 @@ impl StatisticsProvider {
     }
 
     /// Invalidate cached stats for a table.
+    #[allow(dead_code)]
     pub fn invalidate(&self, table: &str) {
         let hash = Self::hash_table_name(table);
         self.stats_cache.remove(hash);
     }
 
     /// Get cache statistics.
+    #[allow(dead_code)]
     pub fn cache_size(&self) -> usize {
         self.stats_cache.len()
     }

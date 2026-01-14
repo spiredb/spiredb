@@ -99,6 +99,7 @@ impl DistributedSpireExec {
     }
 
     /// Create without pruning (for backwards compatibility).
+    #[allow(dead_code)]
     pub fn new_without_pruning(
         executor: Arc<DistributedExecutor>,
         table_name: String,

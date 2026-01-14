@@ -146,6 +146,7 @@ impl ConnectionPool {
     }
 
     /// Get pool statistics.
+    #[allow(dead_code)]
     pub fn stats(&self) -> PoolStats {
         PoolStats {
             channel_count: self.channels.read().len(),
@@ -155,6 +156,7 @@ impl ConnectionPool {
 
 /// Pool statistics.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct PoolStats {
     pub channel_count: usize,
 }

@@ -20,16 +20,17 @@ struct CacheEntry<V> {
 /// Thread-safe LRU cache with eviction on capacity.
 pub struct LruCache<V: Clone> {
     /// Main storage: key_hash -> entry
-    entries: RwLock<HashMap<u64, CacheEntry<V>, ahash::RandomState>>,
+    entries: RwLock<HashMap<u64, CacheEntry<V>>>,
     /// Maximum capacity
     capacity: usize,
 }
 
+#[allow(dead_code)]
 impl<V: Clone> LruCache<V> {
     /// Create a new LRU cache with given capacity.
     pub fn new(capacity: usize) -> Self {
         Self {
-            entries: RwLock::new(HashMap::with_hasher(ahash::RandomState::new())),
+            entries: RwLock::new(HashMap::default()),
             capacity,
         }
     }
@@ -82,7 +83,7 @@ impl<V: Clone> LruCache<V> {
     }
 
     /// Evict the oldest entry (must be called with write lock held).
-    fn evict_oldest_locked(&self, entries: &mut HashMap<u64, CacheEntry<V>, ahash::RandomState>) {
+    fn evict_oldest_locked(&self, entries: &mut HashMap<u64, CacheEntry<V>>) {
         if let Some((&oldest_key, _)) = entries.iter().min_by_key(|(_, entry)| entry.last_access) {
             entries.remove(&oldest_key);
             log::trace!("Evicted oldest cache entry (hash: {})", oldest_key);

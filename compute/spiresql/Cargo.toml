@@ -31,7 +31,6 @@ monoio = { workspace = true }
 core_affinity = { workspace = true }
 num_cpus = { workspace = true }
 ahash = { workspace = true }
-lru = { workspace = true }
 async-stream = { workspace = true }
 byteorder = { workspace = true }
 socket2 = { workspace = true }

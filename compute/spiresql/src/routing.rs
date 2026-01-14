@@ -26,6 +26,7 @@ pub struct RegionInfo {
     pub start_key: Vec<u8>,
     pub end_key: Vec<u8>,
     pub leader_store_id: u64,
+    #[allow(dead_code)]
     pub peer_store_ids: Vec<u64>,
 }
 
@@ -173,6 +174,7 @@ impl RegionRouter {
     }
 
     /// Get regions that may contain keys in the given range.
+    #[allow(dead_code)]
     pub async fn get_regions_for_range(
         &self,
         table: &str,
@@ -196,12 +198,14 @@ impl RegionRouter {
     }
 
     /// Invalidate region cache for a table.
+    #[allow(dead_code)]
     pub fn invalidate_table(&self, table: &str) {
         let hash = Self::hash_key(&table);
         self.region_cache.remove(hash);
     }
 
     /// Get cache statistics.
+    #[allow(dead_code)]
     pub fn cache_stats(&self) -> CacheStats {
         CacheStats {
             region_cache_size: self.region_cache.len(),
@@ -214,6 +218,7 @@ impl RegionRouter {
 
 /// Cache statistics.
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 pub struct CacheStats {
     pub region_cache_size: usize,
     pub region_cache_capacity: usize,

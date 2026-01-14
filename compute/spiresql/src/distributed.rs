@@ -85,6 +85,7 @@ impl DistributedExecutor {
     }
 
     /// Execute a table scan across all regions for a table.
+    #[allow(dead_code)]
     pub async fn table_scan(
         &self,
         table_name: &str,

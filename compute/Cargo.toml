@@ -37,7 +37,6 @@ monoio = "0.2"
 core_affinity = "0.8"
 num_cpus = "1.17"
 ahash = "0.8"
-lru = "0.16"
 async-stream = "0.3"
 byteorder = "1.5"
 socket2 = { version = "0.6", features = ["all"] }

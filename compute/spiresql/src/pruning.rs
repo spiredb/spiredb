@@ -16,6 +16,7 @@ pub struct KeyBounds {
     pub end_key: Option<Vec<u8>>,
 }
 
+#[allow(dead_code)]
 impl KeyBounds {
     /// Create empty bounds (no filtering).
     pub fn unbounded() -> Self {
