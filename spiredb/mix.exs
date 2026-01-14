@@ -23,7 +23,7 @@ defmodule Spiredb.MixProject do
         steps: [:assemble, :tar],
         # Default cookie - can be overridden at runtime via RELEASE_COOKIE env var
         # All nodes MUST use the same cookie for cluster communication
-        cookie: :spiredb_cluster_cookie
+        cookie: "spiredb_cluster_cookie"
       ]
     ]
   end
