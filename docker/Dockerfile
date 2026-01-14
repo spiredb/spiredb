@@ -57,8 +57,8 @@ COPY apps apps
 # Compile application
 RUN mix compile
 
-# Build release
-RUN mix release spiredb
+# Build release (clean first to avoid stale artifacts)
+RUN rm -rf _build/prod/rel && mix release spiredb
 
 # Stage 2: Runtime image
 FROM debian:bookworm-slim AS runtime

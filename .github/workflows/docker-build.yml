@@ -34,5 +34,4 @@ jobs:
           file: docker/Dockerfile
           push: ${{ github.event_name == 'push' }}
           tags: ghcr.io/spiredb/spiredb:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          no-cache: true
