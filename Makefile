@@ -1,6 +1,6 @@
 # SpireDB Makefile
 
-.PHONY: setup build test test-unit test-raft clean proto deps format docker-build
+.PHONY: setup build test test-unit test-raft clean proto deps format docker-build build-rust test-rust clean-rust
 
 setup: deps
 	@echo "Setup complete."
@@ -57,6 +57,15 @@ lint:
 
 docker-build:
 	docker build -t spiredb:latest -f docker/Dockerfile spiredb/
+
+build-rust:
+	cd compute && cargo build --release
+
+test-rust:
+	cd compute && cargo test
+
+clean-rust:
+	cd compute && cargo clean
 
 pf:
 	kubectl port-forward svc/spiredb 6379:6379

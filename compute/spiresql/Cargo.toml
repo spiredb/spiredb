@@ -1,0 +1,27 @@
+[package]
+name = "spiresql"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+tokio = { workspace = true }
+tonic = { workspace = true }
+prost = { workspace = true }
+spire_proto = { workspace = true }
+spire_common = { workspace = true }
+datafusion = { workspace = true }
+pgwire = { workspace = true }
+async-trait = { workspace = true }
+futures = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+anyhow = { workspace = true }
+fastrace = { workspace = true, features = ["enable"] }
+env_logger = { workspace = true }
+log = { workspace = true }
+mimalloc = { workspace = true }
+kovan = { workspace = true }
+kovan-map = { workspace = true }
+kovan-channel = { workspace = true }
+async-stream = "0.3"
+byteorder = "1.5"
