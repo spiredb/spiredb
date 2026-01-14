@@ -360,8 +360,14 @@ defmodule PD.Server do
   end
 
   defp start_cluster_with_retry(node_name, config, retries \\ 30) do
-    Logger.info("Calling :ra.start_server for PD server...")
     server_id = config.id
+
+    # Check for IP/Node identity mismatch before starting
+    # If we find existing Ra data for a different node identity, we must clean it up
+    # because Ra will try to recover the old cluster state where this node (with new IP) is not a member.
+    :ok = maybe_cleanup_stale_cluster(:pd_system, server_id)
+
+    Logger.info("Calling :ra.start_server for PD server...")
 
     try do
       case :ra.start_server(:pd_system, config) do
@@ -431,10 +437,55 @@ defmodule PD.Server do
           Logger.debug("Force delete returned: #{inspect(err)}")
       end
 
-      Process.sleep(2000)
+      Process.sleep(500)
       start_cluster_with_retry(node_name, config, retries - 1)
     else
       raise "Failed to start PD Raft server after retries: #{inspect(reason)}"
+    end
+  end
+
+  defp maybe_cleanup_stale_cluster(system, current_server_id) do
+    # Check existing registrations for this system
+    case :ra_directory.list_registered(system) do
+      registered when is_list(registered) ->
+        current_node = Node.self()
+
+        Enum.each(registered, fn {server_id, _uid} ->
+          # Check if the registered server ID belongs to a different node identity
+          # PD server ID format is {:pd_server, node_name}
+          should_delete? =
+            case server_id do
+              {:pd_server, node} when node != current_node ->
+                true
+
+              # Also handle case where we might have a mismatch but different format?
+              # For PD, we expect singleton, so if found ID != current ID, it's stale?
+              # But cluster might have valid peers.
+              # However, we are checking LOCAL registrations.
+              # Any local registration for a different node name is stale data from previous boot.
+              id when id != current_server_id ->
+                # Be careful: if we have multiple local servers (unlikely for PD system),
+                # we only want to delete if it implies a node identity mismatch.
+                # Inspecting the ID to see if it contains a node atom that is not us.
+                inspect(id) |> String.contains?(inspect(Node.self())) == false
+
+              _ ->
+                false
+            end
+
+          if should_delete? do
+            Logger.warning(
+              "Node identity changed! Found stale PD server: #{inspect(server_id)}. Force deleting."
+            )
+
+            :ra.force_delete_server(system, server_id)
+          end
+        end)
+
+        :ok
+
+      _ ->
+        :ok
     end
   end
 

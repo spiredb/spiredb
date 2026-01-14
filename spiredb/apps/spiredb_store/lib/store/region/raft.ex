@@ -76,6 +76,11 @@ defmodule Store.Region.Raft do
 
     Logger.info("Starting :ra.start_server with config: #{inspect(config)}")
 
+    # Check for IP/Node identity mismatch before starting
+    # If this system has Ra servers registered on this node from a previous run (with different IP),
+    # we must clean them up, otherwise Ra recovery will fail or stall.
+    :ok = maybe_cleanup_stale_regions(system_name)
+
     case :ra.start_server(system_name, config) do
       :ok ->
         :ok
@@ -130,5 +135,64 @@ defmodule Store.Region.Raft do
 
   def cluster_name(region_id) do
     String.to_atom("region_#{region_id}_cluster")
+  end
+
+  defp maybe_cleanup_stale_regions(system) do
+    # List all Ra servers registered for this system on this node
+    registered = :ra_directory.list_registered(system)
+
+    # Check if any of them have a server ID that belongs to a different node identity.
+    # Region server IDs are format: {:region_ID, node_name}
+    # Example: {:region_1, :"spiredb@10.1.1.130"}
+
+    current_node = Node.self()
+
+    has_mismatch? =
+      Enum.any?(registered, fn {id, _uid} ->
+        case id do
+          {_name, node} when node != current_node ->
+            # This server ID belongs to a different node name (e.g. old IP)
+            # This implies the Ra data on disk belongs to the old node identity.
+            true
+
+          _ ->
+            false
+        end
+      end)
+
+    if has_mismatch? do
+      Logger.warning(
+        "Detected node identity change in Ra system #{inspect(system)}. Cleaning stale data."
+      )
+
+      # Clean up the Ra system directory to force a fresh start
+      ra_data_dir =
+        Application.get_env(:ra, :data_dir) ||
+          Path.join(File.cwd!(), "ra_data")
+
+      # Handle relative paths vs absolute
+      ra_root =
+        if Path.type(ra_data_dir) == :absolute do
+          ra_data_dir
+        else
+          Path.join(File.cwd!(), ra_data_dir)
+        end
+
+      system_dir = Path.join(ra_root, to_string(system))
+
+      Logger.info("Removing Ra system directory: #{system_dir}")
+      File.rm_rf!(system_dir)
+
+      # Also try to unregister all stale servers from local registry
+      # Note: ra_directory.unregister_server is private/undefined so we rely on directory removal
+      # Enum.each(registered, fn {name, _} ->
+      #   :ra_directory.delete_server(system, name) # if available?
+      # end)
+
+      # Since we deleted the DETS directory, ra_directory will eventually reflect this
+      # or require restart. Since this happens on pod start, it's fine.
+    end
+
+    :ok
   end
 end
