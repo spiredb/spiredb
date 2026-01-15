@@ -12,8 +12,9 @@ RUN apt-get update && \
 
 WORKDIR /spiredb
 
-# Copy proto files first (needed for build)
-COPY spiredb/apps/spiredb_common/priv/proto /spiredb/proto
+# Copy proto files to match build.rs relative path:
+# build.rs looks for ../../spiredb/apps/spiredb_common/priv/proto/ from compute/
+COPY spiredb/apps/spiredb_common/priv/proto /spiredb/spiredb/apps/spiredb_common/priv/proto
 
 # Copy Rust workspace
 COPY compute /spiredb/compute
@@ -41,7 +42,6 @@ LABEL org.opencontainers.image.description="Distributed SQL query engine for Spi
 LABEL org.opencontainers.image.vendor="SpireDB"
 LABEL org.opencontainers.image.source="https://github.com/spiredb/spiredb"
 LABEL com.spiredb.arch="x86_64-v3"
-LABEL com.spiredb.healthz="/healthz"
 
 # Copy dynamic linker and libraries
 COPY --from=build /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
@@ -60,10 +60,7 @@ ENV LD_LIBRARY_PATH=/spiredb/lib
 ENV RUST_LOG=info
 ENV SPIRE_LOG=info
 
-# PostgreSQL wire protocol port
+# PostgreSQL wire protocol port (also used for health checks)
 EXPOSE 5432
-
-# Health check port  
-EXPOSE 8080
 
 ENTRYPOINT ["/spiresql", "-c", "/spiresql.toml"]
