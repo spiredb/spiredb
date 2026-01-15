@@ -84,7 +84,8 @@ config :logger, :console,
     :stores,
     :total_regions,
     :interval_seconds,
-    :address
+    :address,
+    :has_filter
   ]
 
 # Import environment specific config

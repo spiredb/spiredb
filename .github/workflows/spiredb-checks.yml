@@ -1,4 +1,4 @@
-name: Checks
+name: SpireDB Checks
 
 on:
   pull_request:
@@ -8,7 +8,7 @@ on:
 
 jobs:
   checks:
-    name: Checks
+    name: SpireDB Checks
     runs-on: ubuntu-latest
 
     env:

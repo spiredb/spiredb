@@ -132,7 +132,11 @@ defmodule PD.API.GRPC.Cluster do
 
   defp store_to_proto(store) do
     store_id = if is_atom(store.node), do: :erlang.phash2(store.node), else: store.node
-    address = if is_atom(store.node), do: Atom.to_string(store.node), else: "#{store.node}"
+
+    # Convert Erlang node name to gRPC address
+    # Node name format: spiredb@10.0.0.1 or spiredb@hostname
+    # DataAccess gRPC port is 50052
+    address = node_to_grpc_address(store.node, 50052)
 
     region_count = length(store.regions || [])
     state = if store.state == :up, do: :STORE_UP, else: :STORE_DOWN
@@ -146,6 +150,21 @@ defmodule PD.API.GRPC.Cluster do
       region_count: region_count,
       labels: %{}
     }
+  end
+
+  # Convert Erlang node name to gRPC address
+  # spiredb@10.0.0.1 -> http://10.0.0.1:50052
+  defp node_to_grpc_address(node, port) when is_atom(node) do
+    node
+    |> Atom.to_string()
+    |> node_to_grpc_address(port)
+  end
+
+  defp node_to_grpc_address(node_str, port) when is_binary(node_str) do
+    case String.split(node_str, "@") do
+      [_name, host] -> "http://#{host}:#{port}"
+      _ -> "http://#{node_str}:#{port}"
+    end
   end
 
   @doc """

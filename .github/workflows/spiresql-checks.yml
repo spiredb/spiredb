@@ -1,0 +1,55 @@
+name: SpireSQL Checks
+
+on:
+  push:
+    branches: [ "master" ]
+    paths:
+      - 'compute/**'
+      - '.github/workflows/spiresql-checks.yml'
+  pull_request:
+    branches: [ "master" ]
+    paths:
+      - 'compute/**'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  fmt:
+    name: Format
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check formatting
+        run: make check-fmt-rust
+
+  clippy:
+    name: Clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Run Clippy
+        run: make clippy-rust
+
+  check:
+    name: Check
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Cargo check
+        working-directory: compute
+        run: cargo check --all-targets
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install protobuf compiler
+        run: sudo apt-get update && sudo apt-get install -y protobuf-compiler
+      - name: Run tests
+        run: make test-rust

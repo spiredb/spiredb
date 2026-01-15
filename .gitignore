@@ -2,3 +2,5 @@ docs/
 test_data/
 .claude
 spire_charts
+compute/target
+**/*.rs.bk
