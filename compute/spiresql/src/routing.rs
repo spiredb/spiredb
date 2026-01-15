@@ -4,11 +4,11 @@
 //! and route queries to the appropriate shards.
 //! Uses LRU cache for region and store address caching with eviction.
 
-use crate::cache::{new_shared_cache, SharedLruCache};
+use crate::cache::{SharedLruCache, new_shared_cache};
 use crate::topology::ClusterTopology;
 use ahash::AHasher;
 use spire_proto::spiredb::cluster::{
-    cluster_service_client::ClusterServiceClient, GetTableRegionsRequest, Region, RegionList,
+    GetTableRegionsRequest, Region, RegionList, cluster_service_client::ClusterServiceClient,
 };
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;

@@ -2,7 +2,7 @@ use crate::cli::PluginCmd;
 use spire_common::SpireError;
 use spire_proto::spiredb::cluster::plugin_service_client::PluginServiceClient;
 use spire_proto::spiredb::cluster::{
-    install_plugin_request, Empty, InstallPluginRequest, UninstallPluginRequest,
+    Empty, InstallPluginRequest, UninstallPluginRequest, install_plugin_request,
 };
 use std::path::Path;
 use std::process::Command;

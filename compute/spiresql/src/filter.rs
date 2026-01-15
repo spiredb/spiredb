@@ -16,7 +16,7 @@
 
 use datafusion::common::ScalarValue;
 use datafusion::logical_expr::{BinaryExpr, Expr, Operator};
-use serde_json::{json, Value};
+use serde_json::{Value, json};
 
 /// Serialize a filter expression to JSON bytes for wire transfer.
 pub fn serialize_filter(filters: &[Expr]) -> Vec<u8> {

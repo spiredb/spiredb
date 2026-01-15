@@ -25,7 +25,7 @@ use std::fmt;
 
 use crate::distributed::DistributedExecutor;
 use crate::filter::serialize_filter;
-use crate::pruning::{extract_key_bounds, KeyBounds};
+use crate::pruning::{KeyBounds, extract_key_bounds};
 
 /// Distributed execution plan that queries multiple shards in parallel.
 #[derive(Debug)]

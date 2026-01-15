@@ -33,7 +33,7 @@ mod routing;
 mod statistics;
 mod topology;
 
-use config::{load_config, print_banner, Config};
+use config::{Config, load_config, print_banner};
 use context::SpireContext;
 
 #[global_allocator]
@@ -44,7 +44,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = load_config();
 
     // Initialize logging (respect log_level from config)
-    std::env::set_var("RUST_LOG", &config.log_level);
+    // SAFETY: Single-threaded at this point, no concurrent access to env vars
+    unsafe {
+        std::env::set_var("RUST_LOG", &config.log_level);
+    }
     spire_common::init_logging();
 
     // Print banner
@@ -176,10 +179,10 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
     ));
 
     // Register tables once at startup (only worker 0)
-    if worker_id == 0 {
-        if let Err(e) = ctx.register_tables().await {
-            log::error!("Failed to register tables at startup: {}", e);
-        }
+    if worker_id == 0
+        && let Err(e) = ctx.register_tables().await
+    {
+        log::error!("Failed to register tables at startup: {}", e);
     }
 
     let processor = Arc::new(SpireSqlProcessor { ctx });

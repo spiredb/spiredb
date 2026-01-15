@@ -9,7 +9,7 @@ use spire_proto::spiredb::{
 use std::sync::Arc;
 use tonic::transport::Channel;
 
-use crate::cache::{new_shared_cache, SharedLruCache};
+use crate::cache::{SharedLruCache, new_shared_cache};
 use crate::distributed::{DistributedConfig, DistributedExecutor};
 use crate::pool::{ConnectionPool, PoolConfig};
 use crate::provider::SpireProvider;

@@ -81,41 +81,41 @@ fn extract_from_expr(expr: &Expr, pk_column: &str, bounds: &mut KeyBounds) {
         // Binary expressions: pk = value, pk > value, etc.
         Expr::BinaryExpr(binary) => {
             // Check if left side references the PK column
-            if let Expr::Column(col) = binary.left.as_ref() {
-                if col.name() == pk_column {
-                    // Right side should be a literal
-                    if let Some(value) = extract_scalar_bytes(binary.right.as_ref()) {
-                        match binary.op {
-                            Operator::Eq => {
-                                // Point lookup: both bounds are the same
-                                bounds.start_key = Some(value.clone());
-                                // For exact match, end_key is start_key + 1 (conceptually)
-                                let mut end = value;
-                                increment_key(&mut end);
-                                bounds.end_key = Some(end);
-                            }
-                            Operator::Gt => {
-                                // pk > value: start is value + 1
-                                let mut start = value;
-                                increment_key(&mut start);
-                                update_start_key(bounds, start);
-                            }
-                            Operator::GtEq => {
-                                // pk >= value: start is value
-                                update_start_key(bounds, value);
-                            }
-                            Operator::Lt => {
-                                // pk < value: end is value
-                                update_end_key(bounds, value);
-                            }
-                            Operator::LtEq => {
-                                // pk <= value: end is value + 1
-                                let mut end = value;
-                                increment_key(&mut end);
-                                update_end_key(bounds, end);
-                            }
-                            _ => {}
+            if let Expr::Column(col) = binary.left.as_ref()
+                && col.name() == pk_column
+            {
+                // Right side should be a literal
+                if let Some(value) = extract_scalar_bytes(binary.right.as_ref()) {
+                    match binary.op {
+                        Operator::Eq => {
+                            // Point lookup: both bounds are the same
+                            bounds.start_key = Some(value.clone());
+                            // For exact match, end_key is start_key + 1 (conceptually)
+                            let mut end = value;
+                            increment_key(&mut end);
+                            bounds.end_key = Some(end);
                         }
+                        Operator::Gt => {
+                            // pk > value: start is value + 1
+                            let mut start = value;
+                            increment_key(&mut start);
+                            update_start_key(bounds, start);
+                        }
+                        Operator::GtEq => {
+                            // pk >= value: start is value
+                            update_start_key(bounds, value);
+                        }
+                        Operator::Lt => {
+                            // pk < value: end is value
+                            update_end_key(bounds, value);
+                        }
+                        Operator::LtEq => {
+                            // pk <= value: end is value + 1
+                            let mut end = value;
+                            increment_key(&mut end);
+                            update_end_key(bounds, end);
+                        }
+                        _ => {}
                     }
                 }
             }
@@ -129,18 +129,17 @@ fn extract_from_expr(expr: &Expr, pk_column: &str, bounds: &mut KeyBounds) {
 
         // Between: pk BETWEEN a AND b
         Expr::Between(between) => {
-            if let Expr::Column(col) = between.expr.as_ref() {
-                if col.name() == pk_column {
-                    if let (Some(low), Some(high)) = (
-                        extract_scalar_bytes(between.low.as_ref()),
-                        extract_scalar_bytes(between.high.as_ref()),
-                    ) {
-                        update_start_key(bounds, low);
-                        let mut end = high;
-                        increment_key(&mut end);
-                        update_end_key(bounds, end);
-                    }
-                }
+            if let Expr::Column(col) = between.expr.as_ref()
+                && col.name() == pk_column
+                && let (Some(low), Some(high)) = (
+                    extract_scalar_bytes(between.low.as_ref()),
+                    extract_scalar_bytes(between.high.as_ref()),
+                )
+            {
+                update_start_key(bounds, low);
+                let mut end = high;
+                increment_key(&mut end);
+                update_end_key(bounds, end);
             }
         }
 

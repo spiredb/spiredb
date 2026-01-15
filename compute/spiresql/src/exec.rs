@@ -15,10 +15,10 @@ use datafusion::physical_plan::{
     DisplayAs, DisplayFormatType, ExecutionPlan, Partitioning, PlanProperties, RecordBatchStream,
     SendableRecordBatchStream,
 };
-use futures::stream::Stream;
 use futures::StreamExt;
-use spire_proto::spiredb::data::data_access_client::DataAccessClient;
+use futures::stream::Stream;
 use spire_proto::spiredb::data::TableScanRequest;
+use spire_proto::spiredb::data::data_access_client::DataAccessClient;
 use tonic::transport::Channel;
 
 use std::fmt;

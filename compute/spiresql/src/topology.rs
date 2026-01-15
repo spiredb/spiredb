@@ -6,7 +6,7 @@
 
 use kovan_map::HashMap;
 use spire_proto::spiredb::cluster::{
-    cluster_service_client::ClusterServiceClient, Empty, StoreState,
+    Empty, StoreState, cluster_service_client::ClusterServiceClient,
 };
 use std::sync::Arc;
 use std::time::Duration;

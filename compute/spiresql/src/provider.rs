@@ -3,8 +3,8 @@ use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::datasource::TableProvider;
 use datafusion::error::Result;
 
-use datafusion::common::stats::Precision;
 use datafusion::common::Statistics;
+use datafusion::common::stats::Precision;
 use datafusion::logical_expr::TableType;
 use datafusion::physical_plan::ExecutionPlan;
 use datafusion::prelude::Expr;

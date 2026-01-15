@@ -1,7 +1,7 @@
 use crate::cli::ClusterCmd;
 use spire_common::SpireError;
-use spire_proto::spiredb::cluster::cluster_service_client::ClusterServiceClient;
 use spire_proto::spiredb::cluster::Empty;
+use spire_proto::spiredb::cluster::cluster_service_client::ClusterServiceClient;
 use tonic::transport::Channel;
 
 pub async fn handle_cluster_command(cmd: ClusterCmd, pd_addr: String) -> Result<(), SpireError> {
