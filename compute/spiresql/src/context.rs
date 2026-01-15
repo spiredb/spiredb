@@ -15,6 +15,7 @@ use crate::pool::{ConnectionPool, PoolConfig};
 use crate::provider::SpireProvider;
 use crate::routing::RegionRouter;
 use crate::statistics::StatisticsProvider;
+use crate::topology::ClusterTopology;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use spire_proto::spiredb::cluster::{ColumnType, Empty};
 use std::fmt;
@@ -49,6 +50,9 @@ pub struct SpireContext {
     /// Statistics provider for cost-based optimization.
     pub stats_provider: Arc<StatisticsProvider>,
 
+    /// Cluster topology for dynamic store discovery.
+    pub topology: Arc<ClusterTopology>,
+
     /// LRU query cache: query_hash -> cached results.
     pub query_cache: SharedLruCache<Arc<Vec<RecordBatch>>>,
 
@@ -64,8 +68,12 @@ impl SpireContext {
         cluster_service: ClusterServiceClient<Channel>,
         config: &Config,
     ) -> Self {
-        // Create region router with LRU cache
-        let region_router = Arc::new(RegionRouter::new(cluster_service.clone()));
+        // Create cluster topology watcher and start refresh task
+        let topology = Arc::new(ClusterTopology::new(cluster_service.clone()));
+        topology.clone().start_refresh_task();
+
+        // Create region router with topology for store lookups
+        let region_router = Arc::new(RegionRouter::new(cluster_service, topology.clone()));
 
         // Create connection pool
         let connection_pool = Arc::new(ConnectionPool::new(PoolConfig::default()));
@@ -96,6 +104,7 @@ impl SpireContext {
             connection_pool,
             distributed_executor,
             stats_provider,
+            topology,
             query_cache,
             cache_enabled: config.enable_cache,
         }

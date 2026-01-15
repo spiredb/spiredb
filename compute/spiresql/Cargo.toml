@@ -27,7 +27,6 @@ clap = { workspace = true }
 serde = { workspace = true }
 toml = { workspace = true }
 parking_lot = { workspace = true }
-monoio = { workspace = true }
 core_affinity = { workspace = true }
 num_cpus = { workspace = true }
 ahash = { workspace = true }

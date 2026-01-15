@@ -31,6 +31,7 @@ mod provider;
 mod pruning;
 mod routing;
 mod statistics;
+mod topology;
 
 use config::{load_config, print_banner, Config};
 use context::SpireContext;
@@ -142,8 +143,8 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
     let stream_window_size: u32 = 16 * 1024 * 1024;
     let connection_window_size: u32 = 32 * 1024 * 1024;
 
-    // Connect to SpireDB DataAccess
-    let channel = match Channel::from_shared(config.data_access_addr.clone()) {
+    // Connect to SpireDB Cluster (all services on same endpoint)
+    let channel = match Channel::from_shared(config.cluster_addr.clone()) {
         Ok(c) => c
             .connect_timeout(connect_timeout)
             .timeout(request_timeout)
@@ -154,33 +155,16 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
             .initial_connection_window_size(connection_window_size)
             .connect_lazy(),
         Err(e) => {
-            log::error!("Worker {} invalid DataAccess addr: {}", worker_id, e);
+            log::error!("Worker {} invalid cluster addr: {}", worker_id, e);
             return;
         }
     };
-    let data_access_client = DataAccessClient::new(channel);
-
-    // Connect to SpireDB PD
-    let pd_channel = match Channel::from_shared(config.pd_addr.clone()) {
-        Ok(c) => c
-            .connect_timeout(connect_timeout)
-            .timeout(request_timeout)
-            .http2_keep_alive_interval(keepalive_interval)
-            .keep_alive_timeout(keepalive_timeout)
-            .keep_alive_while_idle(true)
-            .initial_stream_window_size(stream_window_size)
-            .initial_connection_window_size(connection_window_size)
-            .connect_lazy(),
-        Err(e) => {
-            log::error!("Worker {} invalid PD addr: {}", worker_id, e);
-            return;
-        }
-    };
-    let schema_client = SchemaServiceClient::new(pd_channel.clone());
-    let cluster_client = ClusterServiceClient::new(pd_channel);
+    let data_access_client = DataAccessClient::new(channel.clone());
+    let schema_client = SchemaServiceClient::new(channel.clone());
+    let cluster_client = ClusterServiceClient::new(channel);
 
     if worker_id == 0 {
-        log::info!("DataAccess and PD channels configured (lazy connect, auto-reconnect)");
+        log::info!("Cluster channel configured (lazy connect, auto-reconnect)");
     }
 
     // Create SpireContext

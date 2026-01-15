@@ -43,5 +43,4 @@ jobs:
           tags: |
             ghcr.io/spiredb/spiresql:latest
             ghcr.io/spiredb/spiresql:${{ github.sha }}
-          no-cache: true
           platforms: linux/amd64

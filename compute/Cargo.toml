@@ -33,7 +33,6 @@ kovan-channel = "0.1"
 parking_lot = "0.12"
 toml = "0.8"
 # Distributed/runtime dependencies
-monoio = "0.2"
 core_affinity = "0.8"
 num_cpus = "1.17"
 ahash = "0.8"

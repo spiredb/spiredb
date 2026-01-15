@@ -9,11 +9,9 @@ pub struct Config {
     /// Listen address for PostgreSQL wire protocol.
     pub listen_addr: String,
 
-    /// SpireDB DataAccess GRPC endpoint.
-    pub data_access_addr: String,
-
-    /// SpireDB PD (Placement Driver / Schema Service) GRPC endpoint.
-    pub pd_addr: String,
+    /// SpireDB Cluster gRPC endpoint (PD/Schema/Cluster services).
+    /// Connects to any node, discovers rest via ListStores.
+    pub cluster_addr: String,
 
     /// Maximum number of cached query results.
     pub query_cache_capacity: usize,
@@ -32,8 +30,7 @@ impl Default for Config {
     fn default() -> Self {
         Self {
             listen_addr: "0.0.0.0:5432".to_string(),
-            data_access_addr: "http://127.0.0.1:50052".to_string(),
-            pd_addr: "http://127.0.0.1:50051".to_string(),
+            cluster_addr: "http://spiredb:50051".to_string(),
             query_cache_capacity: 1024,
             enable_cache: true,
             log_level: "info".to_string(),
@@ -55,11 +52,8 @@ impl Config {
         if let Some(ref addr) = cli.listen {
             self.listen_addr = addr.clone();
         }
-        if let Some(ref addr) = cli.data_access {
-            self.data_access_addr = addr.clone();
-        }
-        if let Some(ref addr) = cli.pd {
-            self.pd_addr = addr.clone();
+        if let Some(ref addr) = cli.cluster {
+            self.cluster_addr = addr.clone();
         }
         if let Some(cap) = cli.cache_capacity {
             self.query_cache_capacity = cap;
@@ -86,13 +80,9 @@ pub struct CliArgs {
     #[arg(short, long)]
     pub listen: Option<String>,
 
-    /// SpireDB DataAccess GRPC endpoint
+    /// SpireDB Cluster gRPC endpoint (discovers all nodes via ListStores)
     #[arg(long)]
-    pub data_access: Option<String>,
-
-    /// SpireDB PD (Schema Service) GRPC endpoint
-    #[arg(long)]
-    pub pd: Option<String>,
+    pub cluster: Option<String>,
 
     /// Query cache capacity (number of cached results)
     #[arg(long)]

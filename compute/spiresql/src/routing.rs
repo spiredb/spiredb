@@ -5,19 +5,17 @@
 //! Uses LRU cache for region and store address caching with eviction.
 
 use crate::cache::{new_shared_cache, SharedLruCache};
+use crate::topology::ClusterTopology;
 use ahash::AHasher;
 use spire_proto::spiredb::cluster::{
-    cluster_service_client::ClusterServiceClient, GetStoreRequest, GetTableRegionsRequest, Region,
-    RegionList, Store,
+    cluster_service_client::ClusterServiceClient, GetTableRegionsRequest, Region, RegionList,
 };
 use std::hash::{Hash, Hasher};
 use std::sync::Arc;
 use tonic::transport::Channel;
 
-/// Default cache capacity for regions.
-const DEFAULT_REGION_CACHE_CAPACITY: usize = 256;
-/// Default cache capacity for store addresses.
-const DEFAULT_STORE_CACHE_CAPACITY: usize = 64;
+/// Default capacity for the region LRU cache.
+const DEFAULT_REGION_CACHE_CAPACITY: usize = 128;
 
 /// Information about a region for routing queries.
 #[derive(Debug, Clone)]
@@ -53,42 +51,41 @@ pub struct RegionRouter {
     /// Cluster client for region discovery.
     cluster_client: ClusterServiceClient<Channel>,
 
+    /// Cluster topology for store address lookups.
+    topology: Arc<ClusterTopology>,
+
     /// LRU cache for regions: table_name_hash -> cached regions.
     region_cache: SharedLruCache<CachedRegions>,
-
-    /// LRU cache for store addresses: store_id -> address.
-    store_cache: SharedLruCache<String>,
 }
 
 impl std::fmt::Debug for RegionRouter {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("RegionRouter")
             .field("region_cache_len", &self.region_cache.len())
-            .field("store_cache_len", &self.store_cache.len())
+            .field("topology_stores", &self.topology.store_count())
             .finish()
     }
 }
 
 impl RegionRouter {
     /// Create a new region router.
-    pub fn new(cluster_client: ClusterServiceClient<Channel>) -> Self {
-        Self::with_capacity(
-            cluster_client,
-            DEFAULT_REGION_CACHE_CAPACITY,
-            DEFAULT_STORE_CACHE_CAPACITY,
-        )
+    pub fn new(
+        cluster_client: ClusterServiceClient<Channel>,
+        topology: Arc<ClusterTopology>,
+    ) -> Self {
+        Self::with_capacity(cluster_client, topology, DEFAULT_REGION_CACHE_CAPACITY)
     }
 
     /// Create a new region router with custom cache capacities.
     pub fn with_capacity(
         cluster_client: ClusterServiceClient<Channel>,
+        topology: Arc<ClusterTopology>,
         region_cache_capacity: usize,
-        store_cache_capacity: usize,
     ) -> Self {
         Self {
             cluster_client,
+            topology,
             region_cache: new_shared_cache(region_cache_capacity),
-            store_cache: new_shared_cache(store_cache_capacity),
         }
     }
 
@@ -154,23 +151,11 @@ impl RegionRouter {
         Ok(regions)
     }
 
-    /// Get store address by store ID (LRU cached).
-    pub async fn get_store_address(&self, store_id: u64) -> Result<String, tonic::Status> {
-        // Check cache first
-        if let Some(addr) = self.store_cache.get_and_touch(store_id) {
-            return Ok(addr);
-        }
-
-        // Cache miss: fetch from cluster service
-        let request = GetStoreRequest { store_id };
-        let mut client = self.cluster_client.clone();
-        let response = client.get_store(request).await?;
-        let store: Store = response.into_inner();
-
-        // Insert with LRU eviction
-        self.store_cache.insert(store_id, store.address.clone());
-
-        Ok(store.address)
+    /// Get store address by store ID (from topology).
+    pub fn get_store_address(&self, store_id: u64) -> Result<String, tonic::Status> {
+        self.topology.get_store_address(store_id).ok_or_else(|| {
+            tonic::Status::not_found(format!("Store {} not found in topology", store_id))
+        })
     }
 
     /// Get regions that may contain keys in the given range.
@@ -210,8 +195,7 @@ impl RegionRouter {
         CacheStats {
             region_cache_size: self.region_cache.len(),
             region_cache_capacity: self.region_cache.capacity(),
-            store_cache_size: self.store_cache.len(),
-            store_cache_capacity: self.store_cache.capacity(),
+            topology_store_count: self.topology.store_count(),
         }
     }
 }
@@ -222,8 +206,7 @@ impl RegionRouter {
 pub struct CacheStats {
     pub region_cache_size: usize,
     pub region_cache_capacity: usize,
-    pub store_cache_size: usize,
-    pub store_cache_capacity: usize,
+    pub topology_store_count: usize,
 }
 
 #[cfg(test)]

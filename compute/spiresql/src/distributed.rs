@@ -213,10 +213,9 @@ impl DistributedExecutor {
         limit: u32,
         filter_expr: Vec<u8>,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
-        // Get store address from router
+        // Get store address from router (sync - uses topology)
         let addr = router
             .get_store_address(store_id)
-            .await
             .map_err(DistributedError::Routing)?;
 
         // Get client from pool
