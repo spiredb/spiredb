@@ -12,13 +12,17 @@ defmodule Store.KV.ScannerTest do
       Engine.start_link(path: path, name: :"test_engine_#{:rand.uniform(1_000_000)}")
 
     on_exit(fn ->
-      try do
-        if Process.alive?(engine), do: GenServer.stop(engine)
-      catch
-        :exit, _ -> :ok
+      # Ensure engine is stopped and release lock
+      if Process.alive?(engine) do
+        try do
+          GenServer.stop(engine, :normal, 5000)
+        catch
+          :exit, _ -> :ok
+        end
       end
 
-      File.rm_rf!(path)
+      # Clean up files with retry
+      File.rm_rf(path)
     end)
 
     {:ok, engine: engine}
