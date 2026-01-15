@@ -22,8 +22,10 @@ use tonic::transport::Channel;
 mod cache;
 mod config;
 mod context;
+mod ddl;
 mod distributed;
 mod distributed_exec;
+mod dml;
 mod exec;
 mod filter;
 mod pool;
@@ -235,6 +237,40 @@ impl SimpleQueryHandler for SpireSqlProcessor {
         C: ClientInfo + Unpin + Send + Sync,
     {
         let ctx = &self.ctx;
+
+        // Parse SQL to detect DDL/DML statements
+        use sqlparser::dialect::PostgreSqlDialect;
+        use sqlparser::parser::Parser;
+
+        let dialect = PostgreSqlDialect {};
+        let statements = Parser::parse_sql(&dialect, query).map_err(|e| {
+            PgWireError::UserError(Box::new(ErrorInfo::new(
+                "ERROR".to_string(),
+                "42601".to_string(),
+                format!("SQL parse error: {}", e),
+            )))
+        })?;
+
+        // Process each statement
+        for stmt in &statements {
+            // Try DDL handler first
+            let mut ddl_handler = ddl::DdlHandler::new(ctx.schema_service.clone());
+            if let Some(response) = ddl_handler.try_execute(stmt).await? {
+                // Refresh tables after DDL
+                if let Err(e) = ctx.register_tables().await {
+                    log::warn!("Failed to refresh tables after DDL: {}", e);
+                }
+                return Ok(response);
+            }
+
+            // Try DML handler
+            let mut dml_handler = dml::DmlHandler::new(ctx.data_access.clone());
+            if let Some(response) = dml_handler.try_execute(stmt).await? {
+                return Ok(response);
+            }
+        }
+
+        // Fall through to DataFusion for SELECT and other queries
 
         // Check cache first (context handles hashing internally)
         if let Some(cached_batches) = ctx.get_cached_query(query) {
