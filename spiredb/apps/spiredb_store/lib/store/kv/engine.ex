@@ -267,11 +267,11 @@ defmodule Store.KV.Engine do
       # Bloom filter - 10 bits per key is good balance of space/accuracy
       bloom_bits_per_key: Application.get_env(:spiredb_store, :rocksdb_bloom_bits_per_key, 10),
 
-      # Write buffer settings - 128MB per buffer, 4 buffers
+      # Write buffer settings - 64MB per buffer, 2 buffers (Tuned for 13+ CFs)
       write_buffer_size:
-        Application.get_env(:spiredb_store, :rocksdb_write_buffer_size, 128 * 1024 * 1024),
+        Application.get_env(:spiredb_store, :rocksdb_write_buffer_size, 64 * 1024 * 1024),
       max_write_buffer_number:
-        Application.get_env(:spiredb_store, :rocksdb_max_write_buffer_number, 4),
+        Application.get_env(:spiredb_store, :rocksdb_max_write_buffer_number, 2),
 
       # Compaction settings
       max_bytes_for_level_base:
@@ -280,11 +280,11 @@ defmodule Store.KV.Engine do
         Application.get_env(:spiredb_store, :rocksdb_target_file_size_base, 64 * 1024 * 1024),
 
       # Background threads
-      max_background_jobs: Application.get_env(:spiredb_store, :rocksdb_max_background_jobs, 4),
+      max_background_jobs: Application.get_env(:spiredb_store, :rocksdb_max_background_jobs, 2),
       max_background_compactions:
-        Application.get_env(:spiredb_store, :rocksdb_max_background_compactions, 3),
+        Application.get_env(:spiredb_store, :rocksdb_max_background_compactions, 2),
       max_background_flushes:
-        Application.get_env(:spiredb_store, :rocksdb_max_background_flushes, 2),
+        Application.get_env(:spiredb_store, :rocksdb_max_background_flushes, 1),
 
       # WAL settings - optimized for write performance
       max_total_wal_size:
