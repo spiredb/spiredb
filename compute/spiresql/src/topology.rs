@@ -65,6 +65,7 @@ impl ClusterTopology {
         let response = client.list_stores(Empty {}).await?;
         let store_list = response.into_inner();
 
+        let prev_count = self.stores.len();
         let mut count = 0;
         for store in store_list.stores {
             if store.state == StoreState::StoreUp as i32 {
@@ -83,7 +84,10 @@ impl ClusterTopology {
             }
         }
 
-        log::info!("Cluster topology refreshed: {} active stores", count);
+        // Only log when store count changes
+        if count != prev_count {
+            log::info!("Cluster topology updated: {} active stores", count);
+        }
         Ok(())
     }
 

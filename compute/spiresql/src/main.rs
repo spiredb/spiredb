@@ -3,12 +3,17 @@ use core_affinity::CoreId;
 use datafusion::arrow::util::display::array_value_to_string;
 use futures::stream;
 use mimalloc::MiMalloc;
-use pgwire::api::query::SimpleQueryHandler;
-use pgwire::api::results::{DataRowEncoder, FieldFormat, FieldInfo, QueryResponse, Response, Tag};
-use pgwire::api::{ClientInfo, PgWireServerHandlers};
+use pgwire::api::portal::Portal;
+use pgwire::api::query::{ExtendedQueryHandler, SimpleQueryHandler};
+use pgwire::api::results::{
+    DataRowEncoder, DescribePortalResponse, DescribeStatementResponse, FieldFormat, FieldInfo,
+    QueryResponse, Response, Tag,
+};
+use pgwire::api::stmt::{NoopQueryParser, StoredStatement};
+use pgwire::api::{ClientInfo, PgWireServerHandlers, Type as PgType};
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use pgwire::tokio::process_socket;
-use socket2::{Domain, Protocol, Socket, Type};
+use socket2::{Domain, Protocol, Socket, Type as SockType};
 use spire_proto::spiredb::{
     cluster::cluster_service_client::ClusterServiceClient,
     cluster::schema_service_client::SchemaServiceClient,
@@ -187,7 +192,10 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
         log::error!("Failed to register tables at startup: {}", e);
     }
 
-    let processor = Arc::new(SpireSqlProcessor { ctx });
+    let processor = Arc::new(SpireSqlProcessor {
+        ctx,
+        query_parser: Arc::new(NoopQueryParser::new()),
+    });
     let factory = Arc::new(SpireSqlProcessorFactory { handler: processor });
 
     // Accept loop
@@ -213,7 +221,7 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
 fn create_reuseport_listener(addr: &SocketAddr) -> std::io::Result<TcpListener> {
     let socket = Socket::new(
         Domain::for_address(*addr),
-        Type::STREAM,
+        SockType::STREAM,
         Some(Protocol::TCP),
     )?;
     socket.set_reuse_address(true)?;
@@ -228,6 +236,7 @@ fn create_reuseport_listener(addr: &SocketAddr) -> std::io::Result<TcpListener> 
 
 pub struct SpireSqlProcessor {
     ctx: Arc<SpireContext>,
+    query_parser: Arc<NoopQueryParser>,
 }
 
 #[async_trait]
@@ -301,6 +310,126 @@ impl SimpleQueryHandler for SpireSqlProcessor {
                 format!("SQL Error: {}", e),
             )))),
         }
+    }
+}
+
+#[async_trait]
+impl ExtendedQueryHandler for SpireSqlProcessor {
+    type Statement = String;
+    type QueryParser = NoopQueryParser;
+
+    fn query_parser(&self) -> Arc<Self::QueryParser> {
+        self.query_parser.clone()
+    }
+
+    async fn do_query<C>(
+        &self,
+        _client: &mut C,
+        portal: &Portal<Self::Statement>,
+        _max_rows: usize,
+    ) -> PgWireResult<Response>
+    where
+        C: ClientInfo + Unpin + Send + Sync,
+    {
+        let query = &portal.statement.statement;
+        let ctx = &self.ctx;
+
+        // Parse SQL to detect DDL/DML statements
+        use sqlparser::dialect::PostgreSqlDialect;
+        use sqlparser::parser::Parser;
+
+        let dialect = PostgreSqlDialect {};
+        let statements = Parser::parse_sql(&dialect, query).map_err(|e| {
+            PgWireError::UserError(Box::new(ErrorInfo::new(
+                "ERROR".to_string(),
+                "42601".to_string(),
+                format!("SQL parse error: {}", e),
+            )))
+        })?;
+
+        // Process each statement
+        for stmt in &statements {
+            // Try DDL handler first
+            let mut ddl_handler = ddl::DdlHandler::new(ctx.schema_service.clone());
+            if let Some(response) = ddl_handler.try_execute(stmt).await? {
+                // Refresh tables after DDL
+                if let Err(e) = ctx.register_tables().await {
+                    log::warn!("Failed to refresh tables after DDL: {}", e);
+                }
+                // Return first response for extended query
+                return Ok(response
+                    .into_iter()
+                    .next()
+                    .unwrap_or(Response::Execution(Tag::new("OK"))));
+            }
+
+            // Try DML handler
+            let mut dml_handler = dml::DmlHandler::new(ctx.data_access.clone());
+            if let Some(response) = dml_handler.try_execute(stmt).await? {
+                return Ok(response
+                    .into_iter()
+                    .next()
+                    .unwrap_or(Response::Execution(Tag::new("OK"))));
+            }
+        }
+
+        // Fall through to DataFusion for SELECT
+        let session_ctx = &ctx.session_context;
+
+        match session_ctx.sql(query).await {
+            Ok(df) => {
+                let batches = df.collect().await.map_err(|e| {
+                    PgWireError::UserError(Box::new(ErrorInfo::new(
+                        "FATAL".to_string(),
+                        "XX000".to_string(),
+                        format!("Execution failed: {}", e),
+                    )))
+                })?;
+
+                // Convert to single Response
+                let responses = batches_to_pgwire_response(&batches)?;
+                Ok(responses
+                    .into_iter()
+                    .next()
+                    .unwrap_or(Response::Execution(Tag::new("SELECT 0"))))
+            }
+            Err(e) => Err(PgWireError::UserError(Box::new(ErrorInfo::new(
+                "ERROR".to_string(),
+                "42000".to_string(),
+                format!("SQL Error: {}", e),
+            )))),
+        }
+    }
+
+    async fn do_describe_statement<C>(
+        &self,
+        _client: &mut C,
+        stmt: &StoredStatement<Self::Statement>,
+    ) -> PgWireResult<DescribeStatementResponse>
+    where
+        C: ClientInfo + Unpin + Send + Sync,
+    {
+        // Parse the query to get column info
+        let param_types = stmt
+            .parameter_types
+            .iter()
+            .map(|t| t.clone().unwrap_or(PgType::UNKNOWN))
+            .collect();
+
+        // For now, return empty column description (will be populated on execute)
+        Ok(DescribeStatementResponse::new(param_types, vec![]))
+    }
+
+    async fn do_describe_portal<C>(
+        &self,
+        _client: &mut C,
+        _portal: &Portal<Self::Statement>,
+    ) -> PgWireResult<DescribePortalResponse>
+    where
+        C: ClientInfo + Unpin + Send + Sync,
+    {
+        // For now, return empty column description
+        Ok(DescribePortalResponse::new(vec![]))
     }
 }
 
@@ -391,6 +520,10 @@ struct SpireSqlProcessorFactory {
 
 impl PgWireServerHandlers for SpireSqlProcessorFactory {
     fn simple_query_handler(&self) -> Arc<impl SimpleQueryHandler> {
+        self.handler.clone()
+    }
+
+    fn extended_query_handler(&self) -> Arc<impl ExtendedQueryHandler> {
         self.handler.clone()
     }
 }
