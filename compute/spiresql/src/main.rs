@@ -550,6 +550,10 @@ impl PgWireServerHandlers for SpireSqlProcessorFactory {
     fn extended_query_handler(&self) -> Arc<impl ExtendedQueryHandler> {
         self.handler.clone()
     }
+
+    fn startup_handler(&self) -> Arc<impl pgwire::api::auth::StartupHandler> {
+        Arc::new(pgwire::api::NoopHandler)
+    }
 }
 
 fn map_arrow_type_to_pg_type(dt: &datafusion::arrow::datatypes::DataType) -> pgwire::api::Type {
