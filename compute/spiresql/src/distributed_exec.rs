@@ -209,7 +209,7 @@ impl DistributedStream {
             let end_key = key_bounds.end_key.as_deref().unwrap_or(&[]);
 
             let batches = executor
-                .table_scan_with_bounds(&table_name, columns, limit, start_key, end_key, filter_expr)
+                .table_scan_with_bounds(&table_name, columns, limit, start_key, end_key, filter_expr, &schema_captured)
                 .await
                 .map_err(|e| DataFusionError::External(Box::new(e)))?;
 
@@ -225,7 +225,7 @@ impl DistributedStream {
         };
 
         Self {
-            schema: schema_captured,
+            schema: schema.clone(),
             inner: Box::pin(stream),
         }
     }

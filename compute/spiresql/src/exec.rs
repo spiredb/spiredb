@@ -5,7 +5,6 @@ use std::task::{Context, Poll};
 
 use datafusion::arrow::array::RecordBatch;
 use datafusion::arrow::datatypes::SchemaRef;
-use datafusion::arrow::ipc::reader::StreamReader;
 use datafusion::common::Result;
 use datafusion::error::DataFusionError;
 use datafusion::execution::context::TaskContext;
@@ -21,6 +20,7 @@ use spire_proto::spiredb::data::TableScanRequest;
 use spire_proto::spiredb::data::data_access_client::DataAccessClient;
 use tonic::transport::Channel;
 
+use crate::distributed::DistributedExecutor;
 use std::fmt;
 
 use datafusion::prelude::Expr;
@@ -138,7 +138,7 @@ impl SpireStream {
         limit: Option<usize>,
     ) -> Self {
         let schema_captured = schema.clone();
-        let stream = async_stream::try_stream! {
+        let stream = async_stream::stream! {
             let mut client = client.clone();
 
             let columns = if let Some(proj) = &projection {
@@ -170,26 +170,39 @@ impl SpireStream {
 
             log::debug!("Sending TableScanRequest: {:?}", req);
 
-            let mut response_stream = client
+            let response_result = client
                 .table_scan(req)
                 .await
-                .map_err(|e| DataFusionError::External(Box::new(e)))?
-                .into_inner();
+                .map_err(|e| DataFusionError::External(Box::new(e)));
 
-            while let Some(resp) = response_stream.next().await {
-                let resp = resp.map_err(|e| DataFusionError::External(Box::new(e)))?;
-                if !resp.arrow_batch.is_empty() {
-                    // Elixir backend uses Explorer.DataFrame.dump_ipc_stream(), which produces
-                    // a complete Arrow IPC stream (Schema + Batches) for each response batch.
-                    let cursor = std::io::Cursor::new(resp.arrow_batch);
-                    let reader = StreamReader::try_new(cursor, None)
-                        .map_err(|e| DataFusionError::ArrowError(Box::new(e), None))?;
-
-                    for batch_result in reader {
-                        let batch = batch_result.map_err(|e| DataFusionError::ArrowError(Box::new(e), None))?;
-                        yield batch;
-                    }
+            let mut response_stream = match response_result {
+                Ok(resp) => resp.into_inner(),
+                Err(e) => {
+                     yield Err(e);
+                     return;
                 }
+            };
+
+            while let Some(resp_result) = response_stream.next().await {
+                 match resp_result {
+                    Ok(resp) => {
+                        if !resp.arrow_batch.is_empty() {
+                            // Decoder for SpireDB custom binary format
+                            match DistributedExecutor::decode_spire_batch(&resp.arrow_batch, &schema_captured) {
+                                Ok(batch) => {
+                                    yield Ok(batch);
+                                }
+                                Err(e) => {
+                                    log::error!("Failed to decode SpireDB batch: {}", e);
+                                    yield Err(DataFusionError::External(Box::new(e)));
+                                }
+                            }
+                        }
+                    }
+                    Err(e) => {
+                        yield Err(DataFusionError::External(Box::new(e)));
+                    }
+                 }
             }
         };
 

@@ -5,11 +5,10 @@
 
 use crate::pool::ConnectionPool;
 use crate::routing::{RegionInfo, RegionRouter};
-use datafusion::arrow::ipc::reader::StreamReader;
+use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
 use futures::stream::{FuturesUnordered, StreamExt};
 use spire_proto::spiredb::data::{TableScanRequest, TableScanResponse};
-use std::io::Cursor;
 use std::sync::Arc;
 use tonic::Streaming;
 
@@ -91,15 +90,17 @@ impl DistributedExecutor {
         table_name: &str,
         columns: Vec<String>,
         limit: u32,
+        schema: &SchemaRef,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         // No pruning - scan all regions (no filter)
-        self.table_scan_with_bounds(table_name, columns, limit, &[], &[], Vec::new())
+        self.table_scan_with_bounds(table_name, columns, limit, &[], &[], Vec::new(), schema)
             .await
     }
 
     /// Execute a table scan with region pruning based on key bounds.
     ///
     /// Only scans regions that may contain keys in the [start_key, end_key) range.
+    #[allow(clippy::too_many_arguments)]
     pub async fn table_scan_with_bounds(
         &self,
         table_name: &str,
@@ -108,6 +109,7 @@ impl DistributedExecutor {
         start_key: &[u8],
         end_key: &[u8],
         filter_expr: Vec<u8>,
+        schema: &SchemaRef,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         // Get regions, optionally filtered by key range
         let regions = if start_key.is_empty() && end_key.is_empty() {
@@ -150,8 +152,9 @@ impl DistributedExecutor {
         );
 
         // Execute scans in parallel (limited by max_parallel_shards)
+        // Execute scans in parallel (limited by max_parallel_shards)
         let batches = self
-            .parallel_scan(table_name, &regions, columns, limit, filter_expr)
+            .parallel_scan(table_name, &regions, columns, limit, filter_expr, schema)
             .await?;
 
         Ok(batches)
@@ -165,6 +168,7 @@ impl DistributedExecutor {
         columns: Vec<String>,
         limit: u32,
         filter_expr: Vec<u8>,
+        schema: &SchemaRef,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         let mut futures = FuturesUnordered::new();
         let mut all_batches = Vec::new();
@@ -179,9 +183,11 @@ impl DistributedExecutor {
             let region_id = region.region_id;
             let filter = filter_expr.clone();
 
+            let schema = schema.clone();
+
             futures.push(async move {
                 Self::scan_single_region(
-                    &router, &pool, store_id, region_id, &table, cols, limit, filter,
+                    &router, &pool, store_id, region_id, &table, cols, limit, filter, &schema,
                 )
                 .await
             });
@@ -212,6 +218,7 @@ impl DistributedExecutor {
         columns: Vec<String>,
         limit: u32,
         filter_expr: Vec<u8>,
+        schema: &SchemaRef,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         // Get store address from router (sync - uses topology)
         let addr = router
@@ -241,14 +248,15 @@ impl DistributedExecutor {
             .map_err(DistributedError::Grpc)?;
 
         // Consume stream
-        let batches = Self::consume_stream(response.into_inner()).await?;
+        let batches = Self::consume_stream(response.into_inner(), Some(schema)).await?;
 
         Ok(batches)
     }
 
-    /// Consume a TableScan stream and decode Arrow batches.
+    /// Consume a TableScan stream and decode batches.
     async fn consume_stream(
         mut stream: Streaming<TableScanResponse>,
+        schema: Option<&SchemaRef>,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         let mut batches = Vec::new();
 
@@ -256,8 +264,13 @@ impl DistributedExecutor {
             match stream.message().await {
                 Ok(Some(response)) => {
                     if !response.arrow_batch.is_empty() {
-                        let batch = Self::decode_arrow_ipc(&response.arrow_batch)?;
-                        batches.push(batch);
+                        // Only decode if we have a schema
+                        if let Some(s) = schema {
+                            match Self::decode_spire_batch(&response.arrow_batch, s) {
+                                Ok(batch) => batches.push(batch),
+                                Err(e) => log::warn!("Failed to decode batch: {}", e),
+                            }
+                        }
                     }
 
                     // Check if stream is complete
@@ -281,20 +294,332 @@ impl DistributedExecutor {
         Ok(batches)
     }
 
-    /// Decode Arrow IPC bytes to RecordBatch.
-    fn decode_arrow_ipc(data: &[u8]) -> Result<RecordBatch, DistributedError> {
-        let cursor = Cursor::new(data);
-        let mut reader = StreamReader::try_new(cursor, None).map_err(DistributedError::Arrow)?;
+    /// Decode SpireDB custom binary format to RecordBatch.
+    ///
+    /// SpireDB format: count:4B + [key_len:4B + key + val_len:4B + val]...
+    /// The `val` is erlang term_to_binary encoded map.
+    pub(crate) fn decode_spire_batch(
+        data: &[u8],
+        schema: &datafusion::arrow::datatypes::SchemaRef,
+    ) -> Result<RecordBatch, DistributedError> {
+        use datafusion::arrow::array::{
+            BinaryBuilder, BooleanBuilder, Float64Builder, Int64Builder, StringBuilder,
+        };
+        use datafusion::arrow::datatypes::DataType;
+        use std::collections::HashMap;
 
-        // Read first batch (should be only one per message)
-        reader
-            .next()
-            .ok_or_else(|| {
-                DistributedError::Arrow(datafusion::arrow::error::ArrowError::InvalidArgumentError(
-                    "Empty Arrow IPC stream".to_string(),
-                ))
-            })?
-            .map_err(DistributedError::Arrow)
+        if data.len() < 4 {
+            return Err(DistributedError::Arrow(
+                datafusion::arrow::error::ArrowError::InvalidArgumentError(
+                    "Data too short for batch header".to_string(),
+                ),
+            ));
+        }
+
+        // Read count (4 bytes big-endian)
+        let count = u32::from_be_bytes([data[0], data[1], data[2], data[3]]) as usize;
+        let mut offset = 4;
+
+        // Parse key-value pairs
+        let mut rows: Vec<HashMap<String, Vec<u8>>> = Vec::with_capacity(count);
+
+        for _ in 0..count {
+            if offset + 4 > data.len() {
+                break;
+            }
+
+            // Key length
+            let key_len = u32::from_be_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ]) as usize;
+            offset += 4;
+
+            if offset + key_len > data.len() {
+                break;
+            }
+
+            // Skip key (we use the decoded value which contains all columns)
+            offset += key_len;
+
+            if offset + 4 > data.len() {
+                break;
+            }
+
+            // Value length
+            let val_len = u32::from_be_bytes([
+                data[offset],
+                data[offset + 1],
+                data[offset + 2],
+                data[offset + 3],
+            ]) as usize;
+            offset += 4;
+
+            if offset + val_len > data.len() {
+                break;
+            }
+
+            // Value bytes (erlang term_to_binary encoded)
+            let val_bytes = &data[offset..offset + val_len];
+            offset += val_len;
+
+            // Try to decode Erlang term to extract column values
+            // For now, store as raw bytes and decode per-column
+            let mut row_map = HashMap::new();
+            if let Ok(row) = decode_erlang_row(val_bytes) {
+                row_map = row;
+            }
+            rows.push(row_map);
+        }
+
+        // Build Arrow arrays from parsed rows
+        let mut arrays: Vec<datafusion::arrow::array::ArrayRef> = Vec::new();
+
+        for field in schema.fields() {
+            let col_name = field.name();
+
+            match field.data_type() {
+                DataType::Int64 | DataType::Int32 => {
+                    let mut builder = Int64Builder::new();
+                    for row in &rows {
+                        if let Some(val) = row.get(col_name)
+                            && let Ok(s) = String::from_utf8(val.clone())
+                            && let Ok(n) = s.parse::<i64>()
+                        {
+                            builder.append_value(n);
+                            continue;
+                        }
+                        builder.append_null();
+                    }
+                    arrays.push(Arc::new(builder.finish()));
+                }
+                DataType::Float64 => {
+                    let mut builder = Float64Builder::new();
+                    for row in &rows {
+                        if let Some(val) = row.get(col_name)
+                            && let Ok(s) = String::from_utf8(val.clone())
+                            && let Ok(n) = s.parse::<f64>()
+                        {
+                            builder.append_value(n);
+                            continue;
+                        }
+                        builder.append_null();
+                    }
+                    arrays.push(Arc::new(builder.finish()));
+                }
+                DataType::Boolean => {
+                    let mut builder = BooleanBuilder::new();
+                    for row in &rows {
+                        if let Some(val) = row.get(col_name)
+                            && let Ok(s) = String::from_utf8(val.clone())
+                        {
+                            builder.append_value(s == "true" || s == "1");
+                            continue;
+                        }
+                        builder.append_null();
+                    }
+                    arrays.push(Arc::new(builder.finish()));
+                }
+                DataType::Binary => {
+                    let mut builder = BinaryBuilder::new();
+                    for row in &rows {
+                        if let Some(val) = row.get(col_name) {
+                            builder.append_value(val);
+                        } else {
+                            builder.append_null();
+                        }
+                    }
+                    arrays.push(Arc::new(builder.finish()));
+                }
+                _ => {
+                    // Default: treat as string
+                    let mut builder = StringBuilder::new();
+                    for row in &rows {
+                        if let Some(val) = row.get(col_name) {
+                            if let Ok(s) = String::from_utf8(val.clone()) {
+                                builder.append_value(&s);
+                            } else {
+                                builder.append_value(format!("{:?}", val));
+                            }
+                        } else {
+                            builder.append_null();
+                        }
+                    }
+                    arrays.push(Arc::new(builder.finish()));
+                }
+            }
+        }
+
+        RecordBatch::try_new(schema.clone(), arrays).map_err(DistributedError::Arrow)
+    }
+}
+
+/// Decode Erlang term_to_binary encoded row map.
+/// Returns HashMap of column_name -> raw bytes.
+fn decode_erlang_row(data: &[u8]) -> Result<std::collections::HashMap<String, Vec<u8>>, ()> {
+    use std::collections::HashMap;
+
+    // Erlang External Term Format magic number
+    if data.is_empty() || data[0] != 131 {
+        return Err(());
+    }
+
+    let mut result = HashMap::new();
+
+    // Try to decode as map (131, 116, arity:4, pairs...)
+    if data.len() < 6 || data[1] != 116 {
+        return Err(());
+    }
+
+    let arity = u32::from_be_bytes([data[2], data[3], data[4], data[5]]) as usize;
+    let mut offset = 6;
+
+    for _ in 0..arity {
+        // Decode key (should be atom or binary)
+        let (key, new_offset) = decode_erlang_term(&data[offset..])?;
+        offset += new_offset;
+
+        // Decode value
+        let (value, new_offset) = decode_erlang_value(&data[offset..])?;
+        offset += new_offset;
+
+        result.insert(key, value);
+    }
+
+    Ok(result)
+}
+
+/// Decode an Erlang term as string key.
+fn decode_erlang_term(data: &[u8]) -> Result<(String, usize), ()> {
+    if data.is_empty() {
+        return Err(());
+    }
+
+    match data[0] {
+        // Small atom (100)
+        100 => {
+            if data.len() < 3 {
+                return Err(());
+            }
+            let len = u16::from_be_bytes([data[1], data[2]]) as usize;
+            if data.len() < 3 + len {
+                return Err(());
+            }
+            let s = String::from_utf8_lossy(&data[3..3 + len]).to_string();
+            Ok((s, 3 + len))
+        }
+        // Atom ext (118) - UTF-8 atom
+        118 => {
+            if data.len() < 3 {
+                return Err(());
+            }
+            let len = u16::from_be_bytes([data[1], data[2]]) as usize;
+            if data.len() < 3 + len {
+                return Err(());
+            }
+            let s = String::from_utf8_lossy(&data[3..3 + len]).to_string();
+            Ok((s, 3 + len))
+        }
+        // Small atom UTF-8 (119)
+        119 => {
+            if data.len() < 2 {
+                return Err(());
+            }
+            let len = data[1] as usize;
+            if data.len() < 2 + len {
+                return Err(());
+            }
+            let s = String::from_utf8_lossy(&data[2..2 + len]).to_string();
+            Ok((s, 2 + len))
+        }
+        // Binary (109)
+        109 => {
+            if data.len() < 5 {
+                return Err(());
+            }
+            let len = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as usize;
+            if data.len() < 5 + len {
+                return Err(());
+            }
+            let s = String::from_utf8_lossy(&data[5..5 + len]).to_string();
+            Ok((s, 5 + len))
+        }
+        _ => Err(()),
+    }
+}
+
+/// Decode an Erlang term as raw bytes value.
+fn decode_erlang_value(data: &[u8]) -> Result<(Vec<u8>, usize), ()> {
+    if data.is_empty() {
+        return Err(());
+    }
+
+    match data[0] {
+        // Small integer (97)
+        97 => {
+            if data.len() < 2 {
+                return Err(());
+            }
+            Ok((data[1].to_string().into_bytes(), 2))
+        }
+        // Integer (98)
+        98 => {
+            if data.len() < 5 {
+                return Err(());
+            }
+            let n = i32::from_be_bytes([data[1], data[2], data[3], data[4]]);
+            Ok((n.to_string().into_bytes(), 5))
+        }
+        // Binary (109)
+        109 => {
+            if data.len() < 5 {
+                return Err(());
+            }
+            let len = u32::from_be_bytes([data[1], data[2], data[3], data[4]]) as usize;
+            if data.len() < 5 + len {
+                return Err(());
+            }
+            Ok((data[5..5 + len].to_vec(), 5 + len))
+        }
+        // Atom (100) - treat as string
+        100 => {
+            if data.len() < 3 {
+                return Err(());
+            }
+            let len = u16::from_be_bytes([data[1], data[2]]) as usize;
+            if data.len() < 3 + len {
+                return Err(());
+            }
+            Ok((data[3..3 + len].to_vec(), 3 + len))
+        }
+        // Small atom UTF-8 (119)
+        119 => {
+            if data.len() < 2 {
+                return Err(());
+            }
+            let len = data[1] as usize;
+            if data.len() < 2 + len {
+                return Err(());
+            }
+            Ok((data[2..2 + len].to_vec(), 2 + len))
+        }
+        // Nil (106) - empty
+        106 => Ok((vec![], 1)),
+        // Float (70) - new float format
+        70 => {
+            if data.len() < 9 {
+                return Err(());
+            }
+            let bytes: [u8; 8] = data[1..9].try_into().map_err(|_| ())?;
+            let f = f64::from_be_bytes(bytes);
+            Ok((f.to_string().into_bytes(), 9))
+        }
+        _ => {
+            // Unknown type - skip by returning empty
+            Ok((vec![], 1))
+        }
     }
 }
 

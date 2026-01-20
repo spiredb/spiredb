@@ -138,13 +138,16 @@ impl SpireContext {
                 .unwrap_or_else(|| "id".to_string());
 
             // Use distributed provider for parallel multi-shard queries
-            // Note: SpireProvider no longer needs a direct client for distributed mode
+            // with single-shard fallback when filters narrow to one region
             let provider = SpireProvider::with_distributed(
                 table_name.clone(),
                 schema,
                 self.distributed_executor.clone(),
                 pk_column,
                 self.stats_provider.clone(),
+                self.connection_pool.clone(),
+                self.region_router.clone(),
+                self.topology.clone(),
             );
 
             self.session_context
