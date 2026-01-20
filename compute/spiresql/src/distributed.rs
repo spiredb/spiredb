@@ -303,7 +303,8 @@ impl DistributedExecutor {
         schema: &datafusion::arrow::datatypes::SchemaRef,
     ) -> Result<RecordBatch, DistributedError> {
         use datafusion::arrow::array::{
-            BinaryBuilder, BooleanBuilder, Float64Builder, Int64Builder, StringBuilder,
+            BinaryBuilder, BooleanBuilder, Float64Builder, Int32Builder, Int64Builder,
+            StringBuilder,
         };
         use datafusion::arrow::datatypes::DataType;
         use std::collections::HashMap;
@@ -381,7 +382,21 @@ impl DistributedExecutor {
             let col_name = field.name();
 
             match field.data_type() {
-                DataType::Int64 | DataType::Int32 => {
+                DataType::Int32 => {
+                    let mut builder = Int32Builder::new();
+                    for row in &rows {
+                        if let Some(val) = row.get(col_name)
+                            && let Ok(s) = String::from_utf8(val.clone())
+                            && let Ok(n) = s.parse::<i32>()
+                        {
+                            builder.append_value(n);
+                            continue;
+                        }
+                        builder.append_null();
+                    }
+                    arrays.push(Arc::new(builder.finish()));
+                }
+                DataType::Int64 => {
                     let mut builder = Int64Builder::new();
                     for row in &rows {
                         if let Some(val) = row.get(col_name)

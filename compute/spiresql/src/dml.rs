@@ -445,18 +445,54 @@ fn encode_insert_rows(rows: &[InsertRow]) -> Vec<u8> {
             buf.extend_from_slice(&pk_len.to_be_bytes());
             buf.extend_from_slice(pk_val);
 
-            // Encode remaining columns as simple key=value pairs
-            let value = serde_json::to_vec(
-                &row.iter()
-                    .map(|(k, v)| (k.clone(), String::from_utf8_lossy(v).to_string()))
-                    .collect::<HashMap<_, _>>(),
-            )
-            .unwrap_or_default();
+            // Encode remaining columns as Erlang Map (ETF)
+            // 131 (Magic), 116 (MAP_EXT), Arity:4, Key1, Val1...
+            let row_map: HashMap<String, Vec<u8>> =
+                row.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+
+            let value = encode_erlang_map(&row_map);
+
             let val_len = value.len() as u32;
             buf.extend_from_slice(&val_len.to_be_bytes());
             buf.extend_from_slice(&value);
         }
     }
+    buf
+}
+
+/// Encode a HashMap as an Erlang External Term Format (ETF) Map.
+/// Uses MAP_EXT (116). Keys are encoded as binaries (assuming they are strings).
+/// Values are encoded as binaries.
+fn encode_erlang_map(map: &HashMap<String, Vec<u8>>) -> Vec<u8> {
+    let mut buf = Vec::new();
+
+    // Magic byte (131)
+    buf.push(131);
+
+    // MAP_EXT (116)
+    buf.push(116);
+
+    // Arity (4 bytes, big-endian)
+    let arity = map.len() as u32;
+    buf.extend_from_slice(&arity.to_be_bytes());
+
+    for (key, val) in map {
+        // Encode Key (Binary)
+        // 109 (BINARY_EXT), Len:4, Data...
+        buf.push(109);
+        let key_bytes = key.as_bytes();
+        let key_len = key_bytes.len() as u32;
+        buf.extend_from_slice(&key_len.to_be_bytes());
+        buf.extend_from_slice(key_bytes);
+
+        // Encode Value (Binary)
+        // 109 (BINARY_EXT), Len:4, Data...
+        buf.push(109);
+        let val_len = val.len() as u32;
+        buf.extend_from_slice(&val_len.to_be_bytes());
+        buf.extend_from_slice(val);
+    }
+
     buf
 }
 

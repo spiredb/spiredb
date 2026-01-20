@@ -242,15 +242,36 @@ defmodule Store.API.DataAccess do
         %TableUpdateResponse{updated: false}
 
       db_ref ->
-        # Check if exists then update
+        # Read-Modify-Write
         case :rocksdb.get(db_ref, key, []) do
-          {:ok, _} ->
-            case :rocksdb.put(db_ref, key, request.arrow_batch, []) do
+          {:ok, existing_val} ->
+            # Decode existing value (safe fallback to empty map)
+            current_map =
+              try do
+                case :erlang.binary_to_term(existing_val, [:safe]) do
+                  m when is_map(m) -> m
+                  _ -> %{}
+                end
+              rescue
+                ArgumentError -> %{}
+              end
+
+            # Apply updates
+            new_map = Map.merge(current_map, request.updates)
+
+            # Encode and write back
+            new_val = :erlang.term_to_binary(new_map)
+
+            case :rocksdb.put(db_ref, key, new_val, []) do
               :ok -> %TableUpdateResponse{updated: true}
               {:error, _} -> %TableUpdateResponse{updated: false}
             end
 
-          _ ->
+          :not_found ->
+            # Row doesn't exist, cannot update
+            %TableUpdateResponse{updated: false}
+
+          {:error, _} ->
             %TableUpdateResponse{updated: false}
         end
     end
