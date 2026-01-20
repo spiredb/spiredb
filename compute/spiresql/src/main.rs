@@ -248,6 +248,7 @@ impl SimpleQueryHandler for SpireSqlProcessor {
         let ctx = &self.ctx;
 
         // Parse SQL to detect DDL/DML statements
+        use sqlparser::ast::Statement;
         use sqlparser::dialect::PostgreSqlDialect;
         use sqlparser::parser::Parser;
 
@@ -262,6 +263,18 @@ impl SimpleQueryHandler for SpireSqlProcessor {
 
         // Process each statement
         for stmt in &statements {
+            // Handle SET commands (PostgreSQL client connection settings)
+            if let Statement::SetVariable { .. } = stmt {
+                // Silently accept SET commands (ignore client settings like extra_float_digits)
+                return Ok(vec![Response::Execution(Tag::new("SET"))]);
+            }
+
+            // Handle SHOW commands
+            if let Statement::ShowVariable { .. } = stmt {
+                // Return empty result for SHOW commands
+                return Ok(vec![Response::Execution(Tag::new("SHOW"))]);
+            }
+
             // Try DDL handler first
             let mut ddl_handler = ddl::DdlHandler::new(ctx.schema_service.clone());
             if let Some(response) = ddl_handler.try_execute(stmt).await? {
@@ -335,6 +348,7 @@ impl ExtendedQueryHandler for SpireSqlProcessor {
         let ctx = &self.ctx;
 
         // Parse SQL to detect DDL/DML statements
+        use sqlparser::ast::Statement;
         use sqlparser::dialect::PostgreSqlDialect;
         use sqlparser::parser::Parser;
 
@@ -349,6 +363,16 @@ impl ExtendedQueryHandler for SpireSqlProcessor {
 
         // Process each statement
         for stmt in &statements {
+            // Handle SET commands (PostgreSQL client connection settings)
+            if let Statement::SetVariable { .. } = stmt {
+                return Ok(Response::Execution(Tag::new("SET")));
+            }
+
+            // Handle SHOW commands
+            if let Statement::ShowVariable { .. } = stmt {
+                return Ok(Response::Execution(Tag::new("SHOW")));
+            }
+
             // Try DDL handler first
             let mut ddl_handler = ddl::DdlHandler::new(ctx.schema_service.clone());
             if let Some(response) = ddl_handler.try_execute(stmt).await? {
