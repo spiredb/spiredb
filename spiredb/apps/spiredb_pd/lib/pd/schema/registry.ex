@@ -453,8 +453,14 @@ defmodule PD.Schema.Registry do
               {:ok, pd_regions} ->
                 Enum.map(pd_regions, & &1.id)
 
+              {:error, :noproc} ->
+                # PD.Server not running (tests or before Raft init)
+                # Use configured num_regions as fallback
+                num_regions = Application.get_env(:spiredb_pd, :num_regions, 16)
+                Enum.to_list(1..num_regions)
+
               {:error, reason} ->
-                # Propagate error - PD.Server must be available
+                # Other errors - propagate
                 {:reply, {:error, reason}, state}
             end
           else
