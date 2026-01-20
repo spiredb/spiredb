@@ -1,8 +1,10 @@
 use async_trait::async_trait;
 use core_affinity::CoreId;
 use datafusion::arrow::util::display::array_value_to_string;
+use futures::Sink;
 use futures::stream;
 use mimalloc::MiMalloc;
+use pgwire::api::auth::{self, StartupHandler};
 use pgwire::api::portal::Portal;
 use pgwire::api::query::{ExtendedQueryHandler, SimpleQueryHandler};
 use pgwire::api::results::{
@@ -12,6 +14,7 @@ use pgwire::api::results::{
 use pgwire::api::stmt::{NoopQueryParser, StoredStatement};
 use pgwire::api::{ClientInfo, PgWireServerHandlers, Type as PgType};
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
+use pgwire::messages::{PgWireBackendMessage, PgWireFrontendMessage};
 use pgwire::tokio::process_socket;
 use socket2::{Domain, Protocol, Socket, Type as SockType};
 use spire_proto::spiredb::{
@@ -551,8 +554,35 @@ impl PgWireServerHandlers for SpireSqlProcessorFactory {
         self.handler.clone()
     }
 
-    fn startup_handler(&self) -> Arc<impl pgwire::api::auth::StartupHandler> {
-        Arc::new(pgwire::api::NoopHandler)
+    fn startup_handler(&self) -> Arc<impl StartupHandler> {
+        Arc::new(SpireStartupHandler)
+    }
+}
+
+/// Startup handler that completes PostgreSQL authentication handshake.
+pub struct SpireStartupHandler;
+
+#[async_trait]
+impl StartupHandler for SpireStartupHandler {
+    async fn on_startup<C>(
+        &self,
+        client: &mut C,
+        message: PgWireFrontendMessage,
+    ) -> PgWireResult<()>
+    where
+        C: ClientInfo + Sink<PgWireBackendMessage> + Unpin + Send,
+        C::Error: std::fmt::Debug,
+        PgWireError: From<<C as Sink<PgWireBackendMessage>>::Error>,
+    {
+        if let PgWireFrontendMessage::Startup(ref startup) = message {
+            // Save startup parameters (user, database, etc.)
+            auth::save_startup_parameters_to_metadata(client, startup);
+
+            // Complete authentication (sends AuthenticationOk + ReadyForQuery)
+            let params = auth::DefaultServerParameterProvider::default();
+            auth::finish_authentication(client, &params).await?;
+        }
+        Ok(())
     }
 }
 
