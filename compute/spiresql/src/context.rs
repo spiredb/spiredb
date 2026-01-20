@@ -96,10 +96,16 @@ impl SpireContext {
         };
         let query_cache = new_shared_cache(cache_capacity);
 
+        // Create SessionContext with 'spire' catalog and 'public' schema
+        let session_config = datafusion::prelude::SessionConfig::new()
+            .with_default_catalog_and_schema("spire", "public")
+            .with_information_schema(true);
+        let session_context = SessionContext::new_with_config(session_config);
+
         Self {
             data_access,
             schema_service,
-            session_context: SessionContext::new(),
+            session_context,
             region_router,
             connection_pool,
             distributed_executor,
@@ -162,6 +168,20 @@ impl SpireContext {
         }
 
         Ok(())
+    }
+
+    /// Start a background task to periodically refresh tables from SpireDB.
+    /// This ensures newly created tables are registered in DataFusion.
+    pub fn start_table_refresh_task(self: Arc<Self>) {
+        tokio::spawn(async move {
+            let refresh_interval = std::time::Duration::from_secs(5);
+            loop {
+                tokio::time::sleep(refresh_interval).await;
+                if let Err(e) = self.register_tables().await {
+                    log::debug!("Table refresh failed: {}", e);
+                }
+            }
+        });
     }
 
     /// Hash a query string for cache lookup (using ahash).

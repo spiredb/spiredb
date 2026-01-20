@@ -444,17 +444,28 @@ defmodule PD.Schema.Registry do
         {:reply, {:error, :not_found}, state}
 
       table ->
-        # If explicit region_ids not set, find by prefix
+        # If explicit region_ids not set, query PD.Server for all regions
+        # All tables use the shared generic region pool with hash-based routing
         regions =
           if table.region_ids == [] do
-            # Find regions where start_key starts with table prefix
-            # This is a simplification; ideally we query PD.Server
-            []
+            # Query PD.Server for all regions (shared pool)
+            case PD.Server.get_all_regions() do
+              {:ok, pd_regions} ->
+                Enum.map(pd_regions, & &1.id)
+
+              {:error, reason} ->
+                # Propagate error - PD.Server must be available
+                {:reply, {:error, reason}, state}
+            end
           else
             table.region_ids
           end
 
-        {:reply, {:ok, regions}, state}
+        # Handle case where regions is an error reply tuple
+        case regions do
+          {:reply, _, _} = error_reply -> error_reply
+          region_ids -> {:reply, {:ok, region_ids}, state}
+        end
     end
   end
 

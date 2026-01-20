@@ -89,9 +89,11 @@ impl DmlHandler {
             Ok(response) => {
                 let rows_affected = response.into_inner().rows_affected;
                 log::info!("Inserted {} rows into '{}'", rows_affected, table_name);
-                Ok(vec![Response::Execution(
-                    Tag::new("INSERT").with_rows(rows_affected as usize),
-                )])
+                // PostgreSQL INSERT format: "INSERT oid count" where oid is always 0
+                Ok(vec![Response::Execution(Tag::new(&format!(
+                    "INSERT 0 {}",
+                    rows_affected
+                )))])
             }
             Err(e) => Err(PgWireError::UserError(Box::new(ErrorInfo::new(
                 "ERROR".to_string(),
