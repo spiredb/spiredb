@@ -4,7 +4,6 @@ use datafusion::prelude::SessionContext;
 use spire_proto::spiredb::{
     cluster::cluster_service_client::ClusterServiceClient,
     cluster::schema_service_client::SchemaServiceClient,
-    data::data_access_client::DataAccessClient,
 };
 use std::sync::Arc;
 use tonic::transport::Channel;
@@ -29,9 +28,6 @@ const DEFAULT_QUERY_CACHE_CAPACITY: usize = 256;
 /// Holds connections, distributed execution components, and high-performance caches.
 #[allow(dead_code)]
 pub struct SpireContext {
-    /// Client to talk to SpireDB DataAccess service.
-    pub data_access: DataAccessClient<Channel>,
-
     /// Client to talk to SpireDB Schema Service.
     pub schema_service: SchemaServiceClient<Channel>,
 
@@ -63,7 +59,6 @@ pub struct SpireContext {
 impl SpireContext {
     /// Create a new SpireContext with all distributed components.
     pub fn new(
-        data_access: DataAccessClient<Channel>,
         schema_service: SchemaServiceClient<Channel>,
         cluster_service: ClusterServiceClient<Channel>,
         config: &Config,
@@ -103,7 +98,6 @@ impl SpireContext {
         let session_context = SessionContext::new_with_config(session_config);
 
         Self {
-            data_access,
             schema_service,
             session_context,
             region_router,
@@ -144,8 +138,8 @@ impl SpireContext {
                 .unwrap_or_else(|| "id".to_string());
 
             // Use distributed provider for parallel multi-shard queries
+            // Note: SpireProvider no longer needs a direct client for distributed mode
             let provider = SpireProvider::with_distributed(
-                self.data_access.clone(),
                 table_name.clone(),
                 schema,
                 self.distributed_executor.clone(),
@@ -256,7 +250,6 @@ fn map_column_type(ct: ColumnType) -> DataType {
 impl fmt::Debug for SpireContext {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("SpireContext")
-            .field("data_access", &self.data_access)
             .field("schema_service", &self.schema_service)
             .field("session_context", &"SessionContext")
             .field("region_router", &"RegionRouter")

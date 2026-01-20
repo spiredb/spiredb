@@ -70,6 +70,12 @@ defmodule PD.API.GRPC.Schema do
     %TableList{tables: Enum.map(tables, &table_to_proto/1)}
   end
 
+  def get_table_id(request, _stream) do
+    # Return the Erlang phash2 for consistent hashing with data_access.ex
+    table_id = :erlang.phash2(request.table_name)
+    %Spiredb.Cluster.GetTableIdResponse{table_id: table_id}
+  end
+
   # Index operations
 
   def create_index(request, _stream) do

@@ -20,7 +20,6 @@ use socket2::{Domain, Protocol, Socket, Type as SockType};
 use spire_proto::spiredb::{
     cluster::cluster_service_client::ClusterServiceClient,
     cluster::schema_service_client::SchemaServiceClient,
-    data::data_access_client::DataAccessClient,
 };
 use std::net::SocketAddr;
 use std::sync::Arc;
@@ -173,42 +172,18 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
         }
     };
 
-    // Connect to SpireDB DataAccess service (Store on port 50052)
-    let data_channel = match Channel::from_shared(config.data_access_addr.clone()) {
-        Ok(c) => c
-            .connect_timeout(connect_timeout)
-            .timeout(request_timeout)
-            .http2_keep_alive_interval(keepalive_interval)
-            .keep_alive_timeout(keepalive_timeout)
-            .keep_alive_while_idle(true)
-            .initial_stream_window_size(stream_window_size)
-            .initial_connection_window_size(connection_window_size)
-            .connect_lazy(),
-        Err(e) => {
-            log::error!("Worker {} invalid data_access addr: {}", worker_id, e);
-            return;
-        }
-    };
-
-    let data_access_client = DataAccessClient::new(data_channel);
     let schema_client = SchemaServiceClient::new(cluster_channel.clone());
     let cluster_client = ClusterServiceClient::new(cluster_channel);
 
     if worker_id == 0 {
         log::info!(
-            "gRPC channels configured (cluster: {}, data: {})",
-            config.cluster_addr,
-            config.data_access_addr
+            "gRPC channels configured (cluster: {})",
+            config.cluster_addr
         );
     }
 
     // Create SpireContext
-    let ctx = Arc::new(SpireContext::new(
-        data_access_client,
-        schema_client,
-        cluster_client,
-        &config,
-    ));
+    let ctx = Arc::new(SpireContext::new(schema_client, cluster_client, &config));
 
     // Register tables once at startup (only worker 0)
     if worker_id == 0 {
@@ -313,7 +288,12 @@ impl SimpleQueryHandler for SpireSqlProcessor {
             }
 
             // Try DML handler
-            let mut dml_handler = dml::DmlHandler::new(ctx.data_access.clone());
+            let mut dml_handler = dml::DmlHandler::new(
+                ctx.region_router.clone(),
+                ctx.connection_pool.clone(),
+                ctx.topology.clone(),
+                ctx.schema_service.clone(),
+            );
             if let Some(response) = dml_handler.try_execute(stmt).await? {
                 return Ok(response);
             }
@@ -415,7 +395,12 @@ impl ExtendedQueryHandler for SpireSqlProcessor {
             }
 
             // Try DML handler
-            let mut dml_handler = dml::DmlHandler::new(ctx.data_access.clone());
+            let mut dml_handler = dml::DmlHandler::new(
+                ctx.region_router.clone(),
+                ctx.connection_pool.clone(),
+                ctx.topology.clone(),
+                ctx.schema_service.clone(),
+            );
             if let Some(response) = dml_handler.try_execute(stmt).await? {
                 return Ok(response
                     .into_iter()

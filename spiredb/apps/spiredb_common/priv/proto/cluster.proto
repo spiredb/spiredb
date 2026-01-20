@@ -33,6 +33,7 @@ service SchemaService {
   rpc DropTable(DropTableRequest) returns (Empty);
   rpc GetTable(GetTableRequest) returns (TableSchema);
   rpc ListTables(Empty) returns (TableList);
+  rpc GetTableId(GetTableIdRequest) returns (GetTableIdResponse);
   
   // Index operations
   rpc CreateIndex(CreateIndexRequest) returns (CreateIndexResponse);
@@ -90,6 +91,14 @@ message CreateTableResponse {
 
 message DropTableRequest {
   string name = 1;
+}
+
+message GetTableIdRequest {
+  string table_name = 1;
+}
+
+message GetTableIdResponse {
+  uint64 table_id = 1;
 }
 
 message GetTableRequest {

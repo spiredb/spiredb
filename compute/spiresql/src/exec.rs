@@ -25,8 +25,9 @@ use std::fmt;
 
 use datafusion::prelude::Expr;
 
-/// Execution plan for scanning a SpireDB table.
+/// Execution plan for scanning a SpireDB table (single-node fallback mode).
 #[derive(Debug)]
+#[allow(dead_code)]
 pub struct SpireExec {
     client: DataAccessClient<Channel>,
     table_name: String,
@@ -119,7 +120,8 @@ impl ExecutionPlan for SpireExec {
     }
 }
 
-/// Stream that reads from SpireDB GRPC and yields RecordBatches.
+/// Stream that reads from SpireDB GRPC and yields RecordBatches (single-node fallback).
+#[allow(dead_code)]
 pub struct SpireStream {
     schema: SchemaRef,
     inner: Pin<Box<dyn Stream<Item = Result<RecordBatch>> + Send>>,

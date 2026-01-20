@@ -828,6 +828,86 @@ defmodule Spiredb.Cluster.DropTableRequest do
   field(:name, 1, type: :string)
 end
 
+defmodule Spiredb.Cluster.GetTableIdRequest do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "GetTableIdRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "table_name",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_STRING,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "tableName",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:table_name, 1, type: :string, json_name: "tableName")
+end
+
+defmodule Spiredb.Cluster.GetTableIdResponse do
+  @moduledoc false
+
+  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "GetTableIdResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "table_id",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "tableId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:table_id, 1, type: :uint64, json_name: "tableId")
+end
+
 defmodule Spiredb.Cluster.GetTableRequest do
   @moduledoc false
 
@@ -2016,6 +2096,34 @@ defmodule Spiredb.Cluster.ColumnStats do
           json_name: "nullCount",
           proto3_optional: nil,
           __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "sum_value",
+          extendee: nil,
+          number: 5,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "sumValue",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "byte_size",
+          extendee: nil,
+          number: 6,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_UINT64,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "byteSize",
+          proto3_optional: nil,
+          __unknown_fields__: []
         }
       ],
       nested_type: [],
@@ -2034,6 +2142,8 @@ defmodule Spiredb.Cluster.ColumnStats do
   field(:min_value, 2, type: :bytes, json_name: "minValue")
   field(:max_value, 3, type: :bytes, json_name: "maxValue")
   field(:null_count, 4, type: :uint64, json_name: "nullCount")
+  field(:sum_value, 5, type: :bytes, json_name: "sumValue")
+  field(:byte_size, 6, type: :uint64, json_name: "byteSize")
 end
 
 defmodule Spiredb.Cluster.UpdateTableStatsRequest do
@@ -4964,6 +5074,15 @@ defmodule Spiredb.Cluster.SchemaService.Service do
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
+          name: "GetTableId",
+          input_type: ".spiredb.cluster.GetTableIdRequest",
+          output_type: ".spiredb.cluster.GetTableIdResponse",
+          options: nil,
+          client_streaming: false,
+          server_streaming: false,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.MethodDescriptorProto{
           name: "CreateIndex",
           input_type: ".spiredb.cluster.CreateIndexRequest",
           output_type: ".spiredb.cluster.CreateIndexResponse",
@@ -5030,6 +5149,8 @@ defmodule Spiredb.Cluster.SchemaService.Service do
   rpc(:GetTable, Spiredb.Cluster.GetTableRequest, Spiredb.Cluster.TableSchema)
 
   rpc(:ListTables, Spiredb.Cluster.Empty, Spiredb.Cluster.TableList)
+
+  rpc(:GetTableId, Spiredb.Cluster.GetTableIdRequest, Spiredb.Cluster.GetTableIdResponse)
 
   rpc(:CreateIndex, Spiredb.Cluster.CreateIndexRequest, Spiredb.Cluster.CreateIndexResponse)
 

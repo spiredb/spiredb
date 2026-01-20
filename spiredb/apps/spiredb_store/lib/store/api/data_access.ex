@@ -204,8 +204,7 @@ defmodule Store.API.DataAccess do
 
     table_id = :erlang.phash2(request.table_name)
 
-    # Parse Arrow batch and extract rows
-    # For now, treat arrow_batch as serialized rows
+    # Decode rows from Arrow batch
     rows = parse_arrow_batch(request.arrow_batch, request.table_name)
 
     # Insert each row
@@ -215,7 +214,6 @@ defmodule Store.API.DataAccess do
 
         case get_db_ref_direct() do
           nil ->
-            # No RocksDB
             Logger.error("TableInsert failed: No RocksDB store_ref found")
             count
 
