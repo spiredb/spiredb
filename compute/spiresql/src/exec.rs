@@ -38,6 +38,7 @@ pub struct SpireExec {
     properties: PlanProperties,
 }
 
+#[allow(dead_code)]
 impl SpireExec {
     pub fn new(
         client: DataAccessClient<Channel>,
