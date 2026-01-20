@@ -32,9 +32,9 @@ RUN mkdir -p /spiredb/lib && \
     cp -LR $(ldd ./target/release/spiresql | grep "=>" | awk '{print $3}' | grep -v "^$") /spiredb/lib/ 2>/dev/null || true
 
 # ============================================================================
-# Final minimal image
+# Final minimal image with DNS support
 # ============================================================================
-FROM scratch AS main
+FROM gcr.io/distroless/cc-debian12:latest AS main
 
 # OCI container labels
 LABEL org.opencontainers.image.title="SpireSQL - Spire Compute Layer"
@@ -43,18 +43,11 @@ LABEL org.opencontainers.image.vendor="SpireDB"
 LABEL org.opencontainers.image.source="https://github.com/spiredb/spiredb"
 LABEL com.spiredb.arch="x86_64-v3"
 
-# Copy dynamic linker and libraries
-COPY --from=build /lib64/ld-linux-x86-64.so.2 /lib64/ld-linux-x86-64.so.2
-COPY --from=build /spiredb/lib /spiredb/lib
-
 # Copy binary
 COPY --from=build /spiredb/compute/target/release/spiresql /spiresql
 
 # Copy default config (if exists)
 COPY --from=build /spiredb/compute/spiresql/spiresql.toml /spiresql.toml
-
-# Library path for dynamic linking
-ENV LD_LIBRARY_PATH=/spiredb/lib
 
 # Logging
 ENV RUST_LOG=info
@@ -63,4 +56,5 @@ ENV SPIRE_LOG=info
 # PostgreSQL wire protocol port (also used for health checks)
 EXPOSE 5432
 
-ENTRYPOINT ["/spiresql", "-c", "/spiresql.toml"]
+ENTRYPOINT ["/spiresql"]
+

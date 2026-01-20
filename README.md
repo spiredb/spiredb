@@ -12,9 +12,9 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-AGPL_3.0-blue.svg" alt="License"></a>
   <a href="https://elixir-lang.org"><img src="https://img.shields.io/badge/Elixir-1.14+-4B275F.svg" alt="Elixir"></a>
   <a href="https://www.rust-lang.org"><img src="https://img.shields.io/badge/Rust-1.75+-B7410E.svg" alt="Rust"></a>
-  <a href="https://crates.io/crates/spiresql"><img src="https://img.shields.io/crates/v/spiresql.svg" alt="Crates.io"></a>
   <a href="https://discord.gg/6GtdpFpU8F"><img src="https://img.shields.io/discord/1266804004327784489?label=Discord&logo=discord&logoColor=white&color=5865F2" alt="Discord"></a>
-  <a href="https://ghcr.io/spiredb/spiredb"><img src="https://img.shields.io/badge/Docker-ghcr.io-2496ED.svg?logo=docker&logoColor=white" alt="Docker"></a>
+  <a href="https://ghcr.io/spiredb/spiredb"><img src="https://img.shields.io/badge/SpireDB-ghcr.io-2496ED.svg?logo=docker&logoColor=white" alt="SpireDB Docker"></a>
+  <a href="https://ghcr.io/spiredb/spiresql"><img src="https://img.shields.io/badge/SpireSQL-ghcr.io-2496ED.svg?logo=docker&logoColor=white" alt="SpireSQL Docker"></a>
 </p>
 
 <br>
