@@ -51,6 +51,7 @@ fn test_config_custom_values() {
     let config = Config {
         listen_addr: "127.0.0.1:15432".to_string(),
         cluster_addr: "http://spiredb:50051".to_string(),
+        data_access_addr: "http://spiredb:50052".to_string(),
         num_workers: 4,
         query_cache_capacity: 5000,
         enable_cache: false,

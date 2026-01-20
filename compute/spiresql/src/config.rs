@@ -9,9 +9,13 @@ pub struct Config {
     /// Listen address for PostgreSQL wire protocol.
     pub listen_addr: String,
 
-    /// SpireDB Cluster gRPC endpoint (PD/Schema/Cluster services).
+    /// SpireDB Cluster gRPC endpoint (PD/Schema/Cluster services on port 50051).
     /// Connects to any node, discovers rest via ListStores.
     pub cluster_addr: String,
+
+    /// SpireDB DataAccess gRPC endpoint (Store services on port 50052).
+    /// For INSERT/UPDATE/DELETE operations.
+    pub data_access_addr: String,
 
     /// Maximum number of cached query results.
     pub query_cache_capacity: usize,
@@ -31,6 +35,7 @@ impl Default for Config {
         Self {
             listen_addr: "0.0.0.0:5432".to_string(),
             cluster_addr: "http://spiredb:50051".to_string(),
+            data_access_addr: "http://spiredb:50052".to_string(),
             query_cache_capacity: 1024,
             enable_cache: true,
             log_level: "info".to_string(),
@@ -64,6 +69,9 @@ impl Config {
         if let Some(ref level) = cli.log_level {
             self.log_level = level.clone();
         }
+        if let Some(ref addr) = cli.data_access {
+            self.data_access_addr = addr.clone();
+        }
     }
 }
 
@@ -83,6 +91,10 @@ pub struct CliArgs {
     /// SpireDB Cluster gRPC endpoint (discovers all nodes via ListStores)
     #[arg(long)]
     pub cluster: Option<String>,
+
+    /// SpireDB DataAccess gRPC endpoint (for INSERT/UPDATE/DELETE)
+    #[arg(long)]
+    pub data_access: Option<String>,
 
     /// Query cache capacity (number of cached results)
     #[arg(long)]
