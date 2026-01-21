@@ -1,3 +1,6 @@
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/spiredb/spiredb/master/art/spire-square.svg"
+)]
 //! SpireDB Protocol Buffers
 //!
 //! This crate contains the compiled Protocol Buffers definitions used for communication

@@ -1,3 +1,6 @@
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/spiredb/spiredb/master/art/spire-square.svg"
+)]
 //! SpireDB Command Line Interface (CLI).
 //!
 //! This crate provides the `spire` binary, which allows users to interact with SpireDB clusters.

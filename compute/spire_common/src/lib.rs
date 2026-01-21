@@ -1,3 +1,6 @@
+#![doc(
+    html_logo_url = "https://raw.githubusercontent.com/spiredb/spiredb/master/art/spire-square.svg"
+)]
 //! SpireDB Common Library
 //!
 //! This crate contains shared utilities, error types, and configuration structures used across
