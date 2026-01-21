@@ -36,18 +36,25 @@ impl DdlHandler {
 
     /// Get a client connected to the leader if available, or fallback to default.
     async fn get_client(&self) -> SchemaServiceClient<Channel> {
-        if let Some(topo) = &self.topology
-            && let Some(leader) = topo.get_leader_address()
+        if let Some(topology) = &self.topology
+            && let Some(leader) = topology.get_leader_address()
         {
-            log::debug!("Routing DDL to leader at {}", leader.address);
-            match Channel::from_shared(leader.address.clone()) {
-                Ok(endpoint) => match endpoint.connect().await {
-                    Ok(channel) => return SchemaServiceClient::new(channel),
-                    Err(e) => {
-                        log::warn!("Failed to connect to leader {}: {}", leader.address, e)
-                    }
-                },
-                Err(e) => log::warn!("Invalid leader address {}: {}", leader.address, e),
+            // IMPORTANT: The leader address from Store proto uses the DataAccess port (50052).
+            // SchemaService is hosted on the main PD gRPC port (50051).
+            // We must swap the port to successfuly connect to the SchemaService.
+            // Dynamic swap: Parse the URI, extract host, and use port 50051.
+            let leader_uri = leader.address.parse::<tonic::transport::Uri>().ok();
+            let pd_addr = if let Some(uri) = leader_uri {
+                let host = uri.host().unwrap_or("spiredb");
+                format!("http://{}:50051", host)
+            } else {
+                leader.address.replace(":50052", ":50051")
+            };
+
+            log::info!("Connecting to PD leader for DDL: {}", pd_addr);
+            match SchemaServiceClient::connect(pd_addr).await {
+                Ok(client) => return client,
+                Err(e) => log::warn!("Failed to connect to leader {}: {}", leader.address, e),
             }
         }
         // Fallback to load-balanced client

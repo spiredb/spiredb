@@ -114,7 +114,19 @@ impl SpireContext {
     pub async fn register_tables(&self) -> Result<(), Box<dyn std::error::Error>> {
         // Try to use leader client first
         let mut client = if let Some(leader) = self.topology.get_leader_address() {
-            match Channel::from_shared(leader.address.clone()) {
+            // Fix port for SchemaService (see ddl.rs)
+            // Dynamic swap: Parse the URI, extract host, and use port 50051.
+            let leader_uri = leader.address.parse::<tonic::transport::Uri>().ok();
+            let pd_addr = if let Some(uri) = leader_uri {
+                let host = uri.host().unwrap_or("spiredb");
+                format!("http://{}:50051", host)
+            } else {
+                leader.address.replace(":50052", ":50051")
+            };
+
+            log::info!("Connecting to PD leader for registration: {}", pd_addr);
+
+            match Channel::from_shared(pd_addr) {
                 Ok(endpoint) => match endpoint.connect().await {
                     Ok(channel) => SchemaServiceClient::new(channel),
                     Err(_) => self.schema_service.clone(),
