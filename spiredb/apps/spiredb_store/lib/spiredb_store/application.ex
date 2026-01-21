@@ -46,14 +46,17 @@ defmodule SpiredbStore.Application do
     strategy_config =
       case discovery do
         "k8sdns" ->
-          # DNS discovery using headless service - will discover spiredb-0, spiredb-1, etc.
+          # For DNS-based node naming with headless service.
+          # NOTE: Cluster.Strategy.Kubernetes.DNS returns IP addresses, not DNS hostnames,
+          # which causes mismatch with DNS-based RELEASE_NODE. Use Gossip instead.
           [
-            strategy: Cluster.Strategy.Kubernetes.DNS,
+            strategy: Cluster.Strategy.Gossip,
             config: [
-              service: System.get_env("SPIRE_SERVICE_NAME", "spiredb-headless"),
-              application_name: "spiredb",
-              kubernetes_namespace: System.get_env("SPIRE_NAMESPACE", "default"),
-              polling_interval: 5_000
+              port: 45892,
+              if_addr: "0.0.0.0",
+              multicast_addr: "239.1.1.1",
+              multicast_ttl: 1,
+              secret: System.get_env("RELEASE_COOKIE", "spiredb_cluster_cookie")
             ]
           ]
 
