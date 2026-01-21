@@ -1,6 +1,10 @@
 //! SpireSQL Library
 //!
-//! This module exports all SpireSQL components for integration testing.
+//! This crate provides the SQL interface for SpireDB, including parsing, planning, and execution
+//! of SQL queries. It is designed to be used both as a standalone server and as a library for
+//! programmatic access to SpireDB's SQL capabilities.
+//!
+//! The main components are exported for integration testing and advanced usage.
 
 pub mod cache;
 pub mod config;

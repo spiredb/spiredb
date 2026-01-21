@@ -1,3 +1,16 @@
+//! SpireDB Command Line Interface (CLI).
+//!
+//! This crate provides the `spire` binary, which allows users to interact with SpireDB clusters.
+//! It supports commands for cluster management, data operations, schema management, and SQL execution.
+//!
+//! # Usage
+//!
+//! ```bash
+//! spire [COMMAND] [ARGS]
+//! ```
+//!
+//! See `spire --help` for more information.
+
 mod cli;
 mod commands;
 
@@ -14,11 +27,7 @@ use spire_common::init_logging;
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     init_logging();
     let args = Args::parse();
-    // Load config if needed, but we use args currently.
-    // Assuming default spiresql_addr is hardcoded or should be in Args?
-    // Args has pd_addr and data_addr but not spiresql_addr in the struct I created earlier.
-    // I should add spiresql_addr to Args or just use default.
-    let spiresql_addr = "127.0.0.1:5432".to_string(); // hardcoded for now or add to Args
+    let spiresql_addr = args.spiresql_addr.clone();
 
     match args.command {
         Commands::Cluster { cmd } => {

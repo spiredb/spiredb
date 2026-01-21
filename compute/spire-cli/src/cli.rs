@@ -14,6 +14,10 @@ pub struct Args {
     /// Data server address
     #[arg(long, global = true, default_value = "http://127.0.0.1:50052")]
     pub data_addr: String,
+
+    /// SpireSQL server address
+    #[arg(long, global = true, default_value = "127.0.0.1:5432")]
+    pub spiresql_addr: String,
 }
 
 #[derive(Subcommand, Debug)]
