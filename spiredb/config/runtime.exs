@@ -26,3 +26,18 @@ if log_level = System.get_env("SPIRE_LOG_LEVEL") do
 
   config :logger, level: level
 end
+
+if config_env() == :prod do
+  config :libcluster,
+    topologies: [
+      k8s_dns: [
+        strategy: Cluster.Strategy.Kubernetes.DNS,
+        config: [
+          service: System.get_env("SPIRE_HEADLESS_SERVICE", "spiredb-headless"),
+          application_name: "spiredb",
+          namespace: System.get_env("POD_NAMESPACE", "spire"),
+          polling_interval: 5_000
+        ]
+      ]
+    ]
+end

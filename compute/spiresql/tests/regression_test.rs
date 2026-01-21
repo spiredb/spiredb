@@ -24,6 +24,7 @@
 /// binary <<>>. Changed to byte_size(k) > 0.
 
 #[test]
+#[allow(clippy::const_is_empty)]
 fn test_empty_binary_vs_empty_string() {
     // In Rust, empty Vec<u8> vs empty String both have length 0
     let empty_binary: Vec<u8> = vec![];

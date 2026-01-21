@@ -665,7 +665,7 @@ defmodule PD.Server do
   end
 
   def seed_node do
-    # 1. Try explicit env var (for dev/testing)
+    # 1. Try explicit env var (primary method for K8s)
     case System.get_env("SPIRE_SEED_NODE") do
       name when is_binary(name) and name != "" and name != "auto" ->
         String.to_atom(name)
@@ -689,49 +689,9 @@ defmodule PD.Server do
             end
 
           _ ->
-            # k8sdns, gossip -> search via POD_NAME + DNS fallback
-            find_seed_in_cluster()
+            # Fallback to simple DNS resolution if env var missing
+            resolve_seed_node_dns()
         end
-    end
-  end
-
-  defp find_seed_in_cluster do
-    # 1. Check if ANY connected node is the seed (by POD_NAME)
-    # This relies on libcluster gossip having formed a mesh.
-    # We check connected nodes AND ourselves.
-    nodes = Node.list()
-    all_nodes = [node() | nodes]
-
-    Logger.debug("Searching for seed in nodes: #{inspect(all_nodes)}")
-
-    seed =
-      Enum.find(all_nodes, fn n ->
-        # RPC to check pod name on that node
-        try do
-          case :rpc.call(n, System, :get_env, ["POD_NAME"]) do
-            name when is_binary(name) ->
-              Logger.debug("Node #{n} POD_NAME: #{name}")
-              String.ends_with?(name, "-0")
-
-            _ ->
-              false
-          end
-        catch
-          _, _ -> false
-        end
-      end)
-
-    case seed do
-      nil ->
-        Logger.warning(
-          "Could not find seed in cluster (scanned #{length(all_nodes)} nodes). Retrying DNS..."
-        )
-
-        resolve_seed_node_dns()
-
-      node ->
-        Logger.debug("Found seed node: #{node}")
-        node
     end
   end
 
