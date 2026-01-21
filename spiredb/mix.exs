@@ -17,7 +17,9 @@ defmodule Spiredb.MixProject do
         applications: [
           spiredb_common: :permanent,
           spiredb_pd: :permanent,
-          spiredb_store: :permanent
+          spiredb_store: :permanent,
+          observer_cli: :permanent,
+          recon: :load
         ],
         include_executables_for: [:unix],
         steps: [:assemble, :tar],

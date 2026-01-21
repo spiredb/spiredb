@@ -20,7 +20,7 @@ defmodule SpiredbCommon.MixProject do
   # Run "mix help compile.app" to learn about applications.
   def application do
     [
-      extra_applications: [:logger],
+      extra_applications: [:logger, :observer_cli],
       mod: {SpiredbCommon.Application, []}
     ]
   end
@@ -34,7 +34,9 @@ defmodule SpiredbCommon.MixProject do
       {:telemetry, "~> 1.2"},
       {:logger_json, "~> 5.1"},
       {:grpc_reflection, "~> 0.3.0"},
-      {:ra, "~> 2.6", optional: true}
+      {:ra, "~> 2.6", optional: true},
+      {:recon, "~> 2.5"},
+      {:observer_cli, "~> 1.7"}
     ]
   end
 end
