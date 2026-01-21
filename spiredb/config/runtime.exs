@@ -28,15 +28,20 @@ if log_level = System.get_env("SPIRE_LOG_LEVEL") do
 end
 
 if config_env() == :prod do
+  # Use Gossip strategy for cluster discovery
+  # NOTE: Cluster.Strategy.Kubernetes.DNS returns IP addresses, not DNS hostnames,
+  # which causes mismatch with DNS-based node names. Gossip uses UDP multicast
+  # and works with any node naming scheme. The actual cluster forms via Ra/seed.
   config :libcluster,
     topologies: [
-      k8s_dns: [
-        strategy: Cluster.Strategy.Kubernetes.DNS,
+      gossip: [
+        strategy: Cluster.Strategy.Gossip,
         config: [
-          service: System.get_env("SPIRE_HEADLESS_SERVICE", "spiredb-headless"),
-          application_name: "spiredb",
-          namespace: System.get_env("POD_NAMESPACE", "spire"),
-          polling_interval: 5_000
+          port: 45892,
+          if_addr: "0.0.0.0",
+          multicast_addr: "239.1.1.1",
+          multicast_ttl: 1,
+          secret: System.get_env("RELEASE_COOKIE", "spiredb_cluster_cookie")
         ]
       ]
     ]
