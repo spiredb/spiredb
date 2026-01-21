@@ -1,7 +1,7 @@
 defmodule PD.API.Endpoint do
   use GRPC.Endpoint
 
-  intercept(GRPC.Server.Interceptors.Logger)
+  intercept(PD.API.Interceptors.Logger)
 
   # gRPC services
   run(PD.API.GRPC.Cluster)

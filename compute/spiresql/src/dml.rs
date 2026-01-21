@@ -583,3 +583,51 @@ fn encode_table_key(table_id: u64, pk: &[u8]) -> Vec<u8> {
     key.extend_from_slice(pk);
     key
 }
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// ============================================================================
+    /// BUG FIX 1: Key Encoding Mismatch Regression Test
+    /// ============================================================================
+    #[test]
+    fn test_encode_table_key_uses_4_bytes() {
+        // Table ID should only use 4 bytes
+        let key = encode_table_key(1, b"pk_value");
+
+        // First 4 bytes are table_id, rest is pk
+        assert_eq!(key.len(), 4 + 8); // 4 for table_id + 8 for "pk_value"
+
+        // First 4 bytes should be table_id = 1 in big-endian
+        assert_eq!(&key[0..4], &[0, 0, 0, 1]);
+    }
+
+    #[test]
+    fn test_encode_table_key_matches_elixir_format() {
+        // Elixir uses <<table_id::unsigned-big-32>> <> pk_bytes
+        let table_id: u64 = 42;
+        let pk = b"user:123";
+        let key = encode_table_key(table_id, pk);
+
+        // Key structure: [0, 0, 0, 42] ++ "user:123"
+        assert_eq!(key.len(), 4 + 8);
+
+        // Extract table_id from key (first 4 bytes, big-endian u32)
+        let extracted_id = u32::from_be_bytes([key[0], key[1], key[2], key[3]]);
+        assert_eq!(extracted_id, 42);
+
+        // Extract pk from key (remaining bytes)
+        let extracted_pk = &key[4..];
+        assert_eq!(extracted_pk, b"user:123");
+    }
+
+    #[test]
+    fn test_encode_table_key_not_8_bytes() {
+        // Regression test: ensure we don't accidentally use 8 bytes
+        let key = encode_table_key(256, b"test");
+
+        // If 8 bytes were used, length would be 8 + 4 = 12
+        // With correct 4 bytes, length is 4 + 4 = 8
+        assert_eq!(key.len(), 8, "table_id should be 4 bytes, not 8");
+    }
+}
