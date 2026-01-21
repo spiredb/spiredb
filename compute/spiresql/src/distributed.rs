@@ -185,9 +185,13 @@ impl DistributedExecutor {
 
             let schema = schema.clone();
 
+            let start_key = region.start_key.clone();
+            let end_key = region.end_key.clone();
+
             futures.push(async move {
                 Self::scan_single_region(
                     &router, &pool, store_id, region_id, &table, cols, limit, filter, &schema,
+                    start_key, end_key,
                 )
                 .await
             });
@@ -219,6 +223,8 @@ impl DistributedExecutor {
         limit: u32,
         filter_expr: Vec<u8>,
         schema: &SchemaRef,
+        start_key: Vec<u8>,
+        end_key: Vec<u8>,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         // Get store address from router (sync - uses topology)
         let addr = router
@@ -239,6 +245,8 @@ impl DistributedExecutor {
             limit,
             snapshot_ts: 0, // Latest
             read_follower: false,
+            start_key,
+            end_key,
         };
 
         // Execute scan

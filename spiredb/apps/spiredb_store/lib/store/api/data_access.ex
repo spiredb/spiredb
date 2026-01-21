@@ -149,16 +149,20 @@ defmodule Store.API.DataAccess do
       has_filter: filter != nil
     )
 
-    # Use table ID prefix for scan range
+    # Use table ID prefix for scan range defaults
     # Table names map to IDs via schema - for now use hash
     table_id = :erlang.phash2(request.table_name)
-    table_prefix = Encoder.encode_table_key(table_id, <<>>)
-    table_end = <<table_prefix::binary, 0xFF>>
+    prefix = Encoder.encode_table_key(table_id, <<>>)
+    prefix_end = <<prefix::binary, 0xFF>>
+
+    # Use provided range or fallback to table range
+    start_key = if request.start_key != "", do: request.start_key, else: prefix
+    end_key = if request.end_key != "", do: request.end_key, else: prefix_end
 
     opts = [batch_size: @default_batch_size, limit: request.limit]
     engine = Engine
 
-    case Engine.scan_range(engine, table_prefix, table_end, opts) do
+    case Engine.scan_range(engine, start_key, end_key, opts) do
       {:ok, batches} ->
         stream_table_batches(stream, batches, request.columns, filter, start_time)
 

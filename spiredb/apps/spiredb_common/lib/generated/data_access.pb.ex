@@ -759,6 +759,34 @@ defmodule Spiredb.Data.TableScanRequest do
           json_name: "readFollower",
           proto3_optional: nil,
           __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "start_key",
+          extendee: nil,
+          number: 7,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "startKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "end_key",
+          extendee: nil,
+          number: 8,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "endKey",
+          proto3_optional: nil,
+          __unknown_fields__: []
         }
       ],
       nested_type: [],
@@ -779,6 +807,8 @@ defmodule Spiredb.Data.TableScanRequest do
   field(:limit, 4, type: :uint32)
   field(:snapshot_ts, 5, type: :uint64, json_name: "snapshotTs")
   field(:read_follower, 6, type: :bool, json_name: "readFollower")
+  field(:start_key, 7, type: :bytes, json_name: "startKey")
+  field(:end_key, 8, type: :bytes, json_name: "endKey")
 end
 
 defmodule Spiredb.Data.TableScanResponse do

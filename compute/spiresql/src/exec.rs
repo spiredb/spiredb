@@ -149,7 +149,7 @@ impl SpireStream {
                 vec![]
             };
 
-            // NOTE: Filter pushdown is plumbed here but not yet supported by the SpireDB backend.
+            // TODO: NOTE: Filter pushdown is plumbed here but not yet supported by the SpireDB backend.
             // Attempts to pass filters will result in them being ignored or logged server-side.
             // We log them here for visibility.
             let filter_expr = if !filters.is_empty() {
@@ -166,6 +166,8 @@ impl SpireStream {
                 limit: limit.unwrap_or(0) as u32,
                 snapshot_ts: 0, // Latest
                 read_follower: false,
+                start_key: vec![],
+                end_key: vec![],
             };
 
             log::debug!("Sending TableScanRequest: {:?}", req);
