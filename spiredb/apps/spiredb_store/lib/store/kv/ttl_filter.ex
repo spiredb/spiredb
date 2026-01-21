@@ -151,7 +151,9 @@ defmodule Store.KV.TTLFilter do
   defp scan_cf_for_expired(db_ref, cf, batch_size) do
     case :rocksdb.iterator(db_ref, cf, []) do
       {:ok, iter} ->
-        expired_keys = collect_expired_keys(iter, batch_size, [])
+        # Initialize iterator at start
+        initial_move = :rocksdb.iterator_move(iter, :first)
+        expired_keys = collect_expired_keys(iter, initial_move, batch_size, [])
         :rocksdb.iterator_close(iter)
 
         # Delete expired keys
@@ -166,30 +168,18 @@ defmodule Store.KV.TTLFilter do
     end
   end
 
-  defp collect_expired_keys(_iter, 0, acc), do: acc
+  defp collect_expired_keys(_iter, _move_result, 0, acc), do: acc
+  defp collect_expired_keys(_iter, {:error, _}, _remaining, acc), do: acc
 
-  defp collect_expired_keys(iter, remaining, acc) do
-    try do
-      move_result =
-        if acc == [] do
-          :rocksdb.iterator_move(iter, :first)
-        else
-          :rocksdb.iterator_move(iter, :next)
-        end
-
-      case move_result do
-        {:ok, key, value} ->
-          if TTL.expired?(value) do
-            collect_expired_keys(iter, remaining - 1, [key | acc])
-          else
-            collect_expired_keys(iter, remaining, acc)
-          end
-
-        _ ->
-          acc
-      end
-    rescue
-      ArgumentError -> acc
+  defp collect_expired_keys(iter, {:ok, key, value}, remaining, acc) do
+    if TTL.expired?(value) do
+      # Found expired key, collect it and move next
+      next_move = :rocksdb.iterator_move(iter, :next)
+      collect_expired_keys(iter, next_move, remaining - 1, [key | acc])
+    else
+      # Not expired, skip and move next
+      next_move = :rocksdb.iterator_move(iter, :next)
+      collect_expired_keys(iter, next_move, remaining, acc)
     end
   end
 
