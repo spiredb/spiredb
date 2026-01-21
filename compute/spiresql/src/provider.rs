@@ -1,3 +1,9 @@
+//! Table Provider implementation
+//!
+//! This module implements the `TableProvider` trait, allowing the SQL engine to query
+//! SpireDB tables. It handles schema inference, statistics provision, and
+//! pushing down filters to the storage layer.
+
 use async_trait::async_trait;
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::datasource::TableProvider;

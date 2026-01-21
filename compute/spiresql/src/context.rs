@@ -1,3 +1,9 @@
+//! Global Query Context
+//!
+//! This module defines `SpireContext`, which holds the global state for the SpireSQL
+//! server, including the session context, connection pools, and distributed
+//! execution components.
+
 use ahash::AHashSet;
 use datafusion::arrow::datatypes::TimeUnit;
 use datafusion::arrow::record_batch::RecordBatch;
