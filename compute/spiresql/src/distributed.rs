@@ -7,7 +7,7 @@ use crate::pool::ConnectionPool;
 use crate::routing::{RegionInfo, RegionRouter};
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
-use futures::stream::{FuturesUnordered, StreamExt};
+use futures::{StreamExt, stream};
 use spire_proto::spiredb::data::{TableScanRequest, TableScanResponse};
 use std::sync::Arc;
 use tonic::Streaming;
@@ -170,40 +170,44 @@ impl DistributedExecutor {
         filter_expr: Vec<u8>,
         schema: &SchemaRef,
     ) -> Result<Vec<RecordBatch>, DistributedError> {
-        let mut futures = FuturesUnordered::new();
+        let concurrency = self.config.max_parallel_shards.max(1);
+
+        // Pre-create futures to avoid HRTB lifetime issues with stream::iter+closure
+        let tasks: Vec<_> = regions
+            .iter()
+            .map(|region| {
+                let router = self.router.clone();
+                let pool = self.pool.clone();
+                let table = table_name.to_string();
+                let cols = columns.clone();
+                let store_id = region.leader_store_id;
+                let region_id = region.region_id;
+                let filter = filter_expr.clone();
+                let schema = schema.clone();
+                let start_key = region.start_key.clone();
+                let end_key = region.end_key.clone();
+
+                async move {
+                    Self::scan_single_region(
+                        &router, &pool, store_id, region_id, &table, cols, limit, filter, &schema,
+                        start_key, end_key,
+                    )
+                    .await
+                }
+            })
+            .collect();
+
+        // Use buffer_unordered to limit concurrency
+        let mut stream = stream::iter(tasks).buffer_unordered(concurrency);
+
         let mut all_batches = Vec::new();
 
-        // Spawn scan tasks for each region (up to max_parallel_shards)
-        for region in regions.iter().take(self.config.max_parallel_shards) {
-            let router = self.router.clone();
-            let pool = self.pool.clone();
-            let table = table_name.to_string();
-            let cols = columns.clone();
-            let store_id = region.leader_store_id;
-            let region_id = region.region_id;
-            let filter = filter_expr.clone();
-
-            let schema = schema.clone();
-
-            let start_key = region.start_key.clone();
-            let end_key = region.end_key.clone();
-
-            futures.push(async move {
-                Self::scan_single_region(
-                    &router, &pool, store_id, region_id, &table, cols, limit, filter, &schema,
-                    start_key, end_key,
-                )
-                .await
-            });
-        }
-
-        // Collect results
-        while let Some(result) = futures.next().await {
+        while let Some(result) = stream.next().await {
             match result {
                 Ok(batches) => all_batches.extend(batches),
                 Err(e) => {
                     log::warn!("Region scan failed: {}", e);
-                    // Continue with other regions (partial results)
+                    // Continue with other regions (best effort)
                 }
             }
         }
