@@ -3,8 +3,6 @@
 )]
 //! SpireSQL Library
 //!
-//! SpireSQL Library
-//!
 //! This crate provides the comprehensive interface for SpireDB, enabling SQL querying, real-time
 //! streaming, vector search, and more. It is designed to be used both as a standalone server and
 //! as a library for programmatic access to SpireDB's unified capabilities.

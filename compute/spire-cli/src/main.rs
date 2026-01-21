@@ -13,6 +13,8 @@
 //! ```
 //!
 //! See `spire --help` for more information.
+//!
+//! For comprehensive documentation, visit: <https://spire.zone/docs/#/cli>
 
 mod cli;
 mod commands;
