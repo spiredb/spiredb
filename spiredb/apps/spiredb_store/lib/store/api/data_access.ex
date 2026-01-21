@@ -155,9 +155,19 @@ defmodule Store.API.DataAccess do
     prefix = Encoder.encode_table_key(table_id, <<>>)
     prefix_end = <<prefix::binary, 0xFF>>
 
-    # Use provided range or fallback to table range
-    start_key = if request.start_key != "", do: request.start_key, else: prefix
-    end_key = if request.end_key != "", do: request.end_key, else: prefix_end
+    # Use region boundaries if provided, intersected with table prefix
+    # Note: gRPC sends empty binary <<>> not empty string "", so check byte_size
+    start_key =
+      case request.start_key do
+        k when is_binary(k) and byte_size(k) > 0 -> max(k, prefix)
+        _ -> prefix
+      end
+
+    end_key =
+      case request.end_key do
+        k when is_binary(k) and byte_size(k) > 0 -> min(k, prefix_end)
+        _ -> prefix_end
+      end
 
     opts = [batch_size: @default_batch_size, limit: request.limit]
     engine = Engine

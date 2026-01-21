@@ -172,6 +172,21 @@ impl DistributedExecutor {
     ) -> Result<Vec<RecordBatch>, DistributedError> {
         let concurrency = self.config.max_parallel_shards.max(1);
 
+        log::info!(
+            "Scanning table '{}' with {} regions",
+            table_name,
+            regions.len()
+        );
+        for (i, r) in regions.iter().enumerate() {
+            log::info!(
+                "Region {}: ID={}, Start='{:?}', End='{:?}'",
+                i,
+                r.region_id,
+                r.start_key,
+                r.end_key
+            );
+        }
+
         // Pre-create futures to avoid HRTB lifetime issues with stream::iter+closure
         let tasks: Vec<_> = regions
             .iter()
