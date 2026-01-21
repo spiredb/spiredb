@@ -208,6 +208,13 @@ impl SpireContext {
         self.query_cache.insert(hash, Arc::new(batches));
     }
 
+    /// Invalidate all cached query results.
+    /// Called after DML operations (INSERT/UPDATE/DELETE) to ensure fresh data.
+    pub fn invalidate_query_cache(&self) {
+        self.query_cache.clear();
+        log::debug!("Query cache invalidated");
+    }
+
     /// Get distributed executor for parallel shard queries.
     #[allow(dead_code)]
     pub fn executor(&self) -> &DistributedExecutor {

@@ -295,6 +295,8 @@ impl SimpleQueryHandler for SpireSqlProcessor {
                 ctx.schema_service.clone(),
             );
             if let Some(response) = dml_handler.try_execute(stmt).await? {
+                // Invalidate query cache after DML to ensure fresh reads
+                ctx.invalidate_query_cache();
                 return Ok(response);
             }
         }
@@ -402,6 +404,8 @@ impl ExtendedQueryHandler for SpireSqlProcessor {
                 ctx.schema_service.clone(),
             );
             if let Some(response) = dml_handler.try_execute(stmt).await? {
+                // Invalidate query cache after DML to ensure fresh reads
+                ctx.invalidate_query_cache();
                 return Ok(response
                     .into_iter()
                     .next()
