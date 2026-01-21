@@ -185,14 +185,16 @@ async fn run_worker(worker_id: usize, config: Arc<Config>) {
     // Create SpireContext
     let ctx = Arc::new(SpireContext::new(schema_client, cluster_client, &config));
 
-    // Register tables once at startup (only worker 0)
-    if worker_id == 0 {
-        if let Err(e) = ctx.register_tables().await {
-            log::error!("Failed to register tables at startup: {}", e);
-        }
-        // Start background table refresh task (only on worker 0)
-        ctx.clone().start_table_refresh_task();
+    // Register tables at startup for ALL workers (ensures consistent state across pods)
+    if let Err(e) = ctx.register_tables().await {
+        log::error!(
+            "Worker {} failed to register tables at startup: {}",
+            worker_id,
+            e
+        );
     }
+    // Start background table refresh task on ALL workers
+    ctx.clone().start_table_refresh_task();
 
     let processor = Arc::new(SpireSqlProcessor {
         ctx,

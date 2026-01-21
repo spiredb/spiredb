@@ -171,7 +171,8 @@ impl SpireContext {
     /// This ensures newly created tables are registered in DataFusion.
     pub fn start_table_refresh_task(self: Arc<Self>) {
         tokio::spawn(async move {
-            let refresh_interval = std::time::Duration::from_secs(5);
+            // Short interval (2s) ensures all SpireSQL pods converge quickly
+            let refresh_interval = std::time::Duration::from_secs(2);
             loop {
                 tokio::time::sleep(refresh_interval).await;
                 if let Err(e) = self.register_tables().await {
