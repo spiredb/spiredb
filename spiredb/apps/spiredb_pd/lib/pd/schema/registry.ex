@@ -444,24 +444,33 @@ defmodule PD.Schema.Registry do
         {:reply, {:error, :not_found}, state}
 
       table ->
-        # If explicit region_ids not set, query PD.Server for all regions
-        # All tables use the shared generic region pool with hash-based routing
+        # If explicit region_ids not set, use hash-based routing to find THE ONE region
+        # for this table. All data for an unsplit table lives in a single region.
         regions =
           if table.region_ids == [] do
-            # Query PD.Server for all regions (shared pool)
+            # Hash table name to determine which single region contains its data
             case PD.Server.get_all_regions() do
-              {:ok, pd_regions} ->
-                Enum.map(pd_regions, & &1.id)
+              {:ok, pd_regions} when pd_regions != [] ->
+                # Use phash2 on table name to pick ONE region (consistent hashing)
+                num_regions = length(pd_regions)
+                region_index = :erlang.phash2(table_name, num_regions)
+                region = Enum.at(pd_regions, region_index)
+                [region.id]
 
               {:error, :noproc} ->
                 # PD.Server not running (tests or before Raft init)
                 # Use configured num_regions as fallback
                 num_regions = Application.get_env(:spiredb_pd, :num_regions, 16)
-                Enum.to_list(1..num_regions)
+                region_id = :erlang.phash2(table_name, num_regions) + 1
+                [region_id]
 
               {:error, reason} ->
                 # Other errors - propagate
                 {:reply, {:error, reason}, state}
+
+              _ ->
+                # Empty regions list - use first region as fallback
+                [1]
             end
           else
             table.region_ids
