@@ -577,8 +577,9 @@ fn assignment_target_to_string(target: &sqlparser::ast::AssignmentTarget) -> Str
 }
 
 fn encode_table_key(table_id: u64, pk: &[u8]) -> Vec<u8> {
-    let mut key = Vec::with_capacity(8 + pk.len());
-    key.extend_from_slice(&table_id.to_be_bytes());
+    // Elixir encodes table_id as 4 bytes (u32 big-endian), not 8 bytes
+    let mut key = Vec::with_capacity(4 + pk.len());
+    key.extend_from_slice(&(table_id as u32).to_be_bytes());
     key.extend_from_slice(pk);
     key
 }
