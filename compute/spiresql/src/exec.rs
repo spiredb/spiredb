@@ -1,3 +1,11 @@
+//! Physical Execution Plans
+//!
+//! Physical Execution Plans
+//!
+//! This module implements the physical `ExecutionPlan` trait for SpireDB.
+//! It provides `SpireExec`, which executes queries against a single storage shard
+//! or falls back to a distributed execution model.
+
 use std::any::Any;
 use std::pin::Pin;
 use std::sync::Arc;

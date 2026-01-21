@@ -2,6 +2,12 @@
 name = "spire_common"
 version = "0.1.0"
 edition = "2024"
+description = "Common utilities and types for SpireDB"
+license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
+keywords = ["database", "distributed", "common"]
+categories = ["database"]
 
 [dependencies]
 serde = { workspace = true }

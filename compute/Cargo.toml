@@ -1,5 +1,5 @@
 [workspace]
-members = ["spire", "spiresql", "spire_common", "spire_proto"]
+members = ["spire-cli", "spiresql", "spire_common", "spire_proto"]
 resolver = "2"
 
 [workspace.dependencies]
@@ -21,8 +21,8 @@ datafusion = "52.0.0"
 pgwire = "0.37"
 async-trait = "0.1"
 futures = "0.3"
-spire_proto = { path = "./spire_proto" }
-spire_common = { path = "./spire_common" }
+spire_proto = { path = "./spire_proto", version = "0.1.0" }
+spire_common = { path = "./spire_common", version = "0.1.0" }
 fastrace = "0.7"
 env_logger = "0.11"
 log = "0.4"

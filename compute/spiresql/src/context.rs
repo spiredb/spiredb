@@ -1,3 +1,10 @@
+//! Global Query Context
+//!
+//! This module defines `SpireContext`, which holds the global state for the SpireSQL
+//! server, including the session context, connection pools, and distributed
+//! execution components.
+
+use ahash::AHashSet;
 use datafusion::arrow::datatypes::TimeUnit;
 use datafusion::arrow::record_batch::RecordBatch;
 use datafusion::prelude::SessionContext;
@@ -22,10 +29,11 @@ use std::fmt;
 use crate::config::Config;
 
 /// Default query cache capacity.
-const DEFAULT_QUERY_CACHE_CAPACITY: usize = 256;
+pub const DEFAULT_QUERY_CACHE_CAPACITY: usize = 1024;
+pub const DEFAULT_CATALOG: &str = "spire";
 
-/// Global context for SpireSQL node.
-/// Holds connections, distributed execution components, and high-performance caches.
+/// Main SpireDB context containing all shared state.
+/// This struct is thread-safe and passed to all query handlers.
 #[allow(dead_code)]
 pub struct SpireContext {
     /// Client to talk to SpireDB Schema Service.
@@ -93,7 +101,7 @@ impl SpireContext {
 
         // Create SessionContext with 'spire' catalog and 'public' schema
         let session_config = datafusion::prelude::SessionConfig::new()
-            .with_default_catalog_and_schema("spire", "public")
+            .with_default_catalog_and_schema(DEFAULT_CATALOG, "public")
             .with_information_schema(true);
         let session_context = SessionContext::new_with_config(session_config);
 
@@ -124,7 +132,7 @@ impl SpireContext {
                 leader.address.replace(":50052", ":50051")
             };
 
-            log::info!("Connecting to PD leader for registration: {}", pd_addr);
+            log::debug!("Connecting to PD leader for registration: {}", pd_addr);
 
             match Channel::from_shared(pd_addr) {
                 Ok(endpoint) => match endpoint.connect().await {
@@ -139,6 +147,10 @@ impl SpireContext {
 
         let response = client.list_tables(Empty {}).await?;
         let table_list = response.into_inner();
+
+        // Keep track of remote tables to identify stale ones
+        let remote_tables: AHashSet<String> =
+            table_list.tables.iter().map(|t| t.name.clone()).collect();
 
         for table in table_list.tables {
             let table_name = table.name.clone();
@@ -175,7 +187,7 @@ impl SpireContext {
             );
 
             self.session_context
-                .register_table(&table_name, Arc::new(provider))?;
+                .register_table(table_name.as_str(), Arc::new(provider))?;
 
             // Pre-warm region cache for this table
             if let Err(e) = self.region_router.get_table_regions(&table_name).await {
@@ -185,6 +197,19 @@ impl SpireContext {
             // Pre-warm statistics cache
             if let Err(e) = self.stats_provider.get_table_stats(&table_name).await {
                 log::warn!("Failed to pre-warm stats for {}: {}", table_name, e);
+            }
+        }
+
+        // Identify and remove stale tables
+        if let Some(catalog) = self.session_context.catalog(DEFAULT_CATALOG)
+            && let Some(schema) = catalog.schema("public")
+        {
+            let local_tables = schema.table_names();
+            for local_table in local_tables {
+                if !remote_tables.contains(&local_table) {
+                    log::info!("Deregistering stale table: {}", local_table);
+                    self.session_context.deregister_table(&local_table)?;
+                }
             }
         }
 

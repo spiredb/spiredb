@@ -117,7 +117,7 @@ impl<V: Clone> LruCache<V> {
     }
 }
 
-/// Wrapper for Arc<LruCache> for easier sharing.
+/// Wrapper for `Arc<LruCache>` for easier sharing.
 pub type SharedLruCache<V> = Arc<LruCache<V>>;
 
 /// Create a new shared LRU cache.

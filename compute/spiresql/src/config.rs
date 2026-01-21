@@ -1,3 +1,8 @@
+//! Configuration Handling
+//!
+//! This module defines the `Config` struct and handles loading configuration from
+//! files, environment variables, and command-line arguments.
+
 use clap::Parser;
 use serde::Deserialize;
 use std::path::PathBuf;

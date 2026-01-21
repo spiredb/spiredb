@@ -2,6 +2,13 @@
 name = "spire_proto"
 version = "0.1.0"
 edition = "2024"
+description = "Protocol buffer definitions for SpireDB"
+license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
+keywords = ["database", "distributed", "protobuf", "grpc"]
+categories = ["database"]
+
 
 [dependencies]
 tonic = { workspace = true }

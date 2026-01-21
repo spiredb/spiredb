@@ -1,7 +1,17 @@
 [package]
-name = "spire"
+name = "spire-cli"
 version = "0.1.0"
 edition = "2024"
+description = "SpireDB command-line interface"
+license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
+keywords = ["database", "distributed", "cli"]
+categories = ["command-line-utilities", "database"]
+
+[[bin]]
+name = "spire"
+path = "src/main.rs"
 
 [dependencies]
 tokio = { workspace = true }

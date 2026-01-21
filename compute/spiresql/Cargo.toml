@@ -2,6 +2,12 @@
 name = "spiresql"
 version = "0.1.0"
 edition = "2024"
+description = "SQL interface for SpireDB"
+license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
+keywords = ["database", "sql", "spiredb"]
+categories = ["database"]
 
 [lib]
 name = "spiresql"
