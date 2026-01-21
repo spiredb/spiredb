@@ -15,11 +15,15 @@ use tonic::transport::Channel;
 /// Refresh interval for cluster topology (fast failure detection).
 const REFRESH_INTERVAL: Duration = Duration::from_secs(5);
 
+use parking_lot::RwLock;
+
 /// Cluster topology with live store addresses.
 pub struct ClusterTopology {
     cluster_client: ClusterServiceClient<Channel>,
     /// store_id -> address (lock-free concurrent map)
     stores: Arc<HashMap<u64, StoreInfo>>,
+    /// Leader store info (cached)
+    leader: RwLock<Option<LeaderInfo>>,
 }
 
 /// Information about a store node.
@@ -30,10 +34,19 @@ pub struct StoreInfo {
     pub address: String,
 }
 
+/// Leader store info (cached).
+#[derive(Clone, Debug)]
+#[allow(dead_code)]
+pub struct LeaderInfo {
+    pub address: String,
+    pub store_id: u64,
+}
+
 impl std::fmt::Debug for ClusterTopology {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("ClusterTopology")
             .field("stores_count", &self.stores.len())
+            .field("leader", &self.leader.read())
             .finish()
     }
 }
@@ -44,7 +57,14 @@ impl ClusterTopology {
         Self {
             cluster_client,
             stores: Arc::new(HashMap::new()),
+            leader: RwLock::new(None),
         }
+    }
+
+    /// Get the leader store address.
+    /// Schema operations should be routed to this node.
+    pub fn get_leader_address(&self) -> Option<LeaderInfo> {
+        self.leader.read().clone()
     }
 
     /// Start background refresh task.
@@ -67,8 +87,18 @@ impl ClusterTopology {
 
         let prev_count = self.stores.len();
         let mut count = 0;
+        let mut found_leader: Option<LeaderInfo> = None;
+
         for store in store_list.stores {
             if store.state == StoreState::StoreUp as i32 {
+                // Check if this store is the leader
+                if store.is_leader {
+                    found_leader = Some(LeaderInfo {
+                        address: store.address.clone(),
+                        store_id: store.id,
+                    });
+                }
+
                 self.stores.insert(
                     store.id,
                     StoreInfo {
@@ -76,12 +106,26 @@ impl ClusterTopology {
                         address: store.address.clone(),
                     },
                 );
-                log::debug!("Store {} at {}", store.id, store.address);
+                log::debug!(
+                    "Store {} at {} (leader={})",
+                    store.id,
+                    store.address,
+                    store.is_leader
+                );
                 count += 1;
             } else {
                 // Remove down stores
                 self.stores.remove(&store.id);
             }
+        }
+
+        // Update cached leader
+        if let Some(leader) = found_leader {
+            *self.leader.write() = Some(leader);
+        } else if count > 0 {
+            // If no leader reported but stores exist, we might have lost leader
+            // Don't clear immediately to allow grace period, but log warning
+            log::warn!("No PD leader reported in topology refresh");
         }
 
         // Only log when store count changes

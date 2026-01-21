@@ -104,7 +104,8 @@ defmodule PD.API.GRPC.Cluster do
         raise GRPC.RPCError, status: :not_found, message: "Store not found"
 
       {:ok, store} ->
-        store_to_proto(store)
+        leader_node = get_pd_leader()
+        store_to_proto(store, leader_node)
 
       {:error, :not_found} ->
         raise GRPC.RPCError, status: :not_found, message: "Store not found"
@@ -119,9 +120,12 @@ defmodule PD.API.GRPC.Cluster do
   List all stores.
   """
   def list_stores(_request, _stream) do
+    # Get PD leader for is_leader field
+    leader_node = get_pd_leader()
+
     case Server.get_all_stores() do
       {:ok, stores} ->
-        proto_stores = Enum.map(stores, &store_to_proto/1)
+        proto_stores = Enum.map(stores, &store_to_proto(&1, leader_node))
         %StoreList{stores: proto_stores}
 
       {:error, reason} ->
@@ -130,7 +134,22 @@ defmodule PD.API.GRPC.Cluster do
     end
   end
 
-  defp store_to_proto(store) do
+  # Get the current PD Raft leader node
+  defp get_pd_leader do
+    server_id = {:pd_server, Node.self()}
+
+    case :ra.members(server_id, 2000) do
+      {:ok, _members, {_name, leader_node}} -> leader_node
+      {:ok, _members, leader} when is_atom(leader) -> leader
+      _ -> nil
+    end
+  rescue
+    _ -> nil
+  catch
+    _, _ -> nil
+  end
+
+  defp store_to_proto(store, leader_node) do
     store_id = if is_atom(store.node), do: :erlang.phash2(store.node), else: store.node
 
     # Convert Erlang node name to gRPC address
@@ -141,6 +160,9 @@ defmodule PD.API.GRPC.Cluster do
     region_count = length(store.regions || [])
     state = if store.state == :up, do: :STORE_UP, else: :STORE_DOWN
 
+    # Check if this store is the PD leader
+    is_leader = store.node == leader_node
+
     %Spiredb.Cluster.Store{
       id: store_id,
       address: address,
@@ -148,7 +170,8 @@ defmodule PD.API.GRPC.Cluster do
       capacity: 0,
       available: 0,
       region_count: region_count,
-      labels: %{}
+      labels: %{},
+      is_leader: is_leader
     }
   end
 

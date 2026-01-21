@@ -263,6 +263,7 @@ message Store {
   uint64 available = 5;
   uint32 region_count = 6;
   map<string, string> labels = 7;
+  bool is_leader = 8;  // True if this store is the PD leader (for schema operations)
 }
 
 enum StoreState {

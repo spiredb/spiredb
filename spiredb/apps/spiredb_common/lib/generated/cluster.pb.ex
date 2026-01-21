@@ -2773,6 +2773,20 @@ defmodule Spiredb.Cluster.Store do
           json_name: "labels",
           proto3_optional: nil,
           __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "is_leader",
+          extendee: nil,
+          number: 8,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "isLeader",
+          proto3_optional: nil,
+          __unknown_fields__: []
         }
       ],
       nested_type: [
@@ -2847,6 +2861,7 @@ defmodule Spiredb.Cluster.Store do
   field(:available, 5, type: :uint64)
   field(:region_count, 6, type: :uint32, json_name: "regionCount")
   field(:labels, 7, repeated: true, type: Spiredb.Cluster.Store.LabelsEntry, map: true)
+  field(:is_leader, 8, type: :bool, json_name: "isLeader")
 end
 
 defmodule Spiredb.Cluster.StoreList do

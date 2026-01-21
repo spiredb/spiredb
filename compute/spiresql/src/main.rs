@@ -280,7 +280,8 @@ impl SimpleQueryHandler for SpireSqlProcessor {
             }
 
             // Try DDL handler first
-            let mut ddl_handler = ddl::DdlHandler::new(ctx.schema_service.clone());
+            let mut ddl_handler =
+                ddl::DdlHandler::new(ctx.schema_service.clone(), Some(ctx.topology.clone()));
             if let Some(response) = ddl_handler.try_execute(stmt).await? {
                 // Refresh tables after DDL
                 if let Err(e) = ctx.register_tables().await {
@@ -385,7 +386,8 @@ impl ExtendedQueryHandler for SpireSqlProcessor {
             }
 
             // Try DDL handler first
-            let mut ddl_handler = ddl::DdlHandler::new(ctx.schema_service.clone());
+            let mut ddl_handler =
+                ddl::DdlHandler::new(ctx.schema_service.clone(), Some(ctx.topology.clone()));
             if let Some(response) = ddl_handler.try_execute(stmt).await? {
                 // Refresh tables after DDL
                 if let Err(e) = ctx.register_tables().await {

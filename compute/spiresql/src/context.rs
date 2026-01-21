@@ -112,7 +112,19 @@ impl SpireContext {
 
     /// Register all tables from SpireDB Schema Service into DataFusion SessionContext.
     pub async fn register_tables(&self) -> Result<(), Box<dyn std::error::Error>> {
-        let mut client = self.schema_service.clone();
+        // Try to use leader client first
+        let mut client = if let Some(leader) = self.topology.get_leader_address() {
+            match Channel::from_shared(leader.address.clone()) {
+                Ok(endpoint) => match endpoint.connect().await {
+                    Ok(channel) => SchemaServiceClient::new(channel),
+                    Err(_) => self.schema_service.clone(),
+                },
+                Err(_) => self.schema_service.clone(),
+            }
+        } else {
+            self.schema_service.clone()
+        };
+
         let response = client.list_tables(Empty {}).await?;
         let table_list = response.into_inner();
 

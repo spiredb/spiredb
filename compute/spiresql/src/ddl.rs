@@ -13,15 +13,45 @@ use sqlparser::ast::{
 };
 use tonic::transport::Channel;
 
+use crate::topology::ClusterTopology;
+use std::sync::Arc;
+
 /// Handler for DDL statements (CREATE/DROP TABLE/INDEX).
 pub struct DdlHandler {
     schema_client: SchemaServiceClient<Channel>,
+    topology: Option<Arc<ClusterTopology>>,
 }
 
 impl DdlHandler {
     /// Create a new DDL handler with the given schema service client.
-    pub fn new(schema_client: SchemaServiceClient<Channel>) -> Self {
-        Self { schema_client }
+    pub fn new(
+        schema_client: SchemaServiceClient<Channel>,
+        topology: Option<Arc<ClusterTopology>>,
+    ) -> Self {
+        Self {
+            schema_client,
+            topology,
+        }
+    }
+
+    /// Get a client connected to the leader if available, or fallback to default.
+    async fn get_client(&self) -> SchemaServiceClient<Channel> {
+        if let Some(topo) = &self.topology
+            && let Some(leader) = topo.get_leader_address()
+        {
+            log::debug!("Routing DDL to leader at {}", leader.address);
+            match Channel::from_shared(leader.address.clone()) {
+                Ok(endpoint) => match endpoint.connect().await {
+                    Ok(channel) => return SchemaServiceClient::new(channel),
+                    Err(e) => {
+                        log::warn!("Failed to connect to leader {}: {}", leader.address, e)
+                    }
+                },
+                Err(e) => log::warn!("Invalid leader address {}: {}", leader.address, e),
+            }
+        }
+        // Fallback to load-balanced client
+        self.schema_client.clone()
     }
 
     /// Try to execute a DDL statement. Returns None if statement is not DDL.
@@ -97,7 +127,8 @@ impl DdlHandler {
             primary_key,
         };
 
-        match self.schema_client.create_table(request).await {
+        let mut client = self.get_client().await;
+        match client.create_table(request).await {
             Ok(response) => {
                 let table_id = response.into_inner().table_id;
                 log::info!("Created table '{}' with id {}", table_name, table_id);
@@ -122,7 +153,8 @@ impl DdlHandler {
             name: table_name.clone(),
         };
 
-        match self.schema_client.drop_table(request).await {
+        let mut client = self.get_client().await;
+        match client.drop_table(request).await {
             Ok(_) => {
                 log::info!("Dropped table '{}'", table_name);
                 Ok(vec![Response::Execution(Tag::new("DROP TABLE"))])
@@ -161,7 +193,8 @@ impl DdlHandler {
             params: std::collections::HashMap::new(),
         };
 
-        match self.schema_client.create_index(request).await {
+        let mut client = self.get_client().await;
+        match client.create_index(request).await {
             Ok(response) => {
                 let index_id = response.into_inner().index_id;
                 log::info!("Created index '{}' with id {}", idx_name, index_id);
@@ -186,7 +219,8 @@ impl DdlHandler {
             name: index_name.clone(),
         };
 
-        match self.schema_client.drop_index(request).await {
+        let mut client = self.get_client().await;
+        match client.drop_index(request).await {
             Ok(_) => {
                 log::info!("Dropped index '{}'", index_name);
                 Ok(vec![Response::Execution(Tag::new("DROP INDEX"))])
