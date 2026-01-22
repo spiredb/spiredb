@@ -23,9 +23,9 @@ use datafusion::prelude::Expr;
 use futures::stream::Stream;
 use std::fmt;
 
-use crate::distributed::DistributedExecutor;
-use crate::filter::serialize_filter;
-use crate::pruning::{KeyBounds, extract_key_bounds};
+use super::distributed::DistributedExecutor;
+use super::filter::serialize_filter;
+use super::pruning::{KeyBounds, extract_key_bounds};
 
 /// Distributed execution plan that queries multiple shards in parallel.
 #[derive(Debug)]

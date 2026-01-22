@@ -7,7 +7,7 @@
 //! - Config merging (file + CLI)
 //! - Edge cases and validation
 
-use spiresql::config::Config;
+use spiresql::sql::config::Config;
 
 /// Test default configuration values.
 #[test]

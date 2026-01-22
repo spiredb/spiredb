@@ -13,7 +13,7 @@ use sqlparser::ast::{
 };
 use tonic::transport::Channel;
 
-use crate::topology::ClusterTopology;
+use super::topology::ClusterTopology;
 use std::sync::Arc;
 
 /// Handler for DDL statements (CREATE/DROP TABLE/INDEX).

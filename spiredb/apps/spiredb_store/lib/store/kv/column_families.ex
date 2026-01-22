@@ -8,7 +8,7 @@ defmodule Store.KV.ColumnFamilies do
   require Logger
 
   # Local schema version for the column families and internal metadata
-  @current_schema_version 6
+  @current_schema_version 7
 
   # Column families for SpireDB
   @column_families [
@@ -37,7 +37,9 @@ defmodule Store.KV.ColumnFamilies do
     # Stream metadata (key: stream_name, value: last_id, length, etc)
     "stream_meta",
     # CDC change log entries
-    "change_log"
+    "change_log",
+    # Consumer groups for streams (PEL, consumers, group metadata)
+    "stream_groups"
   ]
 
   @doc """
@@ -195,6 +197,13 @@ defmodule Store.KV.ColumnFamilies do
   defp migrate(_db_ref, _cf_map, 5, 6) do
     # Column family already created in open_with_cf
     Logger.info("Migration v5→v6: Transaction pending commits column family initialized")
+    :ok
+  end
+
+  # V6 → V7: Stream consumer groups (XGROUP, XPENDING, XCLAIM support)
+  defp migrate(_db_ref, _cf_map, 6, 7) do
+    # Column family already created in open_with_cf
+    Logger.info("Migration v6→v7: Stream consumer groups column family initialized")
     :ok
   end
 

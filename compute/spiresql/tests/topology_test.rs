@@ -5,7 +5,7 @@
 //! - Store info management
 //! - Store count tracking
 
-use spiresql::topology::StoreInfo;
+use spiresql::sql::topology::StoreInfo;
 
 /// Test StoreInfo structure.
 #[test]

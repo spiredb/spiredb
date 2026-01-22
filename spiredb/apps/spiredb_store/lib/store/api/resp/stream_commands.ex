@@ -70,10 +70,6 @@ defmodule Store.API.RESP.StreamCommands do
     end
   end
 
-  def execute(["XINFO" | _]) do
-    {:error, "ERR wrong number of arguments for 'xinfo' command"}
-  end
-
   # XTRIM key MAXLEN|MINID [=|~] threshold [LIMIT count]
   def execute(["XTRIM", stream_name | opts]) do
     handle_xtrim(stream_name, opts)
@@ -89,6 +85,153 @@ defmodule Store.API.RESP.StreamCommands do
 
   def execute(["XDEL", _stream_name]) do
     {:error, "ERR wrong number of arguments for 'xdel' command"}
+  end
+
+  ## Consumer Group Commands
+
+  alias Store.Stream.ConsumerGroup
+
+  # XGROUP CREATE stream group id [MKSTREAM] [ENTRIESREAD n]
+  def execute(["XGROUP", "CREATE", stream, group, id | opts]) do
+    parsed_opts = parse_xgroup_create_opts(opts)
+
+    case ConsumerGroup.create(stream, group, id, parsed_opts) do
+      :ok -> "OK"
+      {:error, :busygroup} -> {:error, "BUSYGROUP Consumer Group name already exists"}
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  # XGROUP DESTROY stream group
+  def execute(["XGROUP", "DESTROY", stream, group]) do
+    case ConsumerGroup.destroy(stream, group) do
+      {:ok, count} -> count
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  # XGROUP SETID stream group id [ENTRIESREAD n]
+  def execute(["XGROUP", "SETID", stream, group, id | opts]) do
+    parsed_opts = parse_xgroup_setid_opts(opts)
+
+    case ConsumerGroup.set_id(stream, group, id, parsed_opts) do
+      :ok -> "OK"
+      {:error, :nogroup} -> {:error, "NOGROUP No such consumer group '#{group}'"}
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  # XGROUP CREATECONSUMER stream group consumer
+  def execute(["XGROUP", "CREATECONSUMER", stream, group, consumer]) do
+    case ConsumerGroup.create_consumer(stream, group, consumer) do
+      {:ok, count} -> count
+      {:error, :nogroup} -> {:error, "NOGROUP No such consumer group '#{group}'"}
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  # XGROUP DELCONSUMER stream group consumer
+  def execute(["XGROUP", "DELCONSUMER", stream, group, consumer]) do
+    case ConsumerGroup.delete_consumer(stream, group, consumer) do
+      {:ok, count} -> count
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  def execute(["XGROUP" | _]) do
+    {:error, "ERR wrong number of arguments for 'xgroup' command"}
+  end
+
+  # XREADGROUP GROUP group consumer [COUNT n] [BLOCK ms] [NOACK] STREAMS key [key...] id [id...]
+  def execute(["XREADGROUP" | args]) do
+    handle_xreadgroup(args)
+  end
+
+  # XACK stream group id [id ...]
+  def execute(["XACK", stream, group | ids]) when ids != [] do
+    case Store.Stream.xack(stream, group, ids) do
+      {:ok, count} -> count
+      {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  def execute(["XACK" | _]) do
+    {:error, "ERR wrong number of arguments for 'xack' command"}
+  end
+
+  # XCLAIM stream group consumer min-idle-time id [id ...] [IDLE ms] [TIME ms] [RETRYCOUNT n] [FORCE] [JUSTID]
+  def execute(["XCLAIM", stream, group, consumer, min_idle_str | rest]) do
+    handle_xclaim(stream, group, consumer, min_idle_str, rest)
+  end
+
+  def execute(["XCLAIM" | _]) do
+    {:error, "ERR wrong number of arguments for 'xclaim' command"}
+  end
+
+  # XAUTOCLAIM stream group consumer min-idle-time start-id [COUNT n] [JUSTID]
+  def execute(["XAUTOCLAIM", stream, group, consumer, min_idle_str, start_id | opts]) do
+    handle_xautoclaim(stream, group, consumer, min_idle_str, start_id, opts)
+  end
+
+  def execute(["XAUTOCLAIM" | _]) do
+    {:error, "ERR wrong number of arguments for 'xautoclaim' command"}
+  end
+
+  # XPENDING stream group [[IDLE min-idle] start end count [consumer]]
+  def execute(["XPENDING", stream, group | opts]) do
+    handle_xpending(stream, group, opts)
+  end
+
+  def execute(["XPENDING" | _]) do
+    {:error, "ERR wrong number of arguments for 'xpending' command"}
+  end
+
+  # XINFO GROUPS stream
+  def execute(["XINFO", "GROUPS", stream]) do
+    case ConsumerGroup.info_groups(stream) do
+      {:ok, groups} ->
+        Enum.map(groups, fn g ->
+          [
+            "name",
+            g.name,
+            "consumers",
+            g.consumers,
+            "pending",
+            g.pending,
+            "last-delivered-id",
+            g.last_delivered_id || "0-0",
+            "entries-read",
+            g.entries_read
+          ]
+        end)
+
+      {:error, reason} ->
+        {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  # XINFO CONSUMERS stream group
+  def execute(["XINFO", "CONSUMERS", stream, group]) do
+    case ConsumerGroup.info_consumers(stream, group) do
+      {:ok, consumers} ->
+        Enum.map(consumers, fn c ->
+          [
+            "name",
+            c.name,
+            "pending",
+            c.pending,
+            "idle",
+            c.idle
+          ]
+        end)
+
+      {:error, reason} ->
+        {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  def execute(["XINFO" | _]) do
+    {:error, "ERR wrong number of arguments for 'xinfo' command"}
   end
 
   def execute([cmd | _]) do
@@ -243,12 +386,16 @@ defmodule Store.API.RESP.StreamCommands do
     |> Enum.map(fn {stream_name, entries} ->
       formatted_entries =
         Enum.map(entries, fn {id, fields} ->
-          [id, Enum.flat_map(fields, fn {k, v} -> [k, v] end)]
+          id_str = format_stream_id(id)
+          [id_str, Enum.flat_map(fields, fn {k, v} -> [k, v] end)]
         end)
 
       [stream_name, formatted_entries]
     end)
   end
+
+  defp format_stream_id({ts, seq}), do: "#{ts}-#{seq}"
+  defp format_stream_id(id) when is_binary(id), do: id
 
   defp handle_xrange(stream_name, start_id, end_id, opts) do
     count = parse_count_option(opts)
@@ -330,4 +477,236 @@ defmodule Store.API.RESP.StreamCommands do
   defp parse_xtrim_options(_) do
     {:error, "ERR wrong number of arguments for 'xtrim' command"}
   end
+
+  ## Consumer Group Handlers
+
+  defp parse_xgroup_create_opts(opts) do
+    parse_xgroup_create_opts(opts, [])
+  end
+
+  defp parse_xgroup_create_opts(["MKSTREAM" | rest], acc) do
+    parse_xgroup_create_opts(rest, [{:mkstream, true} | acc])
+  end
+
+  defp parse_xgroup_create_opts(["ENTRIESREAD", n | rest], acc) do
+    case Integer.parse(n) do
+      {num, ""} -> parse_xgroup_create_opts(rest, [{:entries_read, num} | acc])
+      _ -> parse_xgroup_create_opts(rest, acc)
+    end
+  end
+
+  defp parse_xgroup_create_opts([_ | rest], acc), do: parse_xgroup_create_opts(rest, acc)
+  defp parse_xgroup_create_opts([], acc), do: acc
+
+  defp parse_xgroup_setid_opts(opts), do: parse_xgroup_create_opts(opts, [])
+
+  defp handle_xreadgroup(args) do
+    {opts, stream_args} = parse_xreadgroup_options(args)
+
+    case parse_stream_id_pairs(stream_args) do
+      {:ok, streams} ->
+        group = Map.get(opts, :group)
+        consumer = Map.get(opts, :consumer)
+
+        if is_nil(group) or is_nil(consumer) do
+          {:error, "ERR GROUP or CONSUMER not specified for XREADGROUP"}
+        else
+          xreadgroup_opts =
+            []
+            |> maybe_add_opt(:count, Map.get(opts, :count))
+            |> maybe_add_opt(:noack, Map.get(opts, :noack))
+
+          case Store.Stream.xreadgroup(group, consumer, streams, xreadgroup_opts) do
+            {:ok, results} ->
+              format_xread_results(results)
+
+            {:error, reason} ->
+              {:error, "ERR #{inspect(reason)}"}
+          end
+        end
+
+      {:error, reason} ->
+        {:error, reason}
+    end
+  end
+
+  defp parse_xreadgroup_options(args), do: parse_xreadgroup_options(args, %{})
+
+  defp parse_xreadgroup_options(["GROUP", group, consumer | rest], opts) do
+    parse_xreadgroup_options(rest, Map.merge(opts, %{group: group, consumer: consumer}))
+  end
+
+  defp parse_xreadgroup_options(["COUNT", count | rest], opts) do
+    case Integer.parse(count) do
+      {n, ""} -> parse_xreadgroup_options(rest, Map.put(opts, :count, n))
+      _ -> {opts, ["COUNT", count | rest]}
+    end
+  end
+
+  defp parse_xreadgroup_options(["BLOCK", ms | rest], opts) do
+    case Integer.parse(ms) do
+      {n, ""} -> parse_xreadgroup_options(rest, Map.put(opts, :block, n))
+      _ -> {opts, ["BLOCK", ms | rest]}
+    end
+  end
+
+  defp parse_xreadgroup_options(["NOACK" | rest], opts) do
+    parse_xreadgroup_options(rest, Map.put(opts, :noack, true))
+  end
+
+  defp parse_xreadgroup_options(["STREAMS" | rest], opts), do: {opts, rest}
+  defp parse_xreadgroup_options(rest, opts), do: {opts, rest}
+
+  defp handle_xclaim(stream, group, consumer, min_idle_str, rest) do
+    case Integer.parse(min_idle_str) do
+      {min_idle, ""} ->
+        {ids, opts} = parse_xclaim_args(rest, [], [])
+
+        case Store.Stream.xclaim(stream, group, consumer, min_idle, ids, opts) do
+          {:ok, entries} ->
+            if Keyword.get(opts, :justid, false) do
+              Enum.map(entries, fn {id, _} -> format_stream_id(id) end)
+            else
+              format_entries(entries)
+            end
+
+          {:error, reason} ->
+            {:error, "ERR #{inspect(reason)}"}
+        end
+
+      _ ->
+        {:error, "ERR Invalid min-idle-time argument for XCLAIM"}
+    end
+  end
+
+  defp parse_xclaim_args(["IDLE", ms | rest], ids, opts) do
+    case Integer.parse(ms) do
+      {n, ""} -> parse_xclaim_args(rest, ids, [{:idle, n} | opts])
+      _ -> parse_xclaim_args(rest, ids, opts)
+    end
+  end
+
+  defp parse_xclaim_args(["TIME", ms | rest], ids, opts) do
+    case Integer.parse(ms) do
+      {n, ""} -> parse_xclaim_args(rest, ids, [{:time, n} | opts])
+      _ -> parse_xclaim_args(rest, ids, opts)
+    end
+  end
+
+  defp parse_xclaim_args(["RETRYCOUNT", n | rest], ids, opts) do
+    case Integer.parse(n) do
+      {num, ""} -> parse_xclaim_args(rest, ids, [{:retry_count, num} | opts])
+      _ -> parse_xclaim_args(rest, ids, opts)
+    end
+  end
+
+  defp parse_xclaim_args(["FORCE" | rest], ids, opts) do
+    parse_xclaim_args(rest, ids, [{:force, true} | opts])
+  end
+
+  defp parse_xclaim_args(["JUSTID" | rest], ids, opts) do
+    parse_xclaim_args(rest, ids, [{:justid, true} | opts])
+  end
+
+  defp parse_xclaim_args([id | rest], ids, opts) when is_binary(id) do
+    # Check if it looks like a stream ID (contains -)
+    if String.contains?(id, "-") do
+      parse_xclaim_args(rest, [id | ids], opts)
+    else
+      parse_xclaim_args(rest, ids, opts)
+    end
+  end
+
+  defp parse_xclaim_args([], ids, opts), do: {Enum.reverse(ids), opts}
+
+  defp handle_xautoclaim(stream, group, consumer, min_idle_str, start_id, opts) do
+    case Integer.parse(min_idle_str) do
+      {min_idle, ""} ->
+        parsed_opts = parse_xautoclaim_opts(opts)
+
+        case Store.Stream.xautoclaim(stream, group, consumer, min_idle, start_id, parsed_opts) do
+          {:ok, next_id, entries, deleted_ids} ->
+            if Keyword.get(parsed_opts, :justid, false) do
+              [next_id, Enum.map(entries, fn {id, _} -> format_stream_id(id) end), deleted_ids]
+            else
+              [next_id, format_entries(entries), deleted_ids]
+            end
+
+          {:error, reason} ->
+            {:error, "ERR #{inspect(reason)}"}
+        end
+
+      _ ->
+        {:error, "ERR Invalid min-idle-time argument for XAUTOCLAIM"}
+    end
+  end
+
+  defp parse_xautoclaim_opts(opts), do: parse_xautoclaim_opts(opts, [])
+
+  defp parse_xautoclaim_opts(["COUNT", n | rest], acc) do
+    case Integer.parse(n) do
+      {num, ""} -> parse_xautoclaim_opts(rest, [{:count, num} | acc])
+      _ -> parse_xautoclaim_opts(rest, acc)
+    end
+  end
+
+  defp parse_xautoclaim_opts(["JUSTID" | rest], acc) do
+    parse_xautoclaim_opts(rest, [{:justid, true} | acc])
+  end
+
+  defp parse_xautoclaim_opts([_ | rest], acc), do: parse_xautoclaim_opts(rest, acc)
+  defp parse_xautoclaim_opts([], acc), do: acc
+
+  defp handle_xpending(stream, group, opts) do
+    parsed_opts = parse_xpending_opts(opts)
+
+    case Store.Stream.xpending(stream, group, parsed_opts) do
+      {:ok, summary} ->
+        if Keyword.has_key?(parsed_opts, :count) do
+          # Detailed format
+          Enum.map(summary.entries, fn e ->
+            [e.id, e.consumer, e.idle_ms, e.delivery_count]
+          end)
+        else
+          # Summary format
+          [
+            summary.count,
+            summary.min_id || "-",
+            summary.max_id || "+",
+            Enum.map(summary.consumers, fn {name, pending} -> [name, pending] end)
+          ]
+        end
+
+      {:error, reason} ->
+        {:error, "ERR #{inspect(reason)}"}
+    end
+  end
+
+  defp parse_xpending_opts(opts), do: parse_xpending_opts(opts, [])
+
+  defp parse_xpending_opts(["IDLE", ms | rest], acc) do
+    case Integer.parse(ms) do
+      {n, ""} -> parse_xpending_opts(rest, [{:min_idle, n} | acc])
+      _ -> parse_xpending_opts(rest, acc)
+    end
+  end
+
+  defp parse_xpending_opts([start, stop, count | rest], acc)
+       when is_binary(start) and is_binary(stop) do
+    case Integer.parse(count) do
+      {n, ""} ->
+        opts = [{:start, start}, {:end, stop}, {:count, n} | acc]
+
+        case rest do
+          [consumer | _] -> [{:consumer, consumer} | opts]
+          _ -> opts
+        end
+
+      _ ->
+        acc
+    end
+  end
+
+  defp parse_xpending_opts([_ | rest], acc), do: parse_xpending_opts(rest, acc)
+  defp parse_xpending_opts([], acc), do: acc
 end

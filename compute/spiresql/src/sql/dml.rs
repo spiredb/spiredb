@@ -2,9 +2,9 @@
 //!
 //! Routes INSERT/UPDATE/DELETE statements to SpireDB's DataAccess service via gRPC.
 
-use crate::pool::ConnectionPool;
-use crate::routing::RegionRouter;
-use crate::topology::ClusterTopology;
+use super::pool::ConnectionPool;
+use super::routing::RegionRouter;
+use super::topology::ClusterTopology;
 use pgwire::api::results::{Response, Tag};
 use pgwire::error::{ErrorInfo, PgWireError, PgWireResult};
 use spire_proto::spiredb::cluster::GetTableIdRequest;
@@ -57,9 +57,9 @@ impl DmlHandler {
 
     /// Find the region that contains the given key using key-range matching.
     fn find_region_for_key<'a>(
-        regions: &'a [crate::routing::RegionInfo],
+        regions: &'a [super::routing::RegionInfo],
         key: &[u8],
-    ) -> Option<&'a crate::routing::RegionInfo> {
+    ) -> Option<&'a super::routing::RegionInfo> {
         regions.iter().find(|r| {
             // Region contains key if: start_key <= key < end_key
             // Empty start_key means -infinity, empty end_key means +infinity

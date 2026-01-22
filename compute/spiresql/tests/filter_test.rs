@@ -12,7 +12,7 @@
 
 use datafusion::prelude::*;
 use serde_json::Value;
-use spiresql::filter::serialize_filter;
+use spiresql::sql::filter::serialize_filter;
 
 /// Test equality filter serialization.
 #[test]

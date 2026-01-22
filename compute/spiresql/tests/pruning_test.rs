@@ -9,7 +9,7 @@
 
 use datafusion::logical_expr::lit;
 use datafusion::prelude::col;
-use spiresql::pruning::{KeyBounds, extract_key_bounds};
+use spiresql::sql::pruning::{KeyBounds, extract_key_bounds};
 
 /// Test extracting bounds from equality predicate (pk = value).
 #[test]
