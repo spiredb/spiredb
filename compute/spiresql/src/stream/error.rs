@@ -1,36 +1,45 @@
 //! Error types for the streaming API
 #![allow(dead_code)]
 
-use std::fmt;
+use thiserror::Error;
 
 /// Errors that can occur during stream operations
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum StreamError {
     /// Connection to SpireDB failed
+    #[error("connection error: {0}")]
     Connection(String),
 
     /// Request timed out
+    #[error("timeout: {0}")]
     Timeout(String),
 
     /// Invalid configuration
+    #[error("configuration error: {0}")]
     Config(String),
 
     /// Serialization/deserialization error
+    #[error("serialization error: {0}")]
     Serde(String),
 
     /// Topic not found
+    #[error("topic not found: {0}")]
     TopicNotFound(String),
 
     /// Partition not found
+    #[error("partition not found: {topic}:{partition}")]
     PartitionNotFound { topic: String, partition: u32 },
 
     /// Consumer group not found
+    #[error("group not found: {0}")]
     GroupNotFound(String),
 
     /// Consumer not found in group
+    #[error("consumer not found: {consumer} in group {group}")]
     ConsumerNotFound { group: String, consumer: String },
 
     /// Offset out of range
+    #[error("offset out of range: {topic}:{partition}@{offset}")]
     OffsetOutOfRange {
         topic: String,
         partition: u32,
@@ -38,78 +47,30 @@ pub enum StreamError {
     },
 
     /// Transaction error
+    #[error("transaction error: {0}")]
     Transaction(String),
 
     /// Authorization error
+    #[error("authorization error: {0}")]
     Authorization(String),
 
     /// Unknown server error
+    #[error("server error: {0}")]
     Server(String),
 
     /// gRPC transport error
-    Transport(tonic::transport::Error),
+    #[error("transport error: {0}")]
+    Transport(#[from] tonic::transport::Error),
 
     /// gRPC status error
-    Status(tonic::Status),
+    #[error("gRPC status: {0}")]
+    Status(#[from] tonic::Status),
 
     /// RESP protocol error
+    #[error("protocol error: {0}")]
     Protocol(String),
 
     /// Generic internal error
+    #[error("internal error: {0}")]
     Internal(String),
-}
-
-impl fmt::Display for StreamError {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        match self {
-            Self::Connection(msg) => write!(f, "connection error: {}", msg),
-            Self::Timeout(msg) => write!(f, "timeout: {}", msg),
-            Self::Config(msg) => write!(f, "configuration error: {}", msg),
-            Self::Serde(msg) => write!(f, "serialization error: {}", msg),
-            Self::TopicNotFound(topic) => write!(f, "topic not found: {}", topic),
-            Self::PartitionNotFound { topic, partition } => {
-                write!(f, "partition not found: {}:{}", topic, partition)
-            }
-            Self::GroupNotFound(group) => write!(f, "group not found: {}", group),
-            Self::ConsumerNotFound { group, consumer } => {
-                write!(f, "consumer not found: {} in group {}", consumer, group)
-            }
-            Self::OffsetOutOfRange {
-                topic,
-                partition,
-                offset,
-            } => {
-                write!(f, "offset out of range: {}:{}@{}", topic, partition, offset)
-            }
-            Self::Transaction(msg) => write!(f, "transaction error: {}", msg),
-            Self::Authorization(msg) => write!(f, "authorization error: {}", msg),
-            Self::Server(msg) => write!(f, "server error: {}", msg),
-            Self::Transport(e) => write!(f, "transport error: {}", e),
-            Self::Status(s) => write!(f, "gRPC status: {}", s),
-            Self::Protocol(msg) => write!(f, "protocol error: {}", msg),
-            Self::Internal(msg) => write!(f, "internal error: {}", msg),
-        }
-    }
-}
-
-impl std::error::Error for StreamError {
-    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
-        match self {
-            Self::Transport(e) => Some(e),
-            Self::Status(e) => Some(e),
-            _ => None,
-        }
-    }
-}
-
-impl From<tonic::transport::Error> for StreamError {
-    fn from(e: tonic::transport::Error) -> Self {
-        Self::Transport(e)
-    }
-}
-
-impl From<tonic::Status> for StreamError {
-    fn from(s: tonic::Status) -> Self {
-        Self::Status(s)
-    }
 }

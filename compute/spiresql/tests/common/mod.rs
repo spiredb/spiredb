@@ -2,6 +2,10 @@
 //!
 //! Provides in-memory simulation of SpireDB stream operations.
 
+#![allow(dead_code)]
+
+pub mod mock_vector;
+
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
 use std::time::{SystemTime, UNIX_EPOCH};

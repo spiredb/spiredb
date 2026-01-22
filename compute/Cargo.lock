@@ -3874,6 +3874,7 @@ dependencies = [
  "spire_common",
  "spire_proto",
  "sqlparser 0.53.0",
+ "thiserror",
  "tokio",
  "toml 0.8.23",
  "tonic",
