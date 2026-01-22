@@ -5,7 +5,7 @@
 //! - Hash key consistency
 //! - Cache statistics
 
-use spiresql::routing::{CacheStats, RegionInfo};
+use spiresql::sql::routing::{CacheStats, RegionInfo};
 
 /// Test RegionInfo structure.
 #[test]

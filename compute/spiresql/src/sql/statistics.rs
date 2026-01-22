@@ -4,7 +4,7 @@
 //! Uses GetTableStats API for row counts, column cardinality, and min/max values.
 //! Implements LRU eviction for cached statistics.
 
-use crate::cache::{SharedLruCache, new_shared_cache};
+use super::cache::{SharedLruCache, new_shared_cache};
 use ahash::{AHasher, HashMap};
 use datafusion::common::ScalarValue;
 use spire_proto::spiredb::cluster::{

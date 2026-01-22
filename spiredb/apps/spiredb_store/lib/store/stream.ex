@@ -323,6 +323,267 @@ defmodule Store.Stream do
     end
   end
 
+  ## Consumer Group Operations
+
+  alias Store.Stream.ConsumerGroup
+
+  @doc """
+  Read from a stream via a consumer group (XREADGROUP).
+
+  ## Options
+  - `:count` - Maximum entries to return
+  - `:block` - Block for N milliseconds if no entries
+  - `:noack` - Don't add entries to PEL
+  """
+  @spec xreadgroup(String.t(), String.t(), [{String.t(), String.t()}], keyword()) ::
+          {:ok, [{String.t(), [stream_entry()]}]} | {:error, term()}
+  def xreadgroup(group, consumer, streams, opts \\ []) do
+    count = Keyword.get(opts, :count, 100)
+    noack = Keyword.get(opts, :noack, false)
+
+    with {:ok, db_ref, cf_map} <- get_db_refs() do
+      store_ref = %{db: db_ref, cfs: cf_map}
+
+      results =
+        Enum.map(streams, fn {stream_name, from_id_str} ->
+          # Get group to verify it exists and get last_delivered_id
+          with {:ok, group_info} <-
+                 Store.Stream.ConsumerGroupStorage.get_group(store_ref, stream_name, group) do
+            # Determine starting ID
+            start_id =
+              case from_id_str do
+                ">" ->
+                  # New entries: start from last_delivered_id
+                  group_info.last_delivered_id || Event.min_id()
+
+                "0" ->
+                  # Pending entries: start from beginning
+                  Event.min_id()
+
+                id ->
+                  Event.parse_id(id) || Event.min_id()
+              end
+
+            entries = read_after_id(db_ref, cf_map, stream_name, start_id, count)
+
+            # Add to PEL unless noack
+            unless noack or entries == [] do
+              entry_ids = Enum.map(entries, fn {id, _fields} -> id end)
+              ConsumerGroup.record_delivery(stream_name, group, consumer, entry_ids)
+            end
+
+            {stream_name, entries}
+          else
+            {:error, :not_found} ->
+              {stream_name, []}
+
+            error ->
+              Logger.error("xreadgroup error: #{inspect(error)}")
+              {stream_name, []}
+          end
+        end)
+
+      {:ok, results}
+    end
+  end
+
+  @doc """
+  Acknowledge messages (XACK).
+  """
+  @spec xack(String.t(), String.t(), [String.t()]) ::
+          {:ok, non_neg_integer()} | {:error, term()}
+  def xack(stream, group, ids) do
+    ConsumerGroup.acknowledge(stream, group, ids)
+  end
+
+  @doc """
+  Claim messages from another consumer (XCLAIM).
+  """
+  @spec xclaim(String.t(), String.t(), String.t(), non_neg_integer(), [String.t()], keyword()) ::
+          {:ok, [stream_entry()]} | {:error, term()}
+  def xclaim(stream, group, consumer, min_idle_ms, ids, opts \\ []) do
+    justid = Keyword.get(opts, :justid, false)
+
+    case ConsumerGroup.claim(stream, group, consumer, min_idle_ms, ids, opts) do
+      {:ok, claimed_ids} when justid ->
+        {:ok, Enum.map(claimed_ids, fn id -> {id, []} end)}
+
+      {:ok, claimed_ids} ->
+        # Fetch the actual entries
+        with {:ok, db_ref, cf_map} <- get_db_refs() do
+          entries =
+            Enum.flat_map(claimed_ids, fn id ->
+              key = Event.build_key(stream, id)
+              streams_cf = Map.get(cf_map, @streams_cf)
+
+              case :rocksdb.get(db_ref, streams_cf, key, []) do
+                {:ok, value} ->
+                  case Event.decode_fields(value) do
+                    {:ok, fields} -> [{id, fields}]
+                    :error -> []
+                  end
+
+                _ ->
+                  []
+              end
+            end)
+
+          {:ok, entries}
+        end
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Auto-claim idle messages (XAUTOCLAIM).
+  """
+  @spec xautoclaim(String.t(), String.t(), String.t(), non_neg_integer(), String.t(), keyword()) ::
+          {:ok, String.t(), [stream_entry()], [String.t()]} | {:error, term()}
+  def xautoclaim(stream, group, consumer, min_idle_ms, start_id, opts \\ []) do
+    justid = Keyword.get(opts, :justid, false)
+
+    case ConsumerGroup.auto_claim(stream, group, consumer, min_idle_ms, start_id, opts) do
+      {:ok, next_id, claimed_ids, deleted_ids} when justid ->
+        {:ok, next_id, Enum.map(claimed_ids, fn id -> {id, []} end), deleted_ids}
+
+      {:ok, next_id, claimed_ids, deleted_ids} ->
+        # Fetch the actual entries
+        with {:ok, db_ref, cf_map} <- get_db_refs() do
+          entries =
+            Enum.flat_map(claimed_ids, fn id ->
+              key = Event.build_key(stream, id)
+              streams_cf = Map.get(cf_map, @streams_cf)
+
+              case :rocksdb.get(db_ref, streams_cf, key, []) do
+                {:ok, value} ->
+                  case Event.decode_fields(value) do
+                    {:ok, fields} -> [{id, fields}]
+                    :error -> []
+                  end
+
+                _ ->
+                  []
+              end
+            end)
+
+          {:ok, next_id, entries, deleted_ids}
+        end
+
+      error ->
+        error
+    end
+  end
+
+  @doc """
+  Get pending entries info (XPENDING).
+  """
+  @spec xpending(String.t(), String.t(), keyword()) :: {:ok, map()} | {:error, term()}
+  def xpending(stream, group, opts \\ []) do
+    ConsumerGroup.pending(stream, group, opts)
+  end
+
+  defp read_after_id(db_ref, cf_map, stream_name, start_id, count) do
+    streams_cf = Map.get(cf_map, @streams_cf)
+    start_key = Event.build_key(stream_name, start_id)
+    prefix = "#{stream_name}:"
+
+    case :rocksdb.iterator(db_ref, streams_cf, []) do
+      {:ok, iter} ->
+        entries =
+          case :rocksdb.iterator_move(iter, {:seek, start_key}) do
+            {:ok, key, _value} when key == start_key ->
+              # Skip the exact match, we want entries AFTER
+              collect_entries_after(iter, prefix, count, [])
+
+            {:ok, key, value} ->
+              if String.starts_with?(key, prefix) do
+                case Event.parse_key(key) do
+                  {:ok, _, id} ->
+                    case Event.decode_fields(value) do
+                      {:ok, fields} ->
+                        collect_entries_next(iter, prefix, count - 1, [{id, fields}])
+
+                      :error ->
+                        collect_entries_next(iter, prefix, count, [])
+                    end
+
+                  :error ->
+                    collect_entries_next(iter, prefix, count, [])
+                end
+              else
+                []
+              end
+
+            _ ->
+              []
+          end
+
+        :rocksdb.iterator_close(iter)
+        entries
+
+      _ ->
+        []
+    end
+  end
+
+  defp collect_entries_after(iter, prefix, count, acc) when count > 0 do
+    case :rocksdb.iterator_move(iter, :next) do
+      {:ok, key, value} ->
+        if String.starts_with?(key, prefix) do
+          case Event.parse_key(key) do
+            {:ok, _, id} ->
+              case Event.decode_fields(value) do
+                {:ok, fields} ->
+                  collect_entries_next(iter, prefix, count - 1, [{id, fields} | acc])
+
+                :error ->
+                  collect_entries_next(iter, prefix, count, acc)
+              end
+
+            :error ->
+              collect_entries_next(iter, prefix, count, acc)
+          end
+        else
+          Enum.reverse(acc)
+        end
+
+      _ ->
+        Enum.reverse(acc)
+    end
+  end
+
+  defp collect_entries_after(_iter, _prefix, 0, acc), do: Enum.reverse(acc)
+
+  defp collect_entries_next(iter, prefix, count, acc) when count > 0 do
+    case :rocksdb.iterator_move(iter, :next) do
+      {:ok, key, value} ->
+        if String.starts_with?(key, prefix) do
+          case Event.parse_key(key) do
+            {:ok, _, id} ->
+              case Event.decode_fields(value) do
+                {:ok, fields} ->
+                  collect_entries_next(iter, prefix, count - 1, [{id, fields} | acc])
+
+                :error ->
+                  collect_entries_next(iter, prefix, count, acc)
+              end
+
+            :error ->
+              collect_entries_next(iter, prefix, count, acc)
+          end
+        else
+          Enum.reverse(acc)
+        end
+
+      _ ->
+        Enum.reverse(acc)
+    end
+  end
+
+  defp collect_entries_next(_iter, _prefix, 0, acc), do: Enum.reverse(acc)
+
   ## Private Implementation
 
   defp get_db_refs do

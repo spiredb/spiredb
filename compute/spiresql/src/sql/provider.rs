@@ -17,14 +17,14 @@ use datafusion::prelude::Expr;
 use std::any::Any;
 use std::sync::Arc;
 
-use crate::distributed::DistributedExecutor;
-use crate::distributed_exec::DistributedSpireExec;
-use crate::exec::SpireExec;
-use crate::pool::ConnectionPool;
-use crate::pruning::{KeyBounds, extract_key_bounds};
-use crate::routing::RegionRouter;
-use crate::statistics::StatisticsProvider;
-use crate::topology::ClusterTopology;
+use super::distributed::DistributedExecutor;
+use super::distributed_exec::DistributedSpireExec;
+use super::exec::SpireExec;
+use super::pool::ConnectionPool;
+use super::pruning::{KeyBounds, extract_key_bounds};
+use super::routing::RegionRouter;
+use super::statistics::StatisticsProvider;
+use super::topology::ClusterTopology;
 use datafusion::catalog::Session;
 
 /// A DataFusion TableProvider that fetches data from SpireDB.
@@ -92,7 +92,7 @@ impl SpireProvider {
     async fn get_matching_regions(
         &self,
         key_bounds: &KeyBounds,
-    ) -> Vec<crate::routing::RegionInfo> {
+    ) -> Vec<super::routing::RegionInfo> {
         let regions_arc = match self.region_router.get_table_regions(&self.table_name).await {
             Ok(r) => r,
             Err(e) => {

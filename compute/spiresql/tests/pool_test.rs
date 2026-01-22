@@ -5,7 +5,7 @@
 //! - Pool defaults
 //! - Edge cases
 
-use spiresql::pool::PoolConfig;
+use spiresql::sql::pool::PoolConfig;
 use std::time::Duration;
 
 /// Test default pool configuration.

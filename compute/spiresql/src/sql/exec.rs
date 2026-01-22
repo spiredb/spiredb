@@ -28,7 +28,7 @@ use spire_proto::spiredb::data::TableScanRequest;
 use spire_proto::spiredb::data::data_access_client::DataAccessClient;
 use tonic::transport::Channel;
 
-use crate::distributed::DistributedExecutor;
+use super::distributed::DistributedExecutor;
 use std::fmt;
 
 use datafusion::prelude::Expr;

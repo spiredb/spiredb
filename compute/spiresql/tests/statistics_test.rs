@@ -6,7 +6,7 @@
 //! - Default values
 
 use ahash::HashMap;
-use spiresql::statistics::{CachedStats, ColumnStatistics};
+use spiresql::sql::statistics::{CachedStats, ColumnStatistics};
 
 /// Test CachedStats structure.
 #[test]

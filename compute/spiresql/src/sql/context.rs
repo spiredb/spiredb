@@ -15,18 +15,18 @@ use spire_proto::spiredb::{
 use std::sync::Arc;
 use tonic::transport::Channel;
 
-use crate::cache::{SharedLruCache, new_shared_cache};
-use crate::distributed::{DistributedConfig, DistributedExecutor};
-use crate::pool::{ConnectionPool, PoolConfig};
-use crate::provider::SpireProvider;
-use crate::routing::RegionRouter;
-use crate::statistics::StatisticsProvider;
-use crate::topology::ClusterTopology;
+use super::cache::{SharedLruCache, new_shared_cache};
+use super::distributed::{DistributedConfig, DistributedExecutor};
+use super::pool::{ConnectionPool, PoolConfig};
+use super::provider::SpireProvider;
+use super::routing::RegionRouter;
+use super::statistics::StatisticsProvider;
+use super::topology::ClusterTopology;
 use datafusion::arrow::datatypes::{DataType, Field, Schema};
 use spire_proto::spiredb::cluster::{ColumnType, Empty};
 use std::fmt;
 
-use crate::config::Config;
+use super::config::Config;
 
 /// Default query cache capacity.
 pub const DEFAULT_QUERY_CACHE_CAPACITY: usize = 1024;

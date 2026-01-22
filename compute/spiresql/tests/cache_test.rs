@@ -6,7 +6,7 @@
 //! - Thread-safety under concurrent access
 //! - Edge cases (empty cache, capacity 1)
 
-use spiresql::cache::{LruCache, SharedLruCache, new_shared_cache};
+use spiresql::sql::cache::{LruCache, SharedLruCache, new_shared_cache};
 use std::sync::Arc;
 use std::thread;
 

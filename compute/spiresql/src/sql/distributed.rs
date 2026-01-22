@@ -3,12 +3,13 @@
 //! Parallel multi-shard query execution with stream handling.
 //! Queries multiple regions concurrently and merges results.
 
-use crate::pool::ConnectionPool;
-use crate::routing::{RegionInfo, RegionRouter};
+use super::pool::ConnectionPool;
+use super::routing::{RegionInfo, RegionRouter};
 use datafusion::arrow::datatypes::SchemaRef;
 use datafusion::arrow::record_batch::RecordBatch;
 use futures::{StreamExt, stream};
 use spire_proto::spiredb::data::{TableScanRequest, TableScanResponse};
+use std::collections::HashMap;
 use std::sync::Arc;
 use tonic::Streaming;
 
@@ -329,12 +330,12 @@ impl DistributedExecutor {
         data: &[u8],
         schema: &datafusion::arrow::datatypes::SchemaRef,
     ) -> Result<RecordBatch, DistributedError> {
+        use HashMap;
         use datafusion::arrow::array::{
             BinaryBuilder, BooleanBuilder, Float64Builder, Int32Builder, Int64Builder,
             StringBuilder,
         };
         use datafusion::arrow::datatypes::DataType;
-        use std::collections::HashMap;
 
         if data.len() < 4 {
             return Err(DistributedError::Arrow(
@@ -500,9 +501,7 @@ impl DistributedExecutor {
 
 /// Decode Erlang term_to_binary encoded row map.
 /// Returns HashMap of column_name -> raw bytes.
-fn decode_erlang_row(data: &[u8]) -> Result<std::collections::HashMap<String, Vec<u8>>, ()> {
-    use std::collections::HashMap;
-
+fn decode_erlang_row(data: &[u8]) -> Result<HashMap<String, Vec<u8>>, ()> {
     // Erlang External Term Format magic number
     if data.is_empty() || data[0] != 131 {
         return Err(());

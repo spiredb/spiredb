@@ -2,7 +2,7 @@ use async_trait::async_trait;
 use core_affinity::CoreId;
 use datafusion::arrow::util::display::array_value_to_string;
 use futures::Sink;
-use futures::stream;
+use futures::stream as futures_stream;
 use mimalloc::MiMalloc;
 use pgwire::api::auth::{self, StartupHandler};
 use pgwire::api::portal::Portal;
@@ -26,24 +26,30 @@ use std::sync::Arc;
 use tokio::net::TcpListener;
 use tonic::transport::Channel;
 
-mod cache;
-mod config;
-mod context;
-mod ddl;
-mod distributed;
-mod distributed_exec;
-mod dml;
-mod exec;
-mod filter;
-mod pool;
-mod provider;
-mod pruning;
-mod routing;
-mod statistics;
-mod topology;
+mod sql {
+    pub mod cache;
+    pub mod config;
+    pub mod context;
+    pub mod ddl;
+    pub mod distributed;
+    pub mod distributed_exec;
+    pub mod dml;
+    pub mod exec;
+    pub mod filter;
+    pub mod pool;
+    pub mod provider;
+    pub mod pruning;
+    pub mod routing;
+    pub mod statistics;
+    pub mod topology;
+}
 
-use config::{Config, load_config, print_banner};
-use context::SpireContext;
+mod stream;
+
+use sql::config::{Config, load_config, print_banner};
+use sql::context::SpireContext;
+use sql::ddl;
+use sql::dml;
 
 #[global_allocator]
 static GLOBAL: MiMalloc = MiMalloc;
@@ -552,7 +558,7 @@ fn batches_to_pgwire_response(
             .collect::<Vec<_>>();
 
         let headers = Arc::new(fields);
-        let row_stream = stream::iter(rows_data.into_iter().map(Ok));
+        let row_stream = futures_stream::iter(rows_data.into_iter().map(Ok));
 
         Ok(vec![Response::Query(QueryResponse::new(
             headers, row_stream,

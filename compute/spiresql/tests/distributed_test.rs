@@ -5,7 +5,7 @@
 //! - DistributedError types
 //! - Configuration defaults
 
-use spiresql::distributed::{DistributedConfig, DistributedError};
+use spiresql::sql::distributed::{DistributedConfig, DistributedError};
 
 /// Test distributed config defaults.
 #[test]
