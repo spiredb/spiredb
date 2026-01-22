@@ -1,5 +1,7 @@
 //! Mock vector service for testing.
 
+#![allow(dead_code)]
+
 use async_trait::async_trait;
 use std::collections::HashMap;
 use std::sync::{Arc, RwLock};
@@ -8,13 +10,16 @@ use spiresql::vector::client::VectorService;
 use spiresql::vector::error::{VectorError, VectorResult};
 use spiresql::vector::types::{IndexParams, SearchOptions, VectorResult as VResult};
 
+/// Type alias for vector storage
+type VectorStorage = HashMap<Vec<u8>, (Vec<f32>, Option<Vec<u8>>)>;
+
 /// In-memory vector store for testing
 #[derive(Debug, Default)]
 pub struct MockVectorStore {
     /// Index name -> IndexParams
     pub indexes: HashMap<String, IndexParams>,
     /// Index name -> doc_id -> (vector, payload)
-    pub vectors: HashMap<String, HashMap<Vec<u8>, (Vec<f32>, Option<Vec<u8>>)>>,
+    pub vectors: HashMap<String, VectorStorage>,
     /// Auto-increment ID counter
     pub id_counter: u64,
 }

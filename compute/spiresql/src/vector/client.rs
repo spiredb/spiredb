@@ -277,18 +277,10 @@ impl VectorService for SpireVector {
 }
 
 /// Builder for SpireVector with injectable mock
+#[derive(Default)]
 pub struct SpireVectorBuilder {
     config: VectorConfig,
     mock: Option<Arc<dyn VectorService>>,
-}
-
-impl Default for SpireVectorBuilder {
-    fn default() -> Self {
-        Self {
-            config: VectorConfig::default(),
-            mock: None,
-        }
-    }
 }
 
 impl SpireVectorBuilder {
