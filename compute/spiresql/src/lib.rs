@@ -14,3 +14,4 @@
 
 pub mod sql;
 pub mod stream;
+pub mod vector;

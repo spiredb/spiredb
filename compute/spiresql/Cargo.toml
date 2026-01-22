@@ -50,3 +50,4 @@ serde_json = { workspace = true }
 byteorder = { workspace = true }
 socket2 = { workspace = true }
 sqlparser = { workspace = true }
+thiserror = { workspace = true }
