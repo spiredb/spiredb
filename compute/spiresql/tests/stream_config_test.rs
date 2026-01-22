@@ -130,14 +130,8 @@ fn test_consumer_config_default() {
     assert!(config.group_id.is_none());
     assert!(config.auto_commit);
     assert_eq!(config.auto_commit_interval, Duration::from_secs(5));
-    assert_eq!(
-        config.auto_offset_reset,
-        OffsetReset::Latest
-    );
-    assert_eq!(
-        config.isolation_level,
-        IsolationLevel::ReadUncommitted
-    );
+    assert_eq!(config.auto_offset_reset, OffsetReset::Latest);
+    assert_eq!(config.isolation_level, IsolationLevel::ReadUncommitted);
     assert_eq!(config.max_poll_records, 500);
     assert_eq!(config.max_poll_interval, Duration::from_secs(300));
     assert_eq!(config.session_timeout, Duration::from_secs(45));
@@ -158,10 +152,7 @@ fn test_consumer_config_with_group() {
 
     assert_eq!(config.group_id, Some("my-consumer-group".to_string()));
     assert!(!config.auto_commit);
-    assert_eq!(
-        config.auto_offset_reset,
-        OffsetReset::Earliest
-    );
+    assert_eq!(config.auto_offset_reset, OffsetReset::Earliest);
 }
 
 #[test]
@@ -173,10 +164,7 @@ fn test_consumer_config_transactional() {
         ..Default::default()
     };
 
-    assert_eq!(
-        config.isolation_level,
-        IsolationLevel::ReadCommitted
-    );
+    assert_eq!(config.isolation_level, IsolationLevel::ReadCommitted);
     assert!(!config.auto_commit);
 }
 
@@ -253,10 +241,7 @@ fn test_exactly_once_config() {
 
     assert!(producer.idempotence);
     assert!(producer.transactional_id.is_some());
-    assert_eq!(
-        consumer.isolation_level,
-        IsolationLevel::ReadCommitted
-    );
+    assert_eq!(consumer.isolation_level, IsolationLevel::ReadCommitted);
     assert!(!consumer.auto_commit);
 }
 

@@ -131,6 +131,7 @@ pub mod config;
 pub mod error;
 
 /// Prelude for convenient imports - `use spiresql::stream::prelude::*;`
+#[allow(unused_imports)]
 pub mod prelude {
     // Types
     pub use super::types::*;

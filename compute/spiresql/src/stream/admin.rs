@@ -1,4 +1,5 @@
 //! Admin client for topic and consumer group management
+#![allow(dead_code)]
 
 use super::error::StreamError;
 use super::types::TopicPartition;

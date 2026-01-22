@@ -328,7 +328,6 @@ impl MockStreamStore {
         count: u32,
     ) -> (String, Vec<StreamEntry>, Vec<String>) {
         let now = current_time_ms();
-        let mut claimed = Vec::new();
         let deleted = Vec::new();
         let mut next_id = "0-0".to_string();
 
@@ -349,7 +348,7 @@ impl MockStreamStore {
 
         // Claim the messages
         let id_refs: Vec<&str> = ids_to_claim.iter().map(|s| s.as_str()).collect();
-        claimed = self.xclaim(topic, group, consumer, min_idle_ms, &id_refs);
+        let claimed = self.xclaim(topic, group, consumer, min_idle_ms, &id_refs);
 
         // Set next_id
         if let Some(last) = claimed.last() {

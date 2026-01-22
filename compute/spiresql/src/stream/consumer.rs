@@ -1,6 +1,7 @@
 //! Kafka-like Consumer for SpireDB
 //!
 //! Supports subscribe/poll pattern, manual/auto commit, consumer groups, and PEL operations.
+#![allow(dead_code)]
 
 use std::sync::Arc;
 use std::sync::atomic::{AtomicU64, Ordering};

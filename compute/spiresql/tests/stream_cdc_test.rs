@@ -45,7 +45,7 @@ async fn test_cdc_builder_with_operations() {
 async fn test_cdc_builder_from_now() {
     let cdc = CdcBuilder::new("localhost:6379")
         .tables(&["test"])
-        .from_now();
+        .current();
 
     let stream = cdc.build().await.unwrap();
     assert_eq!(stream.tables().len(), 1);
@@ -55,7 +55,7 @@ async fn test_cdc_builder_from_now() {
 async fn test_cdc_builder_from_beginning() {
     let cdc = CdcBuilder::new("localhost:6379")
         .tables(&["test"])
-        .from_beginning();
+        .beginning();
 
     let stream = cdc.build().await.unwrap();
     assert_eq!(stream.tables().len(), 1);
@@ -80,7 +80,7 @@ async fn test_cdc_builder_full_config() {
     let cdc = CdcBuilder::new("localhost:6379")
         .tables(&["users", "orders", "products"])
         .operations(&[Op::Insert, Op::Update, Op::Delete])
-        .from_beginning();
+        .beginning();
 
     let stream = cdc.build().await.unwrap();
     assert_eq!(stream.tables().len(), 3);
@@ -319,7 +319,7 @@ fn test_change_event_complex_json() {
             "tags": ["a", "b", "c"],
             "count": 42,
             "active": true,
-            "ratio": 3.14
+            "ratio": 3.15
         })),
         timestamp: 0,
         tx_id: None,

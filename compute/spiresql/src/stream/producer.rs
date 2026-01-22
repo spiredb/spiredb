@@ -1,6 +1,7 @@
 //! Kafka-like Producer for SpireDB
 //!
 //! Supports async send, batching, compression, and exactly-once transactional produce.
+#![allow(dead_code)]
 
 use std::future::Future;
 use std::pin::Pin;

@@ -223,7 +223,6 @@ async fn test_admin_client_close() {
 
 #[tokio::test]
 async fn test_admin_client_reset_offsets() {
-
     let admin = AdminClient::new("localhost:6379");
 
     // Test all OffsetSpec variants
@@ -251,8 +250,6 @@ async fn test_admin_client_reset_offsets() {
 
 #[test]
 fn test_member_info_structure() {
-    
-
     let member = MemberInfo {
         member_id: "member-1".to_string(),
         client_id: "client-1".to_string(),
@@ -270,7 +267,6 @@ fn test_member_info_structure() {
 
 #[test]
 fn test_member_info_clone() {
-
     let member = MemberInfo {
         member_id: "m".to_string(),
         client_id: "c".to_string(),
@@ -287,7 +283,6 @@ fn test_member_info_clone() {
 
 #[test]
 fn test_offset_spec_variants() {
-
     let earliest = OffsetSpec::Earliest;
     let latest = OffsetSpec::Latest;
     let offset = OffsetSpec::Offset(1000);
@@ -302,7 +297,6 @@ fn test_offset_spec_variants() {
 
 #[test]
 fn test_offset_spec_clone() {
-
     let spec = OffsetSpec::Offset(500);
     let cloned = spec.clone();
     assert!(matches!(cloned, OffsetSpec::Offset(500)));

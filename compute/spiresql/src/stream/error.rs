@@ -1,4 +1,5 @@
 //! Error types for the streaming API
+#![allow(dead_code)]
 
 use std::fmt;
 

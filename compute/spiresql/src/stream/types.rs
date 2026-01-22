@@ -1,4 +1,5 @@
 //! Core types for Kafka-like streaming API
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 

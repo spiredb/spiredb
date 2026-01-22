@@ -1,6 +1,7 @@
 //! Stream client trait and RESP client implementation.
 //!
 //! Defines the interface for communicating with SpireDB stream backend.
+#![allow(dead_code)]
 
 use parking_lot::Mutex;
 use std::io::{BufRead, BufReader, Write};

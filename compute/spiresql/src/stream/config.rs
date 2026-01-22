@@ -1,4 +1,5 @@
 //! Configuration types for streaming API
+#![allow(dead_code)]
 
 use super::types::{Acks, IsolationLevel, OffsetReset};
 use std::time::Duration;

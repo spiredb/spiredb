@@ -1,4 +1,5 @@
 //! Interceptors for producer and consumer
+#![allow(dead_code)]
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicU64, Ordering};

@@ -1,4 +1,5 @@
 //! Change Data Capture (CDC) for SpireDB
+#![allow(dead_code)]
 
 use super::consumer::Consumer;
 use super::error::StreamError;
@@ -49,13 +50,13 @@ impl<'a> CdcBuilder<'a> {
     }
 
     /// Start from beginning (all historical changes)
-    pub fn from_beginning(mut self) -> Self {
+    pub fn beginning(mut self) -> Self {
         self.from_beginning = true;
         self
     }
 
     /// Start from now (only new changes)
-    pub fn from_now(mut self) -> Self {
+    pub fn current(mut self) -> Self {
         self.from_beginning = false;
         self
     }

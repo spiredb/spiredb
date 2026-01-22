@@ -1,4 +1,5 @@
 //! Serialization/Deserialization traits for streaming API
+#![allow(dead_code)]
 
 use super::error::StreamError;
 
