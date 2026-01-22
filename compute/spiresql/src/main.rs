@@ -283,6 +283,8 @@ impl SimpleQueryHandler for SpireSqlProcessor {
             let mut ddl_handler =
                 ddl::DdlHandler::new(ctx.schema_service.clone(), Some(ctx.topology.clone()));
             if let Some(response) = ddl_handler.try_execute(stmt).await? {
+                // Invalidate query cache after DDL to ensure fresh reads
+                ctx.invalidate_query_cache();
                 // Refresh tables after DDL
                 if let Err(e) = ctx.register_tables().await {
                     log::warn!("Failed to refresh tables after DDL: {}", e);
@@ -389,6 +391,8 @@ impl ExtendedQueryHandler for SpireSqlProcessor {
             let mut ddl_handler =
                 ddl::DdlHandler::new(ctx.schema_service.clone(), Some(ctx.topology.clone()));
             if let Some(response) = ddl_handler.try_execute(stmt).await? {
+                // Invalidate query cache after DDL to ensure fresh reads
+                ctx.invalidate_query_cache();
                 // Refresh tables after DDL
                 if let Err(e) = ctx.register_tables().await {
                     log::warn!("Failed to refresh tables after DDL: {}", e);
