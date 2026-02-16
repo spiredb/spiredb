@@ -162,10 +162,10 @@ fn expand_doc(input: DeriveInput) -> syn::Result<TokenStream2> {
 
 /// Check if a type is `String`.
 fn is_string_type(ty: &syn::Type) -> bool {
-    if let syn::Type::Path(type_path) = ty {
-        if let Some(segment) = type_path.path.segments.last() {
-            return segment.ident == "String";
-        }
+    if let syn::Type::Path(type_path) = ty
+        && let Some(segment) = type_path.path.segments.last()
+    {
+        return segment.ident == "String";
     }
     false
 }
