@@ -1,5 +1,12 @@
 [workspace]
-members = ["spire-cli", "spiresql", "spire_common", "spire_proto", "spire-ai", "spire-ai-macros"]
+members = [
+    "spire-cli",
+    "spiresql",
+    "spire_common",
+    "spire_proto",
+    "spire-ai",
+    "spire-ai-macros",
+]
 resolver = "2"
 
 [workspace.dependencies]
@@ -28,9 +35,9 @@ fastrace = "0.7"
 env_logger = "0.11"
 log = "0.4"
 mimalloc = "0.1"
-kovan = { path = "../../kovan/kovan", version = "0.1" }
-kovan-map = { path = "../../kovan/kovan-map", version = "0.1" }
-kovan-channel = { path = "../../kovan/kovan-channel", version = "0.1" }
+kovan = "0.1.7"
+kovan-map = "0.1.7"
+kovan-channel = "0.1.7"
 parking_lot = "0.12"
 toml = "0.8"
 # Distributed/runtime dependencies
