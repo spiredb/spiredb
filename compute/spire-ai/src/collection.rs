@@ -3,7 +3,7 @@
 use std::marker::PhantomData;
 
 use spire_proto::spiredb::cluster::{
-    schema_service_client::SchemaServiceClient, ColumnDef, ColumnType, CreateTableRequest,
+    ColumnDef, ColumnType, CreateTableRequest, schema_service_client::SchemaServiceClient,
 };
 use spiresql::vector::types::{Algorithm, IndexParams, SearchOptions};
 
@@ -62,8 +62,7 @@ impl<T: Doc> Collection<T> {
         let dims = self.spire.inner.embedder.dimensions() as u32;
 
         // Create table via SchemaService
-        let mut schema_client =
-            SchemaServiceClient::new(self.spire.inner.pd_channel.clone());
+        let mut schema_client = SchemaServiceClient::new(self.spire.inner.pd_channel.clone());
 
         let columns = vec![
             ColumnDef {
@@ -157,11 +156,7 @@ impl<T: Doc> Collection<T> {
         let texts: Vec<String> = docs.iter().map(|d| d.embed_text()).collect();
 
         // Batch embed non-empty texts
-        let non_empty: Vec<String> = texts
-            .iter()
-            .filter(|t| !t.is_empty())
-            .cloned()
-            .collect();
+        let non_empty: Vec<String> = texts.iter().filter(|t| !t.is_empty()).cloned().collect();
 
         let embeddings = if !non_empty.is_empty() {
             self.spire.inner.embedder.embed_batch(&non_empty).await?

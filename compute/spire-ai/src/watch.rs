@@ -52,9 +52,7 @@ impl<T: Doc> WatchStream<T> {
         match event {
             None => Ok(None),
             Some(event) => {
-                let before = event
-                    .before
-                    .and_then(|v| serde_json::from_value(v).ok());
+                let before = event.before.and_then(|v| serde_json::from_value(v).ok());
                 let after = event.after.and_then(|v| serde_json::from_value(v).ok());
 
                 // Extract ID from the after state (insert/update) or before state (delete)

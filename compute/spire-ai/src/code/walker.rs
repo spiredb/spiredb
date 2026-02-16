@@ -8,11 +8,7 @@ use crate::error::Result;
 pub fn walk_dir(path: &str) -> Result<Vec<String>> {
     let mut files = Vec::new();
 
-    for entry in WalkBuilder::new(path)
-        .hidden(true)
-        .git_ignore(true)
-        .build()
-    {
+    for entry in WalkBuilder::new(path).hidden(true).git_ignore(true).build() {
         let entry = entry.map_err(|e| crate::error::Error::Other(e.to_string()))?;
         let path = entry.path();
 

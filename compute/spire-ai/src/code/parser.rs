@@ -6,11 +6,7 @@ use crate::code::symbols::{CodeChunk, SymbolKind};
 
 /// Detect language from file extension.
 pub fn detect_language(path: &str) -> String {
-    let ext = path
-        .rsplit('.')
-        .next()
-        .unwrap_or("")
-        .to_lowercase();
+    let ext = path.rsplit('.').next().unwrap_or("").to_lowercase();
 
     match ext.as_str() {
         "rs" => "rust".to_string(),
@@ -44,9 +40,7 @@ fn parse_with_treesitter(path: &str, content: &str, language: &str) -> Option<Ve
     };
 
     let mut parser = tree_sitter::Parser::new();
-    parser
-        .set_language(&ts_language.into())
-        .ok()?;
+    parser.set_language(&ts_language.into()).ok()?;
 
     let tree = parser.parse(content, None)?;
     let root = tree.root_node();

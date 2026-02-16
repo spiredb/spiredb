@@ -4,8 +4,8 @@ use async_trait::async_trait;
 
 use crate::collection::Collection;
 use crate::error::Result;
-use crate::rag::chunker::Chunk;
 use crate::rag::ScoredChunk;
+use crate::rag::chunker::Chunk;
 
 /// Trait for retrieval strategies.
 #[async_trait]

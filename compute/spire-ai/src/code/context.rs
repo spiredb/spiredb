@@ -1,7 +1,7 @@
 //! Code context assembly for LLM consumption.
 
-use crate::code::symbols::CodeChunk;
 use crate::code::CodeIndex;
+use crate::code::symbols::CodeChunk;
 use crate::error::Result;
 
 /// Assembled code context ready for LLM consumption.

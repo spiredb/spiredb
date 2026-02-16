@@ -5,7 +5,7 @@
 use proc_macro::TokenStream;
 use proc_macro2::TokenStream as TokenStream2;
 use quote::quote;
-use syn::{parse_macro_input, DeriveInput, Fields, Data};
+use syn::{Data, DeriveInput, Fields, parse_macro_input};
 
 /// Derive the `Doc` trait for a struct.
 ///
@@ -55,14 +55,14 @@ fn expand_doc(input: DeriveInput) -> syn::Result<TokenStream2> {
                 return Err(syn::Error::new_spanned(
                     &input,
                     "Doc can only be derived for structs with named fields",
-                ))
+                ));
             }
         },
         _ => {
             return Err(syn::Error::new_spanned(
                 &input,
                 "Doc can only be derived for structs",
-            ))
+            ));
         }
     };
 

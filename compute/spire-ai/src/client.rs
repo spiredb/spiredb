@@ -7,7 +7,7 @@ use tonic::transport::Channel;
 
 use crate::collection::Collection;
 use crate::document::Doc;
-use crate::embedding::{cache::CachedEmbedder, Embedder, NoOpEmbedder};
+use crate::embedding::{Embedder, NoOpEmbedder, cache::CachedEmbedder};
 use crate::error::{Error, Result};
 use crate::llm::Llm;
 use crate::rag::RagBuilder;
@@ -201,9 +201,7 @@ impl SpireBuilder {
     /// Use OpenAI for LLM generation.
     #[cfg(feature = "openai")]
     pub fn openai_llm(mut self, api_key: &str, model: &str) -> Self {
-        self.llm = Some(Arc::new(crate::llm::openai::OpenAiLlm::new(
-            api_key, model,
-        )));
+        self.llm = Some(Arc::new(crate::llm::openai::OpenAiLlm::new(api_key, model)));
         self
     }
 

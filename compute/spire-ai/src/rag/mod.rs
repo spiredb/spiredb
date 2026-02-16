@@ -81,10 +81,7 @@ impl RagPipeline {
 
     /// Full RAG: retrieve context then generate an answer using the configured LLM.
     pub async fn query(&self, question: &str) -> Result<Answer> {
-        let llm = self
-            .spire
-            .llm()
-            .ok_or(Error::NoLlm)?;
+        let llm = self.spire.llm().ok_or(Error::NoLlm)?;
 
         let chunks = self.retrieve(question).await?;
 
@@ -97,9 +94,7 @@ impl RagPipeline {
 
         let system = "You are a helpful assistant. Answer the question based on the provided context. \
                        If the context doesn't contain enough information, say so.";
-        let user = format!(
-            "Context:\n{context}\n\nQuestion: {question}\n\nAnswer:"
-        );
+        let user = format!("Context:\n{context}\n\nQuestion: {question}\n\nAnswer:");
 
         let text = llm.generate_with_system(system, &user).await?;
 

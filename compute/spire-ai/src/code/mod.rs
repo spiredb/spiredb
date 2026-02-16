@@ -3,12 +3,12 @@
 //! Index source code repositories and search them semantically.
 //! Uses tree-sitter for language-aware parsing when the `code` feature is enabled.
 
-#[cfg(feature = "code")]
-mod walker;
+mod context;
 #[cfg(feature = "code")]
 mod parser;
 mod symbols;
-mod context;
+#[cfg(feature = "code")]
+mod walker;
 
 pub use context::{CodeContext, ContextBuilder};
 pub use symbols::{CodeChunk, CodeHit, SymbolKind};
@@ -111,11 +111,7 @@ impl CodeIndex {
         let hits = self.collection.search(name).limit(20).docs().await?;
         Ok(hits
             .into_iter()
-            .filter(|c| {
-                c.name
-                    .as_ref()
-                    .is_some_and(|n| n.contains(name))
-            })
+            .filter(|c| c.name.as_ref().is_some_and(|n| n.contains(name)))
             .collect())
     }
 

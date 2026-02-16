@@ -90,16 +90,12 @@ impl<T: Doc> Search<T> {
             SearchMode::SimilarVec(vec) => vec.clone(),
             SearchMode::SimilarId(_id) => {
                 // TODO: Fetch the document's embedding from the vector index
-                return Err(Error::Other(
-                    "similar_id not yet implemented".to_string(),
-                ));
+                return Err(Error::Other("similar_id not yet implemented".to_string()));
             }
         };
 
         let index_name = self.collection.index_name();
-        let opts = SearchOptions::default()
-            .k(self.limit as u32)
-            .with_payload();
+        let opts = SearchOptions::default().k(self.limit as u32).with_payload();
 
         let results = self
             .collection
