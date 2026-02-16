@@ -4,3 +4,6 @@ test_data/
 spire_charts
 compute/target
 **/*.rs.bk
+
+# Ignore target directories in examples
+compute/spire-ai/examples/**/target

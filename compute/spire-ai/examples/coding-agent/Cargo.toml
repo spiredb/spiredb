@@ -1,0 +1,17 @@
+[package]
+name = "spire-ai-example-coding-agent"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Interactive coding agent with memory, sessions, planning, and code search"
+
+[workspace]
+
+[dependencies]
+spire-ai = { path = "../../" }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+clap = { version = "4", features = ["derive"] }
+chrono = "0.4"
+uuid = { version = "1", features = ["v4"] }
