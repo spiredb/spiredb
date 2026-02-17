@@ -14,6 +14,18 @@ pub fn detect_language(path: &str) -> String {
         "js" | "jsx" => "javascript".to_string(),
         "ts" | "tsx" => "typescript".to_string(),
         "go" => "go".to_string(),
+        "c" | "h" => "c".to_string(),
+        "cpp" | "cc" | "cxx" | "hpp" | "hxx" => "cpp".to_string(),
+        "java" => "java".to_string(),
+        "rb" => "ruby".to_string(),
+        "cs" => "csharp".to_string(),
+        "sh" | "bash" => "bash".to_string(),
+        "html" | "htm" => "html".to_string(),
+        "css" => "css".to_string(),
+        "json" => "json".to_string(),
+        "scala" | "sc" => "scala".to_string(),
+        "hs" => "haskell".to_string(),
+        "php" => "php".to_string(),
         other => other.to_string(),
     }
 }
@@ -36,6 +48,18 @@ fn parse_with_treesitter(path: &str, content: &str, language: &str) -> Option<Ve
         "javascript" => tree_sitter_javascript::LANGUAGE,
         "typescript" => tree_sitter_typescript::LANGUAGE_TYPESCRIPT,
         "go" => tree_sitter_go::LANGUAGE,
+        "c" => tree_sitter_c::LANGUAGE,
+        "cpp" => tree_sitter_cpp::LANGUAGE,
+        "java" => tree_sitter_java::LANGUAGE,
+        "ruby" => tree_sitter_ruby::LANGUAGE,
+        "csharp" => tree_sitter_c_sharp::LANGUAGE,
+        "bash" => tree_sitter_bash::LANGUAGE,
+        "html" => tree_sitter_html::LANGUAGE,
+        "css" => tree_sitter_css::LANGUAGE,
+        "json" => tree_sitter_json::LANGUAGE,
+        "scala" => tree_sitter_scala::LANGUAGE,
+        "haskell" => tree_sitter_haskell::LANGUAGE,
+        "php" => tree_sitter_php::LANGUAGE_PHP,
         _ => return None,
     };
 
@@ -107,17 +131,46 @@ fn extract_symbols(
 
 fn classify_node(node_kind: &str, _language: &str) -> Option<SymbolKind> {
     match node_kind {
-        "function_item" | "function_definition" | "function_declaration" | "func_literal" => {
-            Some(SymbolKind::Function)
+        // Functions
+        "function_item"
+        | "function_definition"
+        | "function_declaration"
+        | "func_literal"
+        | "preproc_function_def" => Some(SymbolKind::Function),
+
+        // Methods
+        "method_definition"
+        | "method_declaration"
+        | "singleton_method"
+        | "constructor_declaration" => Some(SymbolKind::Method),
+
+        // Classes
+        "impl_item" | "class_definition" | "class_declaration" | "object_definition" => {
+            Some(SymbolKind::Class)
         }
-        "method_definition" | "method_declaration" => Some(SymbolKind::Method),
-        "impl_item" | "class_definition" | "class_declaration" => Some(SymbolKind::Class),
-        "struct_item" | "struct_definition" => Some(SymbolKind::Struct),
-        "trait_item" => Some(SymbolKind::Trait),
+
+        // Structs
+        "struct_item" | "struct_definition" | "struct_specifier" | "data_type" | "newtype" => {
+            Some(SymbolKind::Struct)
+        }
+
+        // Traits / type classes
+        "trait_item" | "trait_definition" | "type_class" => Some(SymbolKind::Trait),
+
+        // Interfaces
         "interface_declaration" => Some(SymbolKind::Interface),
-        "enum_item" | "enum_definition" => Some(SymbolKind::Enum),
-        "mod_item" | "module" => Some(SymbolKind::Module),
+
+        // Enums
+        "enum_item" | "enum_definition" | "enum_specifier" => Some(SymbolKind::Enum),
+
+        // Modules / namespaces
+        "mod_item" | "module" | "namespace_definition" | "package_declaration" => {
+            Some(SymbolKind::Module)
+        }
+
+        // Constants
         "const_item" | "static_item" => Some(SymbolKind::Constant),
+
         _ => None,
     }
 }

@@ -44,7 +44,7 @@ struct Cli {
     embed_model: String,
 
     /// Ollama LLM model
-    #[arg(long, default_value = "llama3.2")]
+    #[arg(long, default_value = "qwen3-coder:30b")]
     llm_model: String,
 
     /// Resume a previous session
@@ -122,6 +122,7 @@ struct Agent {
     plans: Collection<Plan>,
     session: Session,
     project_dir: String,
+    file_cache: FileCache,
 }
 
 impl Agent {
@@ -185,6 +186,7 @@ impl Agent {
             plans,
             session,
             project_dir: cli.project.clone(),
+            file_cache: FileCache::new(),
         })
     }
 
@@ -215,6 +217,7 @@ impl Agent {
                 "/recall" => self.cmd_recall(arg).await?,
                 "/session" => self.cmd_session(arg).await?,
                 "/sessions" => self.cmd_sessions().await?,
+                "/cache-stats" => self.cmd_cache_stats(),
                 _ => println!("Unknown command: {}. Type /help for available commands.", cmd),
             }
         } else {
@@ -244,6 +247,7 @@ Commands:
 
   /session [id]       Show or switch session
   /sessions           List all sessions
+  /cache-stats        Show file cache statistics
   /help               Show this help
   /quit               Exit
 "#
@@ -612,16 +616,25 @@ Commands:
             match step.action.as_str() {
                 "ReadFile" => {
                     let path = resolve_path(&self.project_dir, &step.file);
-                    match tokio::fs::read_to_string(&path).await {
-                        Ok(content) => {
-                            let lines: Vec<&str> = content.lines().collect();
-                            println!("    Read {} lines from {}", lines.len(), step.file);
-                            // Show first 10 lines as preview
-                            for (j, line) in lines.iter().take(10).enumerate() {
+                    match self.file_cache.read_file(&path) {
+                        Ok(ReadResult::Fresh { ref content, lines, tokens_estimated }) => {
+                            println!("    Read {} lines (~{} tokens) from {}", lines, tokens_estimated, step.file);
+                            for (j, line) in content.lines().take(10).enumerate() {
                                 println!("    {:>4} | {}", j + 1, line);
                             }
-                            if lines.len() > 10 {
-                                println!("    ... ({} more lines)", lines.len() - 10);
+                            if lines > 10 {
+                                println!("    ... ({} more lines)", lines - 10);
+                            }
+                            step.status = "done".to_string();
+                        }
+                        Ok(ReadResult::Unchanged { lines, tokens_saved, .. }) => {
+                            println!("    File unchanged ({} lines, saved ~{} tokens)", lines, tokens_saved);
+                            step.status = "done".to_string();
+                        }
+                        Ok(ReadResult::Modified { ref diff, lines_changed, tokens_saved }) => {
+                            println!("    File modified ({} lines changed, saved ~{} tokens):", lines_changed, tokens_saved);
+                            for line in diff.lines().take(20) {
+                                println!("    {}", line);
                             }
                             step.status = "done".to_string();
                         }
@@ -874,6 +887,13 @@ Commands:
         }
 
         Ok(())
+    }
+
+    fn cmd_cache_stats(&self) {
+        let stats = self.file_cache.stats();
+        println!("File Cache Statistics:");
+        println!("  Files tracked:  {}", stats.files_tracked);
+        println!("  Tokens saved:   {}", stats.tokens_saved);
     }
 
     async fn cmd_sessions(&self) -> spire_ai::Result<()> {

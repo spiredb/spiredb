@@ -57,13 +57,13 @@ impl RagPipeline {
 
         while let Some(entry) = entries.next_entry().await? {
             let path = entry.path();
-            if path.is_file() {
-                if let Ok(content) = tokio::fs::read_to_string(&path).await {
-                    let source = path.to_string_lossy().to_string();
-                    let chunks = self.chunker.chunk(&content, &source).await?;
-                    total_chunks += chunks.len();
-                    self.collection.insert_many(&chunks).await?;
-                }
+            if path.is_file()
+                && let Ok(content) = tokio::fs::read_to_string(&path).await
+            {
+                let source = path.to_string_lossy().to_string();
+                let chunks = self.chunker.chunk(&content, &source).await?;
+                total_chunks += chunks.len();
+                self.collection.insert_many(&chunks).await?;
             }
         }
 

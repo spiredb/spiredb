@@ -34,7 +34,7 @@ struct Cli {
     embed_model: String,
 
     /// Ollama LLM model
-    #[arg(long, default_value = "llama3.2", global = true)]
+    #[arg(long, default_value = "qwen3-coder:30b", global = true)]
     llm_model: String,
 
     /// SpireDB PD address

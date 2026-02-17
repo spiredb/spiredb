@@ -170,14 +170,14 @@ impl<T: Doc> Collection<T> {
 
         for (i, doc) in docs.iter().enumerate() {
             let doc_json = serde_json::to_vec(doc)?;
-            if !texts[i].is_empty() {
-                if let Some(vec) = embed_iter.next() {
-                    self.spire
-                        .inner
-                        .vector
-                        .insert(&index_name, ids[i].as_bytes(), &vec, Some(&doc_json))
-                        .await?;
-                }
+            if !texts[i].is_empty()
+                && let Some(vec) = embed_iter.next()
+            {
+                self.spire
+                    .inner
+                    .vector
+                    .insert(&index_name, ids[i].as_bytes(), &vec, Some(&doc_json))
+                    .await?;
             }
         }
 

@@ -50,6 +50,8 @@ pub mod watch;
 #[cfg(feature = "code")]
 pub mod code;
 
+pub mod filecache;
+
 pub mod agent;
 
 // Re-exports
@@ -57,6 +59,7 @@ pub use client::{Spire, SpireBuilder};
 pub use collection::Collection;
 pub use document::Doc;
 pub use error::{Error, Result};
+pub use filecache::FileCache;
 pub use search::{Filter, Hit, Search};
 pub use types::{IndexResult, IngestResult};
 pub use watch::{Change, WatchStream};
@@ -78,6 +81,8 @@ pub mod prelude {
 
     #[cfg(feature = "code")]
     pub use crate::code::{CodeChunk, CodeContext, CodeIndex};
+
+    pub use crate::filecache::{CacheStats, FileCache, ReadResult};
 
     pub use crate::agent::AgentMemory;
 

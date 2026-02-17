@@ -12,12 +12,12 @@ pub fn walk_dir(path: &str) -> Result<Vec<String>> {
         let entry = entry.map_err(|e| crate::error::Error::Other(e.to_string()))?;
         let path = entry.path();
 
-        if path.is_file() {
-            if let Some(ext) = path.extension() {
-                let ext = ext.to_string_lossy();
-                if is_code_file(&ext) {
-                    files.push(path.to_string_lossy().to_string());
-                }
+        if path.is_file()
+            && let Some(ext) = path.extension()
+        {
+            let ext = ext.to_string_lossy();
+            if is_code_file(&ext) {
+                files.push(path.to_string_lossy().to_string());
             }
         }
     }
@@ -37,9 +37,22 @@ fn is_code_file(ext: &str) -> bool {
             | "java"
             | "c"
             | "cpp"
+            | "cc"
+            | "cxx"
             | "h"
             | "hpp"
+            | "hxx"
             | "rb"
+            | "cs"
+            | "sh"
+            | "bash"
+            | "html"
+            | "htm"
+            | "css"
+            | "json"
+            | "toml"
+            | "lua"
+            | "php"
             | "ex"
             | "exs"
             | "erl"
@@ -47,6 +60,7 @@ fn is_code_file(ext: &str) -> bool {
             | "swift"
             | "kt"
             | "scala"
+            | "sc"
             | "ml"
             | "hs"
     )
