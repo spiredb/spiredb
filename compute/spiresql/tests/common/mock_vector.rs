@@ -100,6 +100,16 @@ impl VectorService for MockVectorService {
         Ok(())
     }
 
+    async fn get_payload(&self, index: &str, doc_id: &[u8]) -> VectorResult<Option<Vec<u8>>> {
+        let store = self.store.read().unwrap();
+        let vectors = store
+            .vectors
+            .get(index)
+            .ok_or_else(|| VectorError::IndexNotFound(index.to_string()))?;
+
+        Ok(vectors.get(doc_id).and_then(|(_, payload)| payload.clone()))
+    }
+
     async fn search(
         &self,
         index: &str,

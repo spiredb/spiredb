@@ -1,7 +1,11 @@
 defmodule Spiredb.Data.MutationType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.data.MutationType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -42,7 +46,11 @@ end
 defmodule Spiredb.Data.ConflictType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.data.ConflictType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -83,7 +91,11 @@ end
 defmodule Spiredb.Data.TxnState do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.data.TxnState",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -124,7 +136,10 @@ end
 defmodule Spiredb.Data.RawGetRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawGetRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -209,7 +224,10 @@ end
 defmodule Spiredb.Data.RawGetResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawGetResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -264,7 +282,10 @@ end
 defmodule Spiredb.Data.RawPutRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawPutRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -319,7 +340,10 @@ end
 defmodule Spiredb.Data.RawDeleteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawDeleteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -359,7 +383,10 @@ end
 defmodule Spiredb.Data.RawScanRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawScanRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -489,7 +516,10 @@ end
 defmodule Spiredb.Data.RawScanResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawScanResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -559,7 +589,10 @@ end
 defmodule Spiredb.Data.RawBatchGetRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawBatchGetRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -629,7 +662,10 @@ end
 defmodule Spiredb.Data.RawBatchGetResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RawBatchGetResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -669,7 +705,10 @@ end
 defmodule Spiredb.Data.TableScanRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableScanRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -814,7 +853,10 @@ end
 defmodule Spiredb.Data.TableScanResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableScanResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -884,7 +926,10 @@ end
 defmodule Spiredb.Data.TableGetRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableGetRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -969,7 +1014,10 @@ end
 defmodule Spiredb.Data.TableGetResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableGetResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1024,7 +1072,10 @@ end
 defmodule Spiredb.Data.TableInsertRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableInsertRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1079,7 +1130,10 @@ end
 defmodule Spiredb.Data.TableInsertResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableInsertResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1119,7 +1173,11 @@ end
 defmodule Spiredb.Data.TableUpdateRequest.UpdatesEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableUpdateRequest.UpdatesEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1184,7 +1242,10 @@ end
 defmodule Spiredb.Data.TableUpdateRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableUpdateRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1312,7 +1373,10 @@ end
 defmodule Spiredb.Data.TableUpdateResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableUpdateResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1352,7 +1416,10 @@ end
 defmodule Spiredb.Data.TableDeleteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableDeleteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1407,7 +1474,10 @@ end
 defmodule Spiredb.Data.TableDeleteResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TableDeleteResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1447,7 +1517,10 @@ end
 defmodule Spiredb.Data.ScanStats do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.ScanStats",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1517,7 +1590,10 @@ end
 defmodule Spiredb.Data.Mutation do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.Mutation",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1587,7 +1663,10 @@ end
 defmodule Spiredb.Data.PrewriteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.PrewriteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1687,7 +1766,10 @@ end
 defmodule Spiredb.Data.PrewriteResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.PrewriteResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1742,7 +1824,10 @@ end
 defmodule Spiredb.Data.KeyError do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.KeyError",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1812,7 +1897,10 @@ end
 defmodule Spiredb.Data.LockInfo do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.LockInfo",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1882,7 +1970,10 @@ end
 defmodule Spiredb.Data.CommitRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.CommitRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1997,7 +2088,10 @@ end
 defmodule Spiredb.Data.CommitResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.CommitResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2082,7 +2176,10 @@ end
 defmodule Spiredb.Data.ConflictInfo do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.ConflictInfo",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2152,7 +2249,10 @@ end
 defmodule Spiredb.Data.RollbackRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.RollbackRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2207,7 +2307,10 @@ end
 defmodule Spiredb.Data.CheckTxnStatusRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.CheckTxnStatusRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2262,7 +2365,10 @@ end
 defmodule Spiredb.Data.TxnStatus do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.TxnStatus",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2332,7 +2438,10 @@ end
 defmodule Spiredb.Data.ResolveLockRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.ResolveLockRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2402,7 +2511,10 @@ end
 defmodule Spiredb.Data.PessimisticLockRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.PessimisticLockRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2487,7 +2599,10 @@ end
 defmodule Spiredb.Data.PessimisticLockResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.PessimisticLockResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2542,7 +2657,11 @@ end
 defmodule Spiredb.Data.VectorIndexCreateRequest.ParamsEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorIndexCreateRequest.ParamsEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2607,7 +2726,10 @@ end
 defmodule Spiredb.Data.VectorIndexCreateRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorIndexCreateRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2765,7 +2887,10 @@ end
 defmodule Spiredb.Data.VectorIndexDropRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorIndexDropRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2805,7 +2930,10 @@ end
 defmodule Spiredb.Data.VectorInsertRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorInsertRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2890,7 +3018,10 @@ end
 defmodule Spiredb.Data.VectorInsertResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorInsertResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2930,7 +3061,10 @@ end
 defmodule Spiredb.Data.VectorDeleteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorDeleteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2982,10 +3116,129 @@ defmodule Spiredb.Data.VectorDeleteRequest do
   field(:doc_id, 2, type: :bytes, json_name: "docId")
 end
 
+defmodule Spiredb.Data.VectorGetPayloadRequest do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "spiredb.data.VectorGetPayloadRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "VectorGetPayloadRequest",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "index_name",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_STRING,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "indexName",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "doc_id",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "docId",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:index_name, 1, type: :string, json_name: "indexName")
+  field(:doc_id, 2, type: :bytes, json_name: "docId")
+end
+
+defmodule Spiredb.Data.VectorGetPayloadResponse do
+  @moduledoc false
+
+  use Protobuf,
+    full_name: "spiredb.data.VectorGetPayloadResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
+
+  def descriptor do
+    # credo:disable-for-next-line
+    %Google.Protobuf.DescriptorProto{
+      name: "VectorGetPayloadResponse",
+      field: [
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "found",
+          extendee: nil,
+          number: 1,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BOOL,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "found",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.FieldDescriptorProto{
+          name: "payload",
+          extendee: nil,
+          number: 2,
+          label: :LABEL_OPTIONAL,
+          type: :TYPE_BYTES,
+          type_name: nil,
+          default_value: nil,
+          options: nil,
+          oneof_index: nil,
+          json_name: "payload",
+          proto3_optional: nil,
+          __unknown_fields__: []
+        }
+      ],
+      nested_type: [],
+      enum_type: [],
+      extension_range: [],
+      extension: [],
+      options: nil,
+      oneof_decl: [],
+      reserved_range: [],
+      reserved_name: [],
+      __unknown_fields__: []
+    }
+  end
+
+  field(:found, 1, type: :bool)
+  field(:payload, 2, type: :bytes)
+end
+
 defmodule Spiredb.Data.VectorSearchRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorSearchRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3100,7 +3353,10 @@ end
 defmodule Spiredb.Data.VectorSearchResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorSearchResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3140,7 +3396,10 @@ end
 defmodule Spiredb.Data.VectorResult do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.VectorResult",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3210,7 +3469,10 @@ end
 defmodule Spiredb.Data.BatchVectorSearchRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.BatchVectorSearchRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3295,7 +3557,10 @@ end
 defmodule Spiredb.Data.BatchVectorSearchResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.BatchVectorSearchResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3335,7 +3600,10 @@ end
 defmodule Spiredb.Data.Empty do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.data.Empty",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3358,7 +3626,7 @@ end
 defmodule Spiredb.Data.DataAccess.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.data.DataAccess", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.data.DataAccess", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3491,7 +3759,7 @@ end
 defmodule Spiredb.Data.TransactionService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.data.TransactionService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.data.TransactionService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3584,7 +3852,7 @@ end
 defmodule Spiredb.Data.VectorService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.data.VectorService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.data.VectorService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3628,6 +3896,15 @@ defmodule Spiredb.Data.VectorService.Service do
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
+          name: "GetPayload",
+          input_type: ".spiredb.data.VectorGetPayloadRequest",
+          output_type: ".spiredb.data.VectorGetPayloadResponse",
+          options: nil,
+          client_streaming: false,
+          server_streaming: false,
+          __unknown_fields__: []
+        },
+        %Google.Protobuf.MethodDescriptorProto{
           name: "Search",
           input_type: ".spiredb.data.VectorSearchRequest",
           output_type: ".spiredb.data.VectorSearchResponse",
@@ -3658,6 +3935,8 @@ defmodule Spiredb.Data.VectorService.Service do
   rpc(:Insert, Spiredb.Data.VectorInsertRequest, Spiredb.Data.VectorInsertResponse)
 
   rpc(:Delete, Spiredb.Data.VectorDeleteRequest, Spiredb.Data.Empty)
+
+  rpc(:GetPayload, Spiredb.Data.VectorGetPayloadRequest, Spiredb.Data.VectorGetPayloadResponse)
 
   rpc(:Search, Spiredb.Data.VectorSearchRequest, Spiredb.Data.VectorSearchResponse)
 

@@ -7,8 +7,8 @@ use async_trait::async_trait;
 use tonic::transport::Channel;
 
 use spire_proto::spiredb::data::{
-    BatchVectorSearchRequest, VectorDeleteRequest, VectorIndexCreateRequest,
-    VectorIndexDropRequest, VectorInsertRequest, VectorSearchRequest,
+    BatchVectorSearchRequest, VectorDeleteRequest, VectorGetPayloadRequest,
+    VectorIndexCreateRequest, VectorIndexDropRequest, VectorInsertRequest, VectorSearchRequest,
     vector_service_client::VectorServiceClient,
 };
 
@@ -36,6 +36,9 @@ pub trait VectorService: Send + Sync {
 
     /// Delete a vector by document ID
     async fn delete(&self, index: &str, doc_id: &[u8]) -> VectorResult<()>;
+
+    /// Get a vector's payload by document ID
+    async fn get_payload(&self, index: &str, doc_id: &[u8]) -> VectorResult<Option<Vec<u8>>>;
 
     /// Search for k nearest neighbors
     async fn search(
@@ -176,6 +179,30 @@ impl VectorService for SpireVector {
             })?;
 
         Ok(())
+    }
+
+    async fn get_payload(&self, index: &str, doc_id: &[u8]) -> VectorResult<Option<Vec<u8>>> {
+        let request = VectorGetPayloadRequest {
+            index_name: index.to_string(),
+            doc_id: doc_id.to_vec(),
+        };
+
+        let response =
+            self.inner
+                .clone()
+                .get_payload(request)
+                .await
+                .map_err(|e| match e.code() {
+                    tonic::Code::NotFound => VectorError::IndexNotFound(index.to_string()),
+                    _ => VectorError::Internal(e.message().to_string()),
+                })?;
+
+        let inner = response.into_inner();
+        if inner.found {
+            Ok(Some(inner.payload))
+        } else {
+            Ok(None)
+        }
     }
 
     async fn search(

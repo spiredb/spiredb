@@ -1,7 +1,11 @@
 defmodule Spiredb.Cluster.ColumnType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.ColumnType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -147,7 +151,11 @@ end
 defmodule Spiredb.Cluster.IndexType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.IndexType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -188,7 +196,11 @@ end
 defmodule Spiredb.Cluster.PeerRole do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.PeerRole",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -229,7 +241,11 @@ end
 defmodule Spiredb.Cluster.RegionState do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.RegionState",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -270,7 +286,11 @@ end
 defmodule Spiredb.Cluster.StoreState do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.StoreState",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -311,7 +331,11 @@ end
 defmodule Spiredb.Cluster.PluginType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.PluginType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -366,7 +390,11 @@ end
 defmodule Spiredb.Cluster.PluginState do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.PluginState",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -407,7 +435,11 @@ end
 defmodule Spiredb.Cluster.InternalMutationType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.cluster.InternalMutationType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -441,7 +473,10 @@ end
 defmodule Spiredb.Cluster.GetTimestampRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTimestampRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -481,7 +516,10 @@ end
 defmodule Spiredb.Cluster.GetTimestampResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTimestampResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -536,7 +574,10 @@ end
 defmodule Spiredb.Cluster.ColumnDef do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.ColumnDef",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -681,7 +722,10 @@ end
 defmodule Spiredb.Cluster.CreateTableRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CreateTableRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -751,7 +795,10 @@ end
 defmodule Spiredb.Cluster.CreateTableResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CreateTableResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -791,7 +838,10 @@ end
 defmodule Spiredb.Cluster.DropTableRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.DropTableRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -831,7 +881,10 @@ end
 defmodule Spiredb.Cluster.GetTableIdRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTableIdRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -871,7 +924,10 @@ end
 defmodule Spiredb.Cluster.GetTableIdResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTableIdResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -911,7 +967,10 @@ end
 defmodule Spiredb.Cluster.GetTableRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTableRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -974,7 +1033,10 @@ end
 defmodule Spiredb.Cluster.TableSchema do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.TableSchema",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1089,7 +1151,10 @@ end
 defmodule Spiredb.Cluster.TableList do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.TableList",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1129,7 +1194,11 @@ end
 defmodule Spiredb.Cluster.CreateIndexRequest.ParamsEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CreateIndexRequest.ParamsEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1194,7 +1263,10 @@ end
 defmodule Spiredb.Cluster.CreateIndexRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CreateIndexRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1352,7 +1424,10 @@ end
 defmodule Spiredb.Cluster.CreateIndexResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CreateIndexResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1392,7 +1467,10 @@ end
 defmodule Spiredb.Cluster.DropIndexRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.DropIndexRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1432,7 +1510,10 @@ end
 defmodule Spiredb.Cluster.GetIndexRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetIndexRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1472,7 +1553,11 @@ end
 defmodule Spiredb.Cluster.IndexSchema.ParamsEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.IndexSchema.ParamsEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1537,7 +1622,10 @@ end
 defmodule Spiredb.Cluster.IndexSchema do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.IndexSchema",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1705,7 +1793,10 @@ end
 defmodule Spiredb.Cluster.ListIndexesRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.ListIndexesRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1745,7 +1836,10 @@ end
 defmodule Spiredb.Cluster.IndexList do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.IndexList",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1785,7 +1879,10 @@ end
 defmodule Spiredb.Cluster.GetTableStatsRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTableStatsRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1825,7 +1922,11 @@ end
 defmodule Spiredb.Cluster.TableStats.ColumnStatsEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.TableStats.ColumnStatsEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1890,7 +1991,10 @@ end
 defmodule Spiredb.Cluster.TableStats do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.TableStats",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2034,7 +2138,10 @@ end
 defmodule Spiredb.Cluster.ColumnStats do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.ColumnStats",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2149,7 +2256,10 @@ end
 defmodule Spiredb.Cluster.UpdateTableStatsRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.UpdateTableStatsRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2219,7 +2329,10 @@ end
 defmodule Spiredb.Cluster.GetRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2259,7 +2372,10 @@ end
 defmodule Spiredb.Cluster.GetRegionByKeyRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetRegionByKeyRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2299,7 +2415,10 @@ end
 defmodule Spiredb.Cluster.GetTableRegionsRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetTableRegionsRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2339,7 +2458,10 @@ end
 defmodule Spiredb.Cluster.Region do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.Region",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2469,7 +2591,10 @@ end
 defmodule Spiredb.Cluster.Peer do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.Peer",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2524,7 +2649,10 @@ end
 defmodule Spiredb.Cluster.RegionList do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.RegionList",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2564,7 +2692,10 @@ end
 defmodule Spiredb.Cluster.GetStoreRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.GetStoreRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2604,7 +2735,11 @@ end
 defmodule Spiredb.Cluster.Store.LabelsEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.Store.LabelsEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2669,7 +2804,10 @@ end
 defmodule Spiredb.Cluster.Store do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.Store",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2867,7 +3005,10 @@ end
 defmodule Spiredb.Cluster.StoreList do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.StoreList",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2907,7 +3048,11 @@ end
 defmodule Spiredb.Cluster.RegisterStoreRequest.LabelsEntry do
   @moduledoc false
 
-  use Protobuf, map: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.RegisterStoreRequest.LabelsEntry",
+    map: true,
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -2972,7 +3117,10 @@ end
 defmodule Spiredb.Cluster.RegisterStoreRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.RegisterStoreRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3100,7 +3248,10 @@ end
 defmodule Spiredb.Cluster.RegisterStoreResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.RegisterStoreResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3140,7 +3291,10 @@ end
 defmodule Spiredb.Cluster.StoreHeartbeat do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.StoreHeartbeat",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3245,7 +3399,10 @@ end
 defmodule Spiredb.Cluster.RegionStats do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.RegionStats",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3330,7 +3487,10 @@ end
 defmodule Spiredb.Cluster.StoreHeartbeatResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.StoreHeartbeatResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3370,7 +3530,10 @@ end
 defmodule Spiredb.Cluster.ScheduledTask do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.ScheduledTask",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3525,7 +3688,10 @@ end
 defmodule Spiredb.Cluster.SplitRegion do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.SplitRegion",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3610,7 +3776,10 @@ end
 defmodule Spiredb.Cluster.MergeRegions do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.MergeRegions",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3665,7 +3834,10 @@ end
 defmodule Spiredb.Cluster.TransferLeader do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.TransferLeader",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3735,7 +3907,10 @@ end
 defmodule Spiredb.Cluster.AddPeer do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.AddPeer",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3820,7 +3995,10 @@ end
 defmodule Spiredb.Cluster.RemovePeer do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.RemovePeer",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3890,7 +4068,10 @@ end
 defmodule Spiredb.Cluster.CompactRegion do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CompactRegion",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -3960,7 +4141,10 @@ end
 defmodule Spiredb.Cluster.InstallPluginRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.InstallPluginRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4038,7 +4222,10 @@ end
 defmodule Spiredb.Cluster.InstallPluginResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.InstallPluginResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4093,7 +4280,10 @@ end
 defmodule Spiredb.Cluster.UninstallPluginRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.UninstallPluginRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4133,7 +4323,10 @@ end
 defmodule Spiredb.Cluster.PluginInfo do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.PluginInfo",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4233,7 +4426,10 @@ end
 defmodule Spiredb.Cluster.PluginList do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.PluginList",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4273,7 +4469,10 @@ end
 defmodule Spiredb.Cluster.ReloadPluginRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.ReloadPluginRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4313,7 +4512,10 @@ end
 defmodule Spiredb.Cluster.AsyncPrewriteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.AsyncPrewriteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4443,7 +4645,10 @@ end
 defmodule Spiredb.Cluster.InternalMutation do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.InternalMutation",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4513,7 +4718,10 @@ end
 defmodule Spiredb.Cluster.AsyncPrewriteResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.AsyncPrewriteResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4583,7 +4791,10 @@ end
 defmodule Spiredb.Cluster.InternalKeyError do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.InternalKeyError",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4653,7 +4864,10 @@ end
 defmodule Spiredb.Cluster.InternalLockInfo do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.InternalLockInfo",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4723,7 +4937,10 @@ end
 defmodule Spiredb.Cluster.CheckSecondaryLocksRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CheckSecondaryLocksRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4793,7 +5010,10 @@ end
 defmodule Spiredb.Cluster.CheckSecondaryLocksResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.CheckSecondaryLocksResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4833,7 +5053,10 @@ end
 defmodule Spiredb.Cluster.SecondaryLockStatus do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.SecondaryLockStatus",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4918,7 +5141,10 @@ end
 defmodule Spiredb.Cluster.InternalResolveLockRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.InternalResolveLockRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -4988,7 +5214,10 @@ end
 defmodule Spiredb.Cluster.Empty do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.cluster.Empty",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -5011,7 +5240,7 @@ end
 defmodule Spiredb.Cluster.TSOService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.cluster.TSOService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.cluster.TSOService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -5045,7 +5274,7 @@ end
 defmodule Spiredb.Cluster.SchemaService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.cluster.SchemaService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.cluster.SchemaService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -5189,7 +5418,7 @@ end
 defmodule Spiredb.Cluster.ClusterService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.cluster.ClusterService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.cluster.ClusterService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -5289,7 +5518,7 @@ end
 defmodule Spiredb.Cluster.PluginService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.cluster.PluginService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.cluster.PluginService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -5358,7 +5587,7 @@ defmodule Spiredb.Cluster.InternalTransactionService.Service do
 
   use GRPC.Service,
     name: "spiredb.cluster.InternalTransactionService",
-    protoc_gen_elixir_version: "0.15.0"
+    protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line

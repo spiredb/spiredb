@@ -59,6 +59,13 @@ defmodule Store.VectorIndex do
   end
 
   @doc """
+  Get payload by document ID.
+  """
+  def get_payload(pid \\ __MODULE__, index_name, doc_id) do
+    GenServer.call(pid, {:get_payload, index_name, doc_id})
+  end
+
+  @doc """
   Delete a vector.
   """
   def delete(pid \\ __MODULE__, index_name, doc_id) do
@@ -188,6 +195,18 @@ defmodule Store.VectorIndex do
   end
 
   @impl true
+  def handle_call({:get_payload, index_name, doc_id}, _from, state) do
+    with {:ok, info} <- get_index(state, index_name) do
+      case read_payload(info.id, doc_id) do
+        nil -> {:reply, {:ok, nil}, state}
+        payload -> {:reply, {:ok, payload}, state}
+      end
+    else
+      {:error, reason} -> {:reply, {:error, reason}, state}
+    end
+  end
+
+  @impl true
   def handle_call({:delete, index_name, doc_id}, _from, state) do
     with {:ok, info} <- get_index(state, index_name),
          {:ok, ref} <- get_anodex_ref(state, index_name) do
@@ -219,7 +238,7 @@ defmodule Store.VectorIndex do
           results_with_payload =
             Enum.map(results, fn {distance, int_id} ->
               doc_id = Map.get(index_mapping, int_id, int_id)
-              payload = if return_payload, do: get_payload(info.id, doc_id), else: nil
+              payload = if return_payload, do: read_payload(info.id, doc_id), else: nil
               {doc_id, distance, payload}
             end)
 
@@ -365,7 +384,7 @@ defmodule Store.VectorIndex do
     end
   end
 
-  defp get_payload(index_id, doc_id) do
+  defp read_payload(index_id, doc_id) do
     key = Encoder.encode_vector_key(index_id, doc_id)
 
     case {get_db_ref(), get_vectors_cf()} do

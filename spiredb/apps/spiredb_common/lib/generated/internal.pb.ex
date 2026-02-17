@@ -1,7 +1,11 @@
 defmodule Spiredb.Internal.TaskType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.internal.TaskType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -56,7 +60,10 @@ end
 defmodule Spiredb.Internal.AppendEntriesRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.AppendEntriesRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -186,7 +193,10 @@ end
 defmodule Spiredb.Internal.AppendEntriesResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.AppendEntriesResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -256,7 +266,10 @@ end
 defmodule Spiredb.Internal.RequestVoteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RequestVoteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -356,7 +369,10 @@ end
 defmodule Spiredb.Internal.RequestVoteResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RequestVoteResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -411,7 +427,10 @@ end
 defmodule Spiredb.Internal.SnapshotChunk do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.SnapshotChunk",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -556,7 +575,10 @@ end
 defmodule Spiredb.Internal.InstallSnapshotResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.InstallSnapshotResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -611,7 +633,10 @@ end
 defmodule Spiredb.Internal.TransferLeaderRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.TransferLeaderRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -666,7 +691,10 @@ end
 defmodule Spiredb.Internal.StoreHeartbeatRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.StoreHeartbeatRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -781,7 +809,10 @@ end
 defmodule Spiredb.Internal.StoreHeartbeatResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.StoreHeartbeatResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -821,7 +852,10 @@ end
 defmodule Spiredb.Internal.ScheduledTask do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.ScheduledTask",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -891,7 +925,10 @@ end
 defmodule Spiredb.Internal.RegionHeartbeatRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RegionHeartbeatRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1021,7 +1058,10 @@ end
 defmodule Spiredb.Internal.RegionHeartbeatResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RegionHeartbeatResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1061,7 +1101,10 @@ end
 defmodule Spiredb.Internal.SplitRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.SplitRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1116,7 +1159,10 @@ end
 defmodule Spiredb.Internal.SplitRegionResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.SplitRegionResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1171,7 +1217,10 @@ end
 defmodule Spiredb.Internal.MergeRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.MergeRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1226,7 +1275,10 @@ end
 defmodule Spiredb.Internal.MergeRegionResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.MergeRegionResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1266,7 +1318,10 @@ end
 defmodule Spiredb.Internal.TransferRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.TransferRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1321,7 +1376,10 @@ end
 defmodule Spiredb.Internal.TransferRegionResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.TransferRegionResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1361,7 +1419,10 @@ end
 defmodule Spiredb.Internal.GetRegionInfoRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.GetRegionInfoRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1401,7 +1462,10 @@ end
 defmodule Spiredb.Internal.GetRegionInfoResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.GetRegionInfoResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1531,7 +1595,10 @@ end
 defmodule Spiredb.Internal.PeerInfo do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.PeerInfo",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1601,7 +1668,10 @@ end
 defmodule Spiredb.Internal.Empty do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.Empty",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1624,7 +1694,7 @@ end
 defmodule Spiredb.Internal.RaftService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.internal.RaftService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.RaftService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1699,7 +1769,7 @@ end
 defmodule Spiredb.Internal.HeartbeatService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.internal.HeartbeatService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.HeartbeatService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1752,7 +1822,7 @@ end
 defmodule Spiredb.Internal.RegionService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.internal.RegionService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.RegionService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line

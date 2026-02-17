@@ -271,6 +271,7 @@ service VectorService {
   rpc DropIndex(VectorIndexDropRequest) returns (Empty);
   rpc Insert(VectorInsertRequest) returns (VectorInsertResponse);
   rpc Delete(VectorDeleteRequest) returns (Empty);
+  rpc GetPayload(VectorGetPayloadRequest) returns (VectorGetPayloadResponse);
   rpc Search(VectorSearchRequest) returns (VectorSearchResponse);
   rpc BatchSearch(BatchVectorSearchRequest) returns (BatchVectorSearchResponse);
 }
@@ -301,6 +302,16 @@ message VectorInsertResponse {
 message VectorDeleteRequest {
   string index_name = 1;
   bytes doc_id = 2;
+}
+
+message VectorGetPayloadRequest {
+  string index_name = 1;
+  bytes doc_id = 2;
+}
+
+message VectorGetPayloadResponse {
+  bool found = 1;
+  bytes payload = 2;              // JSON metadata (if found)
 }
 
 message VectorSearchRequest {

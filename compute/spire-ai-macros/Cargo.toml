@@ -1,6 +1,6 @@
 [package]
 name = "spire-ai-macros"
-version = "0.1.1"
+version = "0.1.2"
 edition = "2024"
 description = "Derive macros for spire-ai"
 license = "AGPL-3.0-only"
