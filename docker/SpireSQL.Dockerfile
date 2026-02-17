@@ -10,7 +10,10 @@ RUN apt-get update && \
 
 WORKDIR /spiredb
 
-# Copy full source
+# Proto files live in spiredb/apps/ — compute/spire_proto/proto is a symlink to there
+COPY spiredb/apps/spiredb_common/priv/proto /spiredb/spiredb/apps/spiredb_common/priv/proto
+
+# Copy Rust workspace
 COPY compute /spiredb/compute
 
 WORKDIR /spiredb/compute
