@@ -1,7 +1,11 @@
 defmodule Spiredb.Internal.TaskType do
   @moduledoc false
 
-  use Protobuf, enum: true, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    enum: true,
+    full_name: "spiredb.internal.TaskType",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -46,17 +50,20 @@ defmodule Spiredb.Internal.TaskType do
     }
   end
 
-  field(:TASK_SPLIT_REGION, 0)
-  field(:TASK_MERGE_REGION, 1)
-  field(:TASK_TRANSFER_LEADER, 2)
-  field(:TASK_ADD_PEER, 3)
-  field(:TASK_REMOVE_PEER, 4)
+  field :TASK_SPLIT_REGION, 0
+  field :TASK_MERGE_REGION, 1
+  field :TASK_TRANSFER_LEADER, 2
+  field :TASK_ADD_PEER, 3
+  field :TASK_REMOVE_PEER, 4
 end
 
 defmodule Spiredb.Internal.AppendEntriesRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.AppendEntriesRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -174,19 +181,22 @@ defmodule Spiredb.Internal.AppendEntriesRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:term, 2, type: :uint64)
-  field(:leader_id, 3, type: :uint64, json_name: "leaderId")
-  field(:prev_log_index, 4, type: :uint64, json_name: "prevLogIndex")
-  field(:prev_log_term, 5, type: :uint64, json_name: "prevLogTerm")
-  field(:entries, 6, repeated: true, type: :bytes)
-  field(:leader_commit, 7, type: :uint64, json_name: "leaderCommit")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :term, 2, type: :uint64
+  field :leader_id, 3, type: :uint64, json_name: "leaderId"
+  field :prev_log_index, 4, type: :uint64, json_name: "prevLogIndex"
+  field :prev_log_term, 5, type: :uint64, json_name: "prevLogTerm"
+  field :entries, 6, repeated: true, type: :bytes
+  field :leader_commit, 7, type: :uint64, json_name: "leaderCommit"
 end
 
 defmodule Spiredb.Internal.AppendEntriesResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.AppendEntriesResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -248,15 +258,18 @@ defmodule Spiredb.Internal.AppendEntriesResponse do
     }
   end
 
-  field(:term, 1, type: :uint64)
-  field(:success, 2, type: :bool)
-  field(:match_index, 3, type: :uint64, json_name: "matchIndex")
+  field :term, 1, type: :uint64
+  field :success, 2, type: :bool
+  field :match_index, 3, type: :uint64, json_name: "matchIndex"
 end
 
 defmodule Spiredb.Internal.RequestVoteRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RequestVoteRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -346,17 +359,20 @@ defmodule Spiredb.Internal.RequestVoteRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:term, 2, type: :uint64)
-  field(:candidate_id, 3, type: :uint64, json_name: "candidateId")
-  field(:last_log_index, 4, type: :uint64, json_name: "lastLogIndex")
-  field(:last_log_term, 5, type: :uint64, json_name: "lastLogTerm")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :term, 2, type: :uint64
+  field :candidate_id, 3, type: :uint64, json_name: "candidateId"
+  field :last_log_index, 4, type: :uint64, json_name: "lastLogIndex"
+  field :last_log_term, 5, type: :uint64, json_name: "lastLogTerm"
 end
 
 defmodule Spiredb.Internal.RequestVoteResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RequestVoteResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -404,14 +420,17 @@ defmodule Spiredb.Internal.RequestVoteResponse do
     }
   end
 
-  field(:term, 1, type: :uint64)
-  field(:vote_granted, 2, type: :bool, json_name: "voteGranted")
+  field :term, 1, type: :uint64
+  field :vote_granted, 2, type: :bool, json_name: "voteGranted"
 end
 
 defmodule Spiredb.Internal.SnapshotChunk do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.SnapshotChunk",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -543,20 +562,23 @@ defmodule Spiredb.Internal.SnapshotChunk do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:term, 2, type: :uint64)
-  field(:leader_id, 3, type: :uint64, json_name: "leaderId")
-  field(:last_included_index, 4, type: :uint64, json_name: "lastIncludedIndex")
-  field(:last_included_term, 5, type: :uint64, json_name: "lastIncludedTerm")
-  field(:offset, 6, type: :uint64)
-  field(:data, 7, type: :bytes)
-  field(:done, 8, type: :bool)
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :term, 2, type: :uint64
+  field :leader_id, 3, type: :uint64, json_name: "leaderId"
+  field :last_included_index, 4, type: :uint64, json_name: "lastIncludedIndex"
+  field :last_included_term, 5, type: :uint64, json_name: "lastIncludedTerm"
+  field :offset, 6, type: :uint64
+  field :data, 7, type: :bytes
+  field :done, 8, type: :bool
 end
 
 defmodule Spiredb.Internal.InstallSnapshotResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.InstallSnapshotResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -604,14 +626,17 @@ defmodule Spiredb.Internal.InstallSnapshotResponse do
     }
   end
 
-  field(:term, 1, type: :uint64)
-  field(:success, 2, type: :bool)
+  field :term, 1, type: :uint64
+  field :success, 2, type: :bool
 end
 
 defmodule Spiredb.Internal.TransferLeaderRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.TransferLeaderRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -659,14 +684,17 @@ defmodule Spiredb.Internal.TransferLeaderRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:target_store_id, 2, type: :uint64, json_name: "targetStoreId")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :target_store_id, 2, type: :uint64, json_name: "targetStoreId"
 end
 
 defmodule Spiredb.Internal.StoreHeartbeatRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.StoreHeartbeatRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -770,18 +798,21 @@ defmodule Spiredb.Internal.StoreHeartbeatRequest do
     }
   end
 
-  field(:store_id, 1, type: :uint64, json_name: "storeId")
-  field(:capacity, 2, type: :uint64)
-  field(:available, 3, type: :uint64)
-  field(:region_count, 4, type: :uint32, json_name: "regionCount")
-  field(:sending_rate, 5, type: :uint64, json_name: "sendingRate")
-  field(:receiving_rate, 6, type: :uint64, json_name: "receivingRate")
+  field :store_id, 1, type: :uint64, json_name: "storeId"
+  field :capacity, 2, type: :uint64
+  field :available, 3, type: :uint64
+  field :region_count, 4, type: :uint32, json_name: "regionCount"
+  field :sending_rate, 5, type: :uint64, json_name: "sendingRate"
+  field :receiving_rate, 6, type: :uint64, json_name: "receivingRate"
 end
 
 defmodule Spiredb.Internal.StoreHeartbeatResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.StoreHeartbeatResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -815,13 +846,16 @@ defmodule Spiredb.Internal.StoreHeartbeatResponse do
     }
   end
 
-  field(:tasks, 1, repeated: true, type: Spiredb.Internal.ScheduledTask)
+  field :tasks, 1, repeated: true, type: Spiredb.Internal.ScheduledTask
 end
 
 defmodule Spiredb.Internal.ScheduledTask do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.ScheduledTask",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -883,15 +917,18 @@ defmodule Spiredb.Internal.ScheduledTask do
     }
   end
 
-  field(:type, 1, type: Spiredb.Internal.TaskType, enum: true)
-  field(:region_id, 2, type: :uint64, json_name: "regionId")
-  field(:params, 3, type: :bytes)
+  field :type, 1, type: Spiredb.Internal.TaskType, enum: true
+  field :region_id, 2, type: :uint64, json_name: "regionId"
+  field :params, 3, type: :bytes
 end
 
 defmodule Spiredb.Internal.RegionHeartbeatRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RegionHeartbeatRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1009,19 +1046,22 @@ defmodule Spiredb.Internal.RegionHeartbeatRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:store_id, 2, type: :uint64, json_name: "storeId")
-  field(:term, 3, type: :uint64)
-  field(:is_leader, 4, type: :bool, json_name: "isLeader")
-  field(:approximate_size, 5, type: :uint64, json_name: "approximateSize")
-  field(:approximate_keys, 6, type: :uint64, json_name: "approximateKeys")
-  field(:region_epoch, 7, type: :uint64, json_name: "regionEpoch")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :store_id, 2, type: :uint64, json_name: "storeId"
+  field :term, 3, type: :uint64
+  field :is_leader, 4, type: :bool, json_name: "isLeader"
+  field :approximate_size, 5, type: :uint64, json_name: "approximateSize"
+  field :approximate_keys, 6, type: :uint64, json_name: "approximateKeys"
+  field :region_epoch, 7, type: :uint64, json_name: "regionEpoch"
 end
 
 defmodule Spiredb.Internal.RegionHeartbeatResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.RegionHeartbeatResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1055,13 +1095,16 @@ defmodule Spiredb.Internal.RegionHeartbeatResponse do
     }
   end
 
-  field(:tasks, 1, repeated: true, type: Spiredb.Internal.ScheduledTask)
+  field :tasks, 1, repeated: true, type: Spiredb.Internal.ScheduledTask
 end
 
 defmodule Spiredb.Internal.SplitRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.SplitRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1109,14 +1152,17 @@ defmodule Spiredb.Internal.SplitRegionRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:split_key, 2, type: :bytes, json_name: "splitKey")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :split_key, 2, type: :bytes, json_name: "splitKey"
 end
 
 defmodule Spiredb.Internal.SplitRegionResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.SplitRegionResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1164,14 +1210,17 @@ defmodule Spiredb.Internal.SplitRegionResponse do
     }
   end
 
-  field(:new_region_id, 1, type: :uint64, json_name: "newRegionId")
-  field(:new_peer_ids, 2, repeated: true, type: :uint64, json_name: "newPeerIds")
+  field :new_region_id, 1, type: :uint64, json_name: "newRegionId"
+  field :new_peer_ids, 2, repeated: true, type: :uint64, json_name: "newPeerIds"
 end
 
 defmodule Spiredb.Internal.MergeRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.MergeRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1219,14 +1268,17 @@ defmodule Spiredb.Internal.MergeRegionRequest do
     }
   end
 
-  field(:source_region_id, 1, type: :uint64, json_name: "sourceRegionId")
-  field(:target_region_id, 2, type: :uint64, json_name: "targetRegionId")
+  field :source_region_id, 1, type: :uint64, json_name: "sourceRegionId"
+  field :target_region_id, 2, type: :uint64, json_name: "targetRegionId"
 end
 
 defmodule Spiredb.Internal.MergeRegionResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.MergeRegionResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1260,13 +1312,16 @@ defmodule Spiredb.Internal.MergeRegionResponse do
     }
   end
 
-  field(:success, 1, type: :bool)
+  field :success, 1, type: :bool
 end
 
 defmodule Spiredb.Internal.TransferRegionRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.TransferRegionRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1314,14 +1369,17 @@ defmodule Spiredb.Internal.TransferRegionRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:to_store_id, 2, type: :uint64, json_name: "toStoreId")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :to_store_id, 2, type: :uint64, json_name: "toStoreId"
 end
 
 defmodule Spiredb.Internal.TransferRegionResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.TransferRegionResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1355,13 +1413,16 @@ defmodule Spiredb.Internal.TransferRegionResponse do
     }
   end
 
-  field(:success, 1, type: :bool)
+  field :success, 1, type: :bool
 end
 
 defmodule Spiredb.Internal.GetRegionInfoRequest do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.GetRegionInfoRequest",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1395,13 +1456,16 @@ defmodule Spiredb.Internal.GetRegionInfoRequest do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
 end
 
 defmodule Spiredb.Internal.GetRegionInfoResponse do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.GetRegionInfoResponse",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1519,19 +1583,22 @@ defmodule Spiredb.Internal.GetRegionInfoResponse do
     }
   end
 
-  field(:region_id, 1, type: :uint64, json_name: "regionId")
-  field(:start_key, 2, type: :bytes, json_name: "startKey")
-  field(:end_key, 3, type: :bytes, json_name: "endKey")
-  field(:region_epoch, 4, type: :uint64, json_name: "regionEpoch")
-  field(:peers, 5, repeated: true, type: Spiredb.Internal.PeerInfo)
-  field(:approximate_size, 6, type: :uint64, json_name: "approximateSize")
-  field(:approximate_keys, 7, type: :uint64, json_name: "approximateKeys")
+  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field :start_key, 2, type: :bytes, json_name: "startKey"
+  field :end_key, 3, type: :bytes, json_name: "endKey"
+  field :region_epoch, 4, type: :uint64, json_name: "regionEpoch"
+  field :peers, 5, repeated: true, type: Spiredb.Internal.PeerInfo
+  field :approximate_size, 6, type: :uint64, json_name: "approximateSize"
+  field :approximate_keys, 7, type: :uint64, json_name: "approximateKeys"
 end
 
 defmodule Spiredb.Internal.PeerInfo do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.PeerInfo",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1593,15 +1660,18 @@ defmodule Spiredb.Internal.PeerInfo do
     }
   end
 
-  field(:store_id, 1, type: :uint64, json_name: "storeId")
-  field(:role, 2, type: :string)
-  field(:match_index, 3, type: :uint64, json_name: "matchIndex")
+  field :store_id, 1, type: :uint64, json_name: "storeId"
+  field :role, 2, type: :string
+  field :match_index, 3, type: :uint64, json_name: "matchIndex"
 end
 
 defmodule Spiredb.Internal.Empty do
   @moduledoc false
 
-  use Protobuf, protoc_gen_elixir_version: "0.15.0", syntax: :proto3
+  use Protobuf,
+    full_name: "spiredb.internal.Empty",
+    protoc_gen_elixir_version: "0.16.0",
+    syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1624,7 +1694,7 @@ end
 defmodule Spiredb.Internal.RaftService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.internal.RaftService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.RaftService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1673,21 +1743,17 @@ defmodule Spiredb.Internal.RaftService.Service do
     }
   end
 
-  rpc(
-    :AppendEntries,
-    Spiredb.Internal.AppendEntriesRequest,
-    Spiredb.Internal.AppendEntriesResponse
-  )
+  rpc :AppendEntries,
+      Spiredb.Internal.AppendEntriesRequest,
+      Spiredb.Internal.AppendEntriesResponse
 
-  rpc(:RequestVote, Spiredb.Internal.RequestVoteRequest, Spiredb.Internal.RequestVoteResponse)
+  rpc :RequestVote, Spiredb.Internal.RequestVoteRequest, Spiredb.Internal.RequestVoteResponse
 
-  rpc(
-    :InstallSnapshot,
-    stream(Spiredb.Internal.SnapshotChunk),
-    Spiredb.Internal.InstallSnapshotResponse
-  )
+  rpc :InstallSnapshot,
+      stream(Spiredb.Internal.SnapshotChunk),
+      Spiredb.Internal.InstallSnapshotResponse
 
-  rpc(:TransferLeader, Spiredb.Internal.TransferLeaderRequest, Spiredb.Internal.Empty)
+  rpc :TransferLeader, Spiredb.Internal.TransferLeaderRequest, Spiredb.Internal.Empty
 end
 
 defmodule Spiredb.Internal.RaftService.Stub do
@@ -1699,7 +1765,7 @@ end
 defmodule Spiredb.Internal.HeartbeatService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.internal.HeartbeatService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.HeartbeatService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1730,17 +1796,13 @@ defmodule Spiredb.Internal.HeartbeatService.Service do
     }
   end
 
-  rpc(
-    :StoreHeartbeat,
-    Spiredb.Internal.StoreHeartbeatRequest,
-    Spiredb.Internal.StoreHeartbeatResponse
-  )
+  rpc :StoreHeartbeat,
+      Spiredb.Internal.StoreHeartbeatRequest,
+      Spiredb.Internal.StoreHeartbeatResponse
 
-  rpc(
-    :RegionHeartbeat,
-    Spiredb.Internal.RegionHeartbeatRequest,
-    Spiredb.Internal.RegionHeartbeatResponse
-  )
+  rpc :RegionHeartbeat,
+      Spiredb.Internal.RegionHeartbeatRequest,
+      Spiredb.Internal.RegionHeartbeatResponse
 end
 
 defmodule Spiredb.Internal.HeartbeatService.Stub do
@@ -1752,7 +1814,7 @@ end
 defmodule Spiredb.Internal.RegionService.Service do
   @moduledoc false
 
-  use GRPC.Service, name: "spiredb.internal.RegionService", protoc_gen_elixir_version: "0.15.0"
+  use GRPC.Service, name: "spiredb.internal.RegionService", protoc_gen_elixir_version: "0.16.0"
 
   def descriptor do
     # credo:disable-for-next-line
@@ -1801,21 +1863,17 @@ defmodule Spiredb.Internal.RegionService.Service do
     }
   end
 
-  rpc(:SplitRegion, Spiredb.Internal.SplitRegionRequest, Spiredb.Internal.SplitRegionResponse)
+  rpc :SplitRegion, Spiredb.Internal.SplitRegionRequest, Spiredb.Internal.SplitRegionResponse
 
-  rpc(:MergeRegion, Spiredb.Internal.MergeRegionRequest, Spiredb.Internal.MergeRegionResponse)
+  rpc :MergeRegion, Spiredb.Internal.MergeRegionRequest, Spiredb.Internal.MergeRegionResponse
 
-  rpc(
-    :TransferRegion,
-    Spiredb.Internal.TransferRegionRequest,
-    Spiredb.Internal.TransferRegionResponse
-  )
+  rpc :TransferRegion,
+      Spiredb.Internal.TransferRegionRequest,
+      Spiredb.Internal.TransferRegionResponse
 
-  rpc(
-    :GetRegionInfo,
-    Spiredb.Internal.GetRegionInfoRequest,
-    Spiredb.Internal.GetRegionInfoResponse
-  )
+  rpc :GetRegionInfo,
+      Spiredb.Internal.GetRegionInfoRequest,
+      Spiredb.Internal.GetRegionInfoResponse
 end
 
 defmodule Spiredb.Internal.RegionService.Stub do
