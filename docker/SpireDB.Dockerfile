@@ -81,7 +81,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     iproute2 \
     dnsutils \
-    linux-perf \
+    && (apt-get install -y --no-install-recommends linux-perf 2>/dev/null || true) \
     && rm -rf /var/lib/apt/lists/* \
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen

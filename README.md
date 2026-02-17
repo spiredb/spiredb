@@ -28,6 +28,7 @@ SpireDB is a unified data platform that seamlessly integrates high-performance d
 | **SpireDB** | Distributed storage engine with Raft consensus | ✅ Available |
 | **SpireSQL** | SQL compute layer (PostgreSQL wire protocol) | ✅ Available |
 | **spire** | Command-line interface for cluster management | ✅ Available |
+| **spire-ai** | AI-native SDK for SpireDB — RAG, code search, agents | ✅ Available |
 
 ## Features
 
@@ -55,7 +56,7 @@ SpireDB is a unified data platform that seamlessly integrates high-performance d
 
 ## Documentation
 
-📚 **[spire.zone/docs](https://spire.zone/docs/#/)**
+**[spire.zone/docs](https://spire.zone/docs/#/)**
 
 ## License
 

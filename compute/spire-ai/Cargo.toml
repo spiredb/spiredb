@@ -1,0 +1,86 @@
+[package]
+name = "spire-ai"
+version = "0.1.0"
+edition = "2024"
+description = "AI-native SDK for SpireDB — RAG, code search, agents"
+license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
+keywords = ["rag", "vector-search", "code-assistant", "ai", "llm"]
+categories = ["database"]
+
+[dependencies]
+# Workspace crates (reuse existing infrastructure)
+spiresql = { workspace = true }
+spire_proto = { workspace = true }
+spire_common = { workspace = true }
+
+# Async runtime
+tokio = { workspace = true }
+futures = { workspace = true }
+async-trait = { workspace = true }
+async-stream = { workspace = true }
+
+# gRPC
+tonic = { workspace = true }
+
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+
+# HTTP (for embedding/LLM providers)
+reqwest = { version = "0.12", default-features = false, features = ["json", "stream", "rustls-tls"] }
+
+# Text processing
+unicode-segmentation = "1"
+regex = { version = "1", optional = true }
+
+# File system
+walkdir = { version = "2", optional = true }
+ignore = { version = "0.4", optional = true }
+
+# Code parsing (behind feature flag)
+tree-sitter = { version = "0.24", optional = true }
+tree-sitter-rust = { version = "0.24", optional = true }
+tree-sitter-python = { version = "0.25", optional = true }
+tree-sitter-javascript = { version = "0.25", optional = true }
+tree-sitter-typescript = { version = "0.23", optional = true }
+tree-sitter-go = { version = "0.25", optional = true }
+tree-sitter-c = { version = "0.24", optional = true }
+tree-sitter-cpp = { version = "0.23", optional = true }
+tree-sitter-java = { version = "0.23", optional = true }
+tree-sitter-ruby = { version = "0.23", optional = true }
+tree-sitter-c-sharp = { version = "0.23", optional = true }
+tree-sitter-bash = { version = "0.25", optional = true }
+tree-sitter-html = { version = "0.23", optional = true }
+tree-sitter-css = { version = "0.25", optional = true }
+tree-sitter-json = { version = "0.24", optional = true }
+tree-sitter-scala = { version = "0.24", optional = true }
+tree-sitter-haskell = { version = "0.23", optional = true }
+tree-sitter-php = { version = "0.24", optional = true }
+
+# Utilities
+thiserror = { workspace = true }
+tracing = { workspace = true }
+parking_lot = { workspace = true }
+kovan-map = { workspace = true }
+ahash = { workspace = true }
+
+# Derive macro
+spire-ai-macros = { path = "../spire-ai-macros", version = "0.1.0", optional = true }
+
+[features]
+default = ["full"]
+macros = ["dep:spire-ai-macros"]
+ollama = []
+openai = []
+anthropic = []
+voyage = []
+code = ["dep:tree-sitter", "dep:tree-sitter-rust", "dep:tree-sitter-python",
+        "dep:tree-sitter-javascript", "dep:tree-sitter-typescript", "dep:tree-sitter-go",
+        "dep:tree-sitter-c", "dep:tree-sitter-cpp", "dep:tree-sitter-java",
+        "dep:tree-sitter-ruby", "dep:tree-sitter-c-sharp", "dep:tree-sitter-bash",
+        "dep:tree-sitter-html", "dep:tree-sitter-css", "dep:tree-sitter-json",
+        "dep:tree-sitter-scala", "dep:tree-sitter-haskell", "dep:tree-sitter-php",
+        "dep:walkdir", "dep:ignore", "dep:regex"]
+full = ["macros", "ollama", "openai", "anthropic", "voyage", "code"]

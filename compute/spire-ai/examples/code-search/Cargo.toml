@@ -1,0 +1,13 @@
+[package]
+name = "spire-ai-example-code-search"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Semantic code search and navigation tool"
+
+[workspace]
+
+[dependencies]
+spire-ai = { path = "../../" }
+tokio = { version = "1", features = ["full"] }
+clap = { version = "4", features = ["derive"] }

@@ -1,0 +1,18 @@
+[package]
+name = "spire-ai-macros"
+version = "0.1.0"
+edition = "2024"
+description = "Derive macros for spire-ai"
+license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
+keywords = ["rag", "ai", "macros", "derive"]
+categories = ["database"]
+
+[lib]
+proc-macro = true
+
+[dependencies]
+syn = { version = "2", features = ["full", "extra-traits"] }
+quote = "1"
+proc-macro2 = "1"

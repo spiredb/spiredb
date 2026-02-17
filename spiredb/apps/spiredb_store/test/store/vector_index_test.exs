@@ -130,9 +130,9 @@ defmodule Store.VectorIndexTest do
       query = [0.0, 1.0, 0.0]
 
       {:ok, results} =
-        wait_for_results(@pid, "search_idx", query, 1, return_payload: true, expected_count: 1)
+        wait_for_results(@pid, "search_idx", query, 4, return_payload: true, expected_count: 4)
 
-      [{_id, _dist, payload}] = results
+      [{_id, _dist, payload} | _] = results
       assert payload != nil
       assert String.contains?(payload, "B")
     end
