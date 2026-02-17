@@ -146,7 +146,7 @@ defmodule Store.API.RESP.TxnCommands do
     else
       parsed_opts = parse_multi_opts(opts)
 
-      case Manager.begin_transaction(parsed_opts) do
+      case Manager.begin_transaction(Manager, parsed_opts) do
         {:ok, txn_id} ->
           set_current_txn(txn_id)
           "OK"

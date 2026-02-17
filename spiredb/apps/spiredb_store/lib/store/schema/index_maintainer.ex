@@ -63,7 +63,7 @@ defmodule Store.Schema.IndexMaintainer do
   @spec rebuild_indexes(String.t()) :: {:ok, non_neg_integer()} | {:error, term()}
   def rebuild_indexes(table_name) do
     with {:ok, table} <- Registry.get_table(table_name),
-         {:ok, indexes} <- Registry.list_indexes(table_name),
+         {:ok, indexes} <- Registry.list_indexes(Registry, table_name),
          {:ok, db_ref, cf_map} <- get_db_refs() do
       # Clear existing index entries for this table's indexes
       indexes_cf = Map.get(cf_map, @indexes_cf)
@@ -124,7 +124,7 @@ defmodule Store.Schema.IndexMaintainer do
 
   defp get_table_indexes(table_name) do
     try do
-      Registry.list_indexes(table_name)
+      Registry.list_indexes(Registry, table_name)
     catch
       :exit, _ -> {:error, :registry_unavailable}
       _, _ -> {:error, :registry_unavailable}
