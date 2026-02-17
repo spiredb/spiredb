@@ -38,9 +38,9 @@ defmodule Spiredb.Data.MutationType do
     }
   end
 
-  field :MUTATION_PUT, 0
-  field :MUTATION_DELETE, 1
-  field :MUTATION_LOCK, 2
+  field(:MUTATION_PUT, 0)
+  field(:MUTATION_DELETE, 1)
+  field(:MUTATION_LOCK, 2)
 end
 
 defmodule Spiredb.Data.ConflictType do
@@ -83,9 +83,9 @@ defmodule Spiredb.Data.ConflictType do
     }
   end
 
-  field :CONFLICT_WRITE_WRITE, 0
-  field :CONFLICT_WRITE_READ, 1
-  field :CONFLICT_READ_WRITE, 2
+  field(:CONFLICT_WRITE_WRITE, 0)
+  field(:CONFLICT_WRITE_READ, 1)
+  field(:CONFLICT_READ_WRITE, 2)
 end
 
 defmodule Spiredb.Data.TxnState do
@@ -128,9 +128,9 @@ defmodule Spiredb.Data.TxnState do
     }
   end
 
-  field :TXN_PENDING, 0
-  field :TXN_COMMITTED, 1
-  field :TXN_ROLLED_BACK, 2
+  field(:TXN_PENDING, 0)
+  field(:TXN_COMMITTED, 1)
+  field(:TXN_ROLLED_BACK, 2)
 end
 
 defmodule Spiredb.Data.RawGetRequest do
@@ -215,10 +215,10 @@ defmodule Spiredb.Data.RawGetRequest do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :key, 2, type: :bytes
-  field :snapshot_ts, 3, type: :uint64, json_name: "snapshotTs"
-  field :read_follower, 4, type: :bool, json_name: "readFollower"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:key, 2, type: :bytes)
+  field(:snapshot_ts, 3, type: :uint64, json_name: "snapshotTs")
+  field(:read_follower, 4, type: :bool, json_name: "readFollower")
 end
 
 defmodule Spiredb.Data.RawGetResponse do
@@ -275,8 +275,8 @@ defmodule Spiredb.Data.RawGetResponse do
     }
   end
 
-  field :value, 1, type: :bytes
-  field :found, 2, type: :bool
+  field(:value, 1, type: :bytes)
+  field(:found, 2, type: :bool)
 end
 
 defmodule Spiredb.Data.RawPutRequest do
@@ -333,8 +333,8 @@ defmodule Spiredb.Data.RawPutRequest do
     }
   end
 
-  field :key, 1, type: :bytes
-  field :value, 2, type: :bytes
+  field(:key, 1, type: :bytes)
+  field(:value, 2, type: :bytes)
 end
 
 defmodule Spiredb.Data.RawDeleteRequest do
@@ -377,7 +377,7 @@ defmodule Spiredb.Data.RawDeleteRequest do
     }
   end
 
-  field :key, 1, type: :bytes
+  field(:key, 1, type: :bytes)
 end
 
 defmodule Spiredb.Data.RawScanRequest do
@@ -504,13 +504,13 @@ defmodule Spiredb.Data.RawScanRequest do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :start_key, 2, type: :bytes, json_name: "startKey"
-  field :end_key, 3, type: :bytes, json_name: "endKey"
-  field :batch_size, 4, type: :uint32, json_name: "batchSize"
-  field :limit, 5, type: :uint32
-  field :snapshot_ts, 6, type: :uint64, json_name: "snapshotTs"
-  field :read_follower, 7, type: :bool, json_name: "readFollower"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:start_key, 2, type: :bytes, json_name: "startKey")
+  field(:end_key, 3, type: :bytes, json_name: "endKey")
+  field(:batch_size, 4, type: :uint32, json_name: "batchSize")
+  field(:limit, 5, type: :uint32)
+  field(:snapshot_ts, 6, type: :uint64, json_name: "snapshotTs")
+  field(:read_follower, 7, type: :bool, json_name: "readFollower")
 end
 
 defmodule Spiredb.Data.RawScanResponse do
@@ -581,9 +581,9 @@ defmodule Spiredb.Data.RawScanResponse do
     }
   end
 
-  field :arrow_batch, 1, type: :bytes, json_name: "arrowBatch"
-  field :has_more, 2, type: :bool, json_name: "hasMore"
-  field :stats, 3, type: Spiredb.Data.ScanStats
+  field(:arrow_batch, 1, type: :bytes, json_name: "arrowBatch")
+  field(:has_more, 2, type: :bool, json_name: "hasMore")
+  field(:stats, 3, type: Spiredb.Data.ScanStats)
 end
 
 defmodule Spiredb.Data.RawBatchGetRequest do
@@ -654,9 +654,9 @@ defmodule Spiredb.Data.RawBatchGetRequest do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :keys, 2, repeated: true, type: :bytes
-  field :snapshot_ts, 3, type: :uint64, json_name: "snapshotTs"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:keys, 2, repeated: true, type: :bytes)
+  field(:snapshot_ts, 3, type: :uint64, json_name: "snapshotTs")
 end
 
 defmodule Spiredb.Data.RawBatchGetResponse do
@@ -699,7 +699,7 @@ defmodule Spiredb.Data.RawBatchGetResponse do
     }
   end
 
-  field :arrow_batch, 1, type: :bytes, json_name: "arrowBatch"
+  field(:arrow_batch, 1, type: :bytes, json_name: "arrowBatch")
 end
 
 defmodule Spiredb.Data.TableScanRequest do
@@ -840,14 +840,14 @@ defmodule Spiredb.Data.TableScanRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
-  field :columns, 2, repeated: true, type: :string
-  field :filter_expr, 3, type: :bytes, json_name: "filterExpr"
-  field :limit, 4, type: :uint32
-  field :snapshot_ts, 5, type: :uint64, json_name: "snapshotTs"
-  field :read_follower, 6, type: :bool, json_name: "readFollower"
-  field :start_key, 7, type: :bytes, json_name: "startKey"
-  field :end_key, 8, type: :bytes, json_name: "endKey"
+  field(:table_name, 1, type: :string, json_name: "tableName")
+  field(:columns, 2, repeated: true, type: :string)
+  field(:filter_expr, 3, type: :bytes, json_name: "filterExpr")
+  field(:limit, 4, type: :uint32)
+  field(:snapshot_ts, 5, type: :uint64, json_name: "snapshotTs")
+  field(:read_follower, 6, type: :bool, json_name: "readFollower")
+  field(:start_key, 7, type: :bytes, json_name: "startKey")
+  field(:end_key, 8, type: :bytes, json_name: "endKey")
 end
 
 defmodule Spiredb.Data.TableScanResponse do
@@ -918,9 +918,9 @@ defmodule Spiredb.Data.TableScanResponse do
     }
   end
 
-  field :arrow_batch, 1, type: :bytes, json_name: "arrowBatch"
-  field :has_more, 2, type: :bool, json_name: "hasMore"
-  field :stats, 3, type: Spiredb.Data.ScanStats
+  field(:arrow_batch, 1, type: :bytes, json_name: "arrowBatch")
+  field(:has_more, 2, type: :bool, json_name: "hasMore")
+  field(:stats, 3, type: Spiredb.Data.ScanStats)
 end
 
 defmodule Spiredb.Data.TableGetRequest do
@@ -1005,10 +1005,10 @@ defmodule Spiredb.Data.TableGetRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
-  field :primary_key, 2, type: :bytes, json_name: "primaryKey"
-  field :columns, 3, repeated: true, type: :string
-  field :snapshot_ts, 4, type: :uint64, json_name: "snapshotTs"
+  field(:table_name, 1, type: :string, json_name: "tableName")
+  field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
+  field(:columns, 3, repeated: true, type: :string)
+  field(:snapshot_ts, 4, type: :uint64, json_name: "snapshotTs")
 end
 
 defmodule Spiredb.Data.TableGetResponse do
@@ -1065,8 +1065,8 @@ defmodule Spiredb.Data.TableGetResponse do
     }
   end
 
-  field :arrow_batch, 1, type: :bytes, json_name: "arrowBatch"
-  field :found, 2, type: :bool
+  field(:arrow_batch, 1, type: :bytes, json_name: "arrowBatch")
+  field(:found, 2, type: :bool)
 end
 
 defmodule Spiredb.Data.TableInsertRequest do
@@ -1123,8 +1123,8 @@ defmodule Spiredb.Data.TableInsertRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
-  field :arrow_batch, 2, type: :bytes, json_name: "arrowBatch"
+  field(:table_name, 1, type: :string, json_name: "tableName")
+  field(:arrow_batch, 2, type: :bytes, json_name: "arrowBatch")
 end
 
 defmodule Spiredb.Data.TableInsertResponse do
@@ -1167,7 +1167,7 @@ defmodule Spiredb.Data.TableInsertResponse do
     }
   end
 
-  field :rows_affected, 1, type: :uint64, json_name: "rowsAffected"
+  field(:rows_affected, 1, type: :uint64, json_name: "rowsAffected")
 end
 
 defmodule Spiredb.Data.TableUpdateRequest.UpdatesEntry do
@@ -1235,8 +1235,8 @@ defmodule Spiredb.Data.TableUpdateRequest.UpdatesEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: :bytes
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :bytes)
 end
 
 defmodule Spiredb.Data.TableUpdateRequest do
@@ -1360,9 +1360,14 @@ defmodule Spiredb.Data.TableUpdateRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
-  field :primary_key, 2, type: :bytes, json_name: "primaryKey"
-  field :updates, 3, repeated: true, type: Spiredb.Data.TableUpdateRequest.UpdatesEntry, map: true
+  field(:table_name, 1, type: :string, json_name: "tableName")
+  field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
+
+  field(:updates, 3,
+    repeated: true,
+    type: Spiredb.Data.TableUpdateRequest.UpdatesEntry,
+    map: true
+  )
 end
 
 defmodule Spiredb.Data.TableUpdateResponse do
@@ -1405,7 +1410,7 @@ defmodule Spiredb.Data.TableUpdateResponse do
     }
   end
 
-  field :updated, 1, type: :bool
+  field(:updated, 1, type: :bool)
 end
 
 defmodule Spiredb.Data.TableDeleteRequest do
@@ -1462,8 +1467,8 @@ defmodule Spiredb.Data.TableDeleteRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
-  field :primary_key, 2, type: :bytes, json_name: "primaryKey"
+  field(:table_name, 1, type: :string, json_name: "tableName")
+  field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
 end
 
 defmodule Spiredb.Data.TableDeleteResponse do
@@ -1506,7 +1511,7 @@ defmodule Spiredb.Data.TableDeleteResponse do
     }
   end
 
-  field :deleted, 1, type: :bool
+  field(:deleted, 1, type: :bool)
 end
 
 defmodule Spiredb.Data.ScanStats do
@@ -1577,9 +1582,9 @@ defmodule Spiredb.Data.ScanStats do
     }
   end
 
-  field :rows_returned, 1, type: :uint64, json_name: "rowsReturned"
-  field :bytes_read, 2, type: :uint64, json_name: "bytesRead"
-  field :scan_time_ms, 3, type: :uint32, json_name: "scanTimeMs"
+  field(:rows_returned, 1, type: :uint64, json_name: "rowsReturned")
+  field(:bytes_read, 2, type: :uint64, json_name: "bytesRead")
+  field(:scan_time_ms, 3, type: :uint32, json_name: "scanTimeMs")
 end
 
 defmodule Spiredb.Data.Mutation do
@@ -1650,9 +1655,9 @@ defmodule Spiredb.Data.Mutation do
     }
   end
 
-  field :type, 1, type: Spiredb.Data.MutationType, enum: true
-  field :key, 2, type: :bytes
-  field :value, 3, type: :bytes
+  field(:type, 1, type: Spiredb.Data.MutationType, enum: true)
+  field(:key, 2, type: :bytes)
+  field(:value, 3, type: :bytes)
 end
 
 defmodule Spiredb.Data.PrewriteRequest do
@@ -1751,11 +1756,11 @@ defmodule Spiredb.Data.PrewriteRequest do
     }
   end
 
-  field :mutations, 1, repeated: true, type: Spiredb.Data.Mutation
-  field :primary_key, 2, type: :bytes, json_name: "primaryKey"
-  field :start_ts, 3, type: :uint64, json_name: "startTs"
-  field :lock_ttl, 4, type: :uint64, json_name: "lockTtl"
-  field :is_pessimistic, 5, type: :bool, json_name: "isPessimistic"
+  field(:mutations, 1, repeated: true, type: Spiredb.Data.Mutation)
+  field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 3, type: :uint64, json_name: "startTs")
+  field(:lock_ttl, 4, type: :uint64, json_name: "lockTtl")
+  field(:is_pessimistic, 5, type: :bool, json_name: "isPessimistic")
 end
 
 defmodule Spiredb.Data.PrewriteResponse do
@@ -1812,8 +1817,8 @@ defmodule Spiredb.Data.PrewriteResponse do
     }
   end
 
-  field :success, 1, type: :bool
-  field :errors, 2, repeated: true, type: Spiredb.Data.KeyError
+  field(:success, 1, type: :bool)
+  field(:errors, 2, repeated: true, type: Spiredb.Data.KeyError)
 end
 
 defmodule Spiredb.Data.KeyError do
@@ -1884,9 +1889,9 @@ defmodule Spiredb.Data.KeyError do
     }
   end
 
-  field :key, 1, type: :bytes
-  field :error, 2, type: :string
-  field :lock_info, 3, type: Spiredb.Data.LockInfo, json_name: "lockInfo"
+  field(:key, 1, type: :bytes)
+  field(:error, 2, type: :string)
+  field(:lock_info, 3, type: Spiredb.Data.LockInfo, json_name: "lockInfo")
 end
 
 defmodule Spiredb.Data.LockInfo do
@@ -1957,9 +1962,9 @@ defmodule Spiredb.Data.LockInfo do
     }
   end
 
-  field :primary_key, 1, type: :bytes, json_name: "primaryKey"
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :ttl, 3, type: :uint64
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:ttl, 3, type: :uint64)
 end
 
 defmodule Spiredb.Data.CommitRequest do
@@ -2072,12 +2077,12 @@ defmodule Spiredb.Data.CommitRequest do
     }
   end
 
-  field :primary_key, 1, type: :bytes, json_name: "primaryKey"
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :commit_ts, 3, type: :uint64, json_name: "commitTs"
-  field :keys, 4, repeated: true, type: :bytes
-  field :read_keys, 10, repeated: true, type: :bytes, json_name: "readKeys"
-  field :write_keys, 11, repeated: true, type: :bytes, json_name: "writeKeys"
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:commit_ts, 3, type: :uint64, json_name: "commitTs")
+  field(:keys, 4, repeated: true, type: :bytes)
+  field(:read_keys, 10, repeated: true, type: :bytes, json_name: "readKeys")
+  field(:write_keys, 11, repeated: true, type: :bytes, json_name: "writeKeys")
 end
 
 defmodule Spiredb.Data.CommitResponse do
@@ -2162,10 +2167,10 @@ defmodule Spiredb.Data.CommitResponse do
     }
   end
 
-  field :success, 1, type: :bool
-  field :commit_ts, 2, type: :uint64, json_name: "commitTs"
-  field :error, 3, type: :string
-  field :conflict, 4, type: Spiredb.Data.ConflictInfo
+  field(:success, 1, type: :bool)
+  field(:commit_ts, 2, type: :uint64, json_name: "commitTs")
+  field(:error, 3, type: :string)
+  field(:conflict, 4, type: Spiredb.Data.ConflictInfo)
 end
 
 defmodule Spiredb.Data.ConflictInfo do
@@ -2236,9 +2241,9 @@ defmodule Spiredb.Data.ConflictInfo do
     }
   end
 
-  field :conflicting_key, 1, type: :bytes, json_name: "conflictingKey"
-  field :conflicting_ts, 2, type: :uint64, json_name: "conflictingTs"
-  field :type, 3, type: Spiredb.Data.ConflictType, enum: true
+  field(:conflicting_key, 1, type: :bytes, json_name: "conflictingKey")
+  field(:conflicting_ts, 2, type: :uint64, json_name: "conflictingTs")
+  field(:type, 3, type: Spiredb.Data.ConflictType, enum: true)
 end
 
 defmodule Spiredb.Data.RollbackRequest do
@@ -2295,8 +2300,8 @@ defmodule Spiredb.Data.RollbackRequest do
     }
   end
 
-  field :start_ts, 1, type: :uint64, json_name: "startTs"
-  field :keys, 2, repeated: true, type: :bytes
+  field(:start_ts, 1, type: :uint64, json_name: "startTs")
+  field(:keys, 2, repeated: true, type: :bytes)
 end
 
 defmodule Spiredb.Data.CheckTxnStatusRequest do
@@ -2353,8 +2358,8 @@ defmodule Spiredb.Data.CheckTxnStatusRequest do
     }
   end
 
-  field :primary_key, 1, type: :bytes, json_name: "primaryKey"
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
 end
 
 defmodule Spiredb.Data.TxnStatus do
@@ -2425,9 +2430,9 @@ defmodule Spiredb.Data.TxnStatus do
     }
   end
 
-  field :state, 1, type: Spiredb.Data.TxnState, enum: true
-  field :commit_ts, 2, type: :uint64, json_name: "commitTs"
-  field :lock_ttl, 3, type: :uint64, json_name: "lockTtl"
+  field(:state, 1, type: Spiredb.Data.TxnState, enum: true)
+  field(:commit_ts, 2, type: :uint64, json_name: "commitTs")
+  field(:lock_ttl, 3, type: :uint64, json_name: "lockTtl")
 end
 
 defmodule Spiredb.Data.ResolveLockRequest do
@@ -2498,9 +2503,9 @@ defmodule Spiredb.Data.ResolveLockRequest do
     }
   end
 
-  field :key, 1, type: :bytes
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :commit_ts, 3, type: :uint64, json_name: "commitTs"
+  field(:key, 1, type: :bytes)
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:commit_ts, 3, type: :uint64, json_name: "commitTs")
 end
 
 defmodule Spiredb.Data.PessimisticLockRequest do
@@ -2585,10 +2590,10 @@ defmodule Spiredb.Data.PessimisticLockRequest do
     }
   end
 
-  field :keys, 1, repeated: true, type: :bytes
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :for_update_ts, 3, type: :uint64, json_name: "forUpdateTs"
-  field :lock_ttl, 4, type: :uint64, json_name: "lockTtl"
+  field(:keys, 1, repeated: true, type: :bytes)
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:for_update_ts, 3, type: :uint64, json_name: "forUpdateTs")
+  field(:lock_ttl, 4, type: :uint64, json_name: "lockTtl")
 end
 
 defmodule Spiredb.Data.PessimisticLockResponse do
@@ -2645,8 +2650,8 @@ defmodule Spiredb.Data.PessimisticLockResponse do
     }
   end
 
-  field :success, 1, type: :bool
-  field :errors, 2, repeated: true, type: Spiredb.Data.KeyError
+  field(:success, 1, type: :bool)
+  field(:errors, 2, repeated: true, type: Spiredb.Data.KeyError)
 end
 
 defmodule Spiredb.Data.VectorIndexCreateRequest.ParamsEntry do
@@ -2714,8 +2719,8 @@ defmodule Spiredb.Data.VectorIndexCreateRequest.ParamsEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Spiredb.Data.VectorIndexCreateRequest do
@@ -2867,15 +2872,16 @@ defmodule Spiredb.Data.VectorIndexCreateRequest do
     }
   end
 
-  field :name, 1, type: :string
-  field :table_name, 2, type: :string, json_name: "tableName"
-  field :column_name, 3, type: :string, json_name: "columnName"
-  field :algorithm, 4, type: :string
+  field(:name, 1, type: :string)
+  field(:table_name, 2, type: :string, json_name: "tableName")
+  field(:column_name, 3, type: :string, json_name: "columnName")
+  field(:algorithm, 4, type: :string)
 
-  field :params, 5,
+  field(:params, 5,
     repeated: true,
     type: Spiredb.Data.VectorIndexCreateRequest.ParamsEntry,
     map: true
+  )
 end
 
 defmodule Spiredb.Data.VectorIndexDropRequest do
@@ -2918,7 +2924,7 @@ defmodule Spiredb.Data.VectorIndexDropRequest do
     }
   end
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Spiredb.Data.VectorInsertRequest do
@@ -3003,10 +3009,10 @@ defmodule Spiredb.Data.VectorInsertRequest do
     }
   end
 
-  field :index_name, 1, type: :string, json_name: "indexName"
-  field :doc_id, 2, type: :bytes, json_name: "docId"
-  field :vector, 3, type: :bytes
-  field :payload, 4, type: :bytes
+  field(:index_name, 1, type: :string, json_name: "indexName")
+  field(:doc_id, 2, type: :bytes, json_name: "docId")
+  field(:vector, 3, type: :bytes)
+  field(:payload, 4, type: :bytes)
 end
 
 defmodule Spiredb.Data.VectorInsertResponse do
@@ -3049,7 +3055,7 @@ defmodule Spiredb.Data.VectorInsertResponse do
     }
   end
 
-  field :internal_id, 1, type: :uint64, json_name: "internalId"
+  field(:internal_id, 1, type: :uint64, json_name: "internalId")
 end
 
 defmodule Spiredb.Data.VectorDeleteRequest do
@@ -3106,8 +3112,8 @@ defmodule Spiredb.Data.VectorDeleteRequest do
     }
   end
 
-  field :index_name, 1, type: :string, json_name: "indexName"
-  field :doc_id, 2, type: :bytes, json_name: "docId"
+  field(:index_name, 1, type: :string, json_name: "indexName")
+  field(:doc_id, 2, type: :bytes, json_name: "docId")
 end
 
 defmodule Spiredb.Data.VectorGetRequest do
@@ -3164,8 +3170,8 @@ defmodule Spiredb.Data.VectorGetRequest do
     }
   end
 
-  field :index_name, 1, type: :string, json_name: "indexName"
-  field :doc_id, 2, type: :bytes, json_name: "docId"
+  field(:index_name, 1, type: :string, json_name: "indexName")
+  field(:doc_id, 2, type: :bytes, json_name: "docId")
 end
 
 defmodule Spiredb.Data.VectorGetResponse do
@@ -3222,8 +3228,8 @@ defmodule Spiredb.Data.VectorGetResponse do
     }
   end
 
-  field :found, 1, type: :bool
-  field :payload, 2, type: :bytes
+  field(:found, 1, type: :bool)
+  field(:payload, 2, type: :bytes)
 end
 
 defmodule Spiredb.Data.VectorSearchRequest do
@@ -3336,12 +3342,12 @@ defmodule Spiredb.Data.VectorSearchRequest do
     }
   end
 
-  field :index_name, 1, type: :string, json_name: "indexName"
-  field :query_vector, 2, type: :bytes, json_name: "queryVector"
-  field :k, 3, type: :uint32
-  field :radius, 4, type: :float
-  field :filter, 5, type: :bytes
-  field :return_payload, 6, type: :bool, json_name: "returnPayload"
+  field(:index_name, 1, type: :string, json_name: "indexName")
+  field(:query_vector, 2, type: :bytes, json_name: "queryVector")
+  field(:k, 3, type: :uint32)
+  field(:radius, 4, type: :float)
+  field(:filter, 5, type: :bytes)
+  field(:return_payload, 6, type: :bool, json_name: "returnPayload")
 end
 
 defmodule Spiredb.Data.VectorSearchResponse do
@@ -3384,7 +3390,7 @@ defmodule Spiredb.Data.VectorSearchResponse do
     }
   end
 
-  field :results, 1, repeated: true, type: Spiredb.Data.VectorResult
+  field(:results, 1, repeated: true, type: Spiredb.Data.VectorResult)
 end
 
 defmodule Spiredb.Data.VectorResult do
@@ -3455,9 +3461,9 @@ defmodule Spiredb.Data.VectorResult do
     }
   end
 
-  field :id, 1, type: :bytes
-  field :distance, 2, type: :float
-  field :payload, 3, type: :bytes
+  field(:id, 1, type: :bytes)
+  field(:distance, 2, type: :float)
+  field(:payload, 3, type: :bytes)
 end
 
 defmodule Spiredb.Data.BatchVectorSearchRequest do
@@ -3542,10 +3548,10 @@ defmodule Spiredb.Data.BatchVectorSearchRequest do
     }
   end
 
-  field :index_name, 1, type: :string, json_name: "indexName"
-  field :query_vectors, 2, repeated: true, type: :bytes, json_name: "queryVectors"
-  field :k, 3, type: :uint32
-  field :return_payload, 4, type: :bool, json_name: "returnPayload"
+  field(:index_name, 1, type: :string, json_name: "indexName")
+  field(:query_vectors, 2, repeated: true, type: :bytes, json_name: "queryVectors")
+  field(:k, 3, type: :uint32)
+  field(:return_payload, 4, type: :bool, json_name: "returnPayload")
 end
 
 defmodule Spiredb.Data.BatchVectorSearchResponse do
@@ -3588,7 +3594,7 @@ defmodule Spiredb.Data.BatchVectorSearchResponse do
     }
   end
 
-  field :results, 1, repeated: true, type: Spiredb.Data.VectorSearchResponse
+  field(:results, 1, repeated: true, type: Spiredb.Data.VectorSearchResponse)
 end
 
 defmodule Spiredb.Data.Empty do
@@ -3723,25 +3729,25 @@ defmodule Spiredb.Data.DataAccess.Service do
     }
   end
 
-  rpc :RawGet, Spiredb.Data.RawGetRequest, Spiredb.Data.RawGetResponse
+  rpc(:RawGet, Spiredb.Data.RawGetRequest, Spiredb.Data.RawGetResponse)
 
-  rpc :RawPut, Spiredb.Data.RawPutRequest, Spiredb.Data.Empty
+  rpc(:RawPut, Spiredb.Data.RawPutRequest, Spiredb.Data.Empty)
 
-  rpc :RawDelete, Spiredb.Data.RawDeleteRequest, Spiredb.Data.Empty
+  rpc(:RawDelete, Spiredb.Data.RawDeleteRequest, Spiredb.Data.Empty)
 
-  rpc :RawScan, Spiredb.Data.RawScanRequest, stream(Spiredb.Data.RawScanResponse)
+  rpc(:RawScan, Spiredb.Data.RawScanRequest, stream(Spiredb.Data.RawScanResponse))
 
-  rpc :RawBatchGet, Spiredb.Data.RawBatchGetRequest, Spiredb.Data.RawBatchGetResponse
+  rpc(:RawBatchGet, Spiredb.Data.RawBatchGetRequest, Spiredb.Data.RawBatchGetResponse)
 
-  rpc :TableScan, Spiredb.Data.TableScanRequest, stream(Spiredb.Data.TableScanResponse)
+  rpc(:TableScan, Spiredb.Data.TableScanRequest, stream(Spiredb.Data.TableScanResponse))
 
-  rpc :TableGet, Spiredb.Data.TableGetRequest, Spiredb.Data.TableGetResponse
+  rpc(:TableGet, Spiredb.Data.TableGetRequest, Spiredb.Data.TableGetResponse)
 
-  rpc :TableInsert, Spiredb.Data.TableInsertRequest, Spiredb.Data.TableInsertResponse
+  rpc(:TableInsert, Spiredb.Data.TableInsertRequest, Spiredb.Data.TableInsertResponse)
 
-  rpc :TableUpdate, Spiredb.Data.TableUpdateRequest, Spiredb.Data.TableUpdateResponse
+  rpc(:TableUpdate, Spiredb.Data.TableUpdateRequest, Spiredb.Data.TableUpdateResponse)
 
-  rpc :TableDelete, Spiredb.Data.TableDeleteRequest, Spiredb.Data.TableDeleteResponse
+  rpc(:TableDelete, Spiredb.Data.TableDeleteRequest, Spiredb.Data.TableDeleteResponse)
 end
 
 defmodule Spiredb.Data.DataAccess.Stub do
@@ -3820,19 +3826,21 @@ defmodule Spiredb.Data.TransactionService.Service do
     }
   end
 
-  rpc :Prewrite, Spiredb.Data.PrewriteRequest, Spiredb.Data.PrewriteResponse
+  rpc(:Prewrite, Spiredb.Data.PrewriteRequest, Spiredb.Data.PrewriteResponse)
 
-  rpc :Commit, Spiredb.Data.CommitRequest, Spiredb.Data.CommitResponse
+  rpc(:Commit, Spiredb.Data.CommitRequest, Spiredb.Data.CommitResponse)
 
-  rpc :Rollback, Spiredb.Data.RollbackRequest, Spiredb.Data.Empty
+  rpc(:Rollback, Spiredb.Data.RollbackRequest, Spiredb.Data.Empty)
 
-  rpc :CheckTxnStatus, Spiredb.Data.CheckTxnStatusRequest, Spiredb.Data.TxnStatus
+  rpc(:CheckTxnStatus, Spiredb.Data.CheckTxnStatusRequest, Spiredb.Data.TxnStatus)
 
-  rpc :ResolveLock, Spiredb.Data.ResolveLockRequest, Spiredb.Data.Empty
+  rpc(:ResolveLock, Spiredb.Data.ResolveLockRequest, Spiredb.Data.Empty)
 
-  rpc :AcquirePessimisticLock,
-      Spiredb.Data.PessimisticLockRequest,
-      Spiredb.Data.PessimisticLockResponse
+  rpc(
+    :AcquirePessimisticLock,
+    Spiredb.Data.PessimisticLockRequest,
+    Spiredb.Data.PessimisticLockResponse
+  )
 end
 
 defmodule Spiredb.Data.TransactionService.Stub do
@@ -3920,19 +3928,19 @@ defmodule Spiredb.Data.VectorService.Service do
     }
   end
 
-  rpc :CreateIndex, Spiredb.Data.VectorIndexCreateRequest, Spiredb.Data.Empty
+  rpc(:CreateIndex, Spiredb.Data.VectorIndexCreateRequest, Spiredb.Data.Empty)
 
-  rpc :DropIndex, Spiredb.Data.VectorIndexDropRequest, Spiredb.Data.Empty
+  rpc(:DropIndex, Spiredb.Data.VectorIndexDropRequest, Spiredb.Data.Empty)
 
-  rpc :Insert, Spiredb.Data.VectorInsertRequest, Spiredb.Data.VectorInsertResponse
+  rpc(:Insert, Spiredb.Data.VectorInsertRequest, Spiredb.Data.VectorInsertResponse)
 
-  rpc :Delete, Spiredb.Data.VectorDeleteRequest, Spiredb.Data.Empty
+  rpc(:Delete, Spiredb.Data.VectorDeleteRequest, Spiredb.Data.Empty)
 
-  rpc :Get, Spiredb.Data.VectorGetRequest, Spiredb.Data.VectorGetResponse
+  rpc(:Get, Spiredb.Data.VectorGetRequest, Spiredb.Data.VectorGetResponse)
 
-  rpc :Search, Spiredb.Data.VectorSearchRequest, Spiredb.Data.VectorSearchResponse
+  rpc(:Search, Spiredb.Data.VectorSearchRequest, Spiredb.Data.VectorSearchResponse)
 
-  rpc :BatchSearch, Spiredb.Data.BatchVectorSearchRequest, Spiredb.Data.BatchVectorSearchResponse
+  rpc(:BatchSearch, Spiredb.Data.BatchVectorSearchRequest, Spiredb.Data.BatchVectorSearchResponse)
 end
 
 defmodule Spiredb.Data.VectorService.Stub do

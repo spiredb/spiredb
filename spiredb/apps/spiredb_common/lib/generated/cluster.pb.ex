@@ -128,24 +128,24 @@ defmodule Spiredb.Cluster.ColumnType do
     }
   end
 
-  field :TYPE_INT8, 0
-  field :TYPE_INT16, 1
-  field :TYPE_INT32, 2
-  field :TYPE_INT64, 3
-  field :TYPE_UINT8, 4
-  field :TYPE_UINT16, 5
-  field :TYPE_UINT32, 6
-  field :TYPE_UINT64, 7
-  field :TYPE_FLOAT32, 8
-  field :TYPE_FLOAT64, 9
-  field :TYPE_BOOL, 10
-  field :TYPE_STRING, 11
-  field :TYPE_BYTES, 12
-  field :TYPE_DATE, 13
-  field :TYPE_TIMESTAMP, 14
-  field :TYPE_DECIMAL, 15
-  field :TYPE_LIST, 16
-  field :TYPE_VECTOR, 17
+  field(:TYPE_INT8, 0)
+  field(:TYPE_INT16, 1)
+  field(:TYPE_INT32, 2)
+  field(:TYPE_INT64, 3)
+  field(:TYPE_UINT8, 4)
+  field(:TYPE_UINT16, 5)
+  field(:TYPE_UINT32, 6)
+  field(:TYPE_UINT64, 7)
+  field(:TYPE_FLOAT32, 8)
+  field(:TYPE_FLOAT64, 9)
+  field(:TYPE_BOOL, 10)
+  field(:TYPE_STRING, 11)
+  field(:TYPE_BYTES, 12)
+  field(:TYPE_DATE, 13)
+  field(:TYPE_TIMESTAMP, 14)
+  field(:TYPE_DECIMAL, 15)
+  field(:TYPE_LIST, 16)
+  field(:TYPE_VECTOR, 17)
 end
 
 defmodule Spiredb.Cluster.IndexType do
@@ -188,9 +188,9 @@ defmodule Spiredb.Cluster.IndexType do
     }
   end
 
-  field :INDEX_BTREE, 0
-  field :INDEX_ANODE, 1
-  field :INDEX_MANODE, 2
+  field(:INDEX_BTREE, 0)
+  field(:INDEX_ANODE, 1)
+  field(:INDEX_MANODE, 2)
 end
 
 defmodule Spiredb.Cluster.PeerRole do
@@ -233,9 +233,9 @@ defmodule Spiredb.Cluster.PeerRole do
     }
   end
 
-  field :PEER_FOLLOWER, 0
-  field :PEER_LEADER, 1
-  field :PEER_LEARNER, 2
+  field(:PEER_FOLLOWER, 0)
+  field(:PEER_LEADER, 1)
+  field(:PEER_LEARNER, 2)
 end
 
 defmodule Spiredb.Cluster.RegionState do
@@ -278,9 +278,9 @@ defmodule Spiredb.Cluster.RegionState do
     }
   end
 
-  field :REGION_ACTIVE, 0
-  field :REGION_SPLITTING, 1
-  field :REGION_MERGING, 2
+  field(:REGION_ACTIVE, 0)
+  field(:REGION_SPLITTING, 1)
+  field(:REGION_MERGING, 2)
 end
 
 defmodule Spiredb.Cluster.StoreState do
@@ -323,9 +323,9 @@ defmodule Spiredb.Cluster.StoreState do
     }
   end
 
-  field :STORE_UP, 0
-  field :STORE_DOWN, 1
-  field :STORE_TOMBSTONE, 2
+  field(:STORE_UP, 0)
+  field(:STORE_DOWN, 1)
+  field(:STORE_TOMBSTONE, 2)
 end
 
 defmodule Spiredb.Cluster.PluginType do
@@ -380,11 +380,11 @@ defmodule Spiredb.Cluster.PluginType do
     }
   end
 
-  field :PLUGIN_INDEX, 0
-  field :PLUGIN_STORAGE, 1
-  field :PLUGIN_FUNCTION, 2
-  field :PLUGIN_PROTOCOL, 3
-  field :PLUGIN_AUTH, 4
+  field(:PLUGIN_INDEX, 0)
+  field(:PLUGIN_STORAGE, 1)
+  field(:PLUGIN_FUNCTION, 2)
+  field(:PLUGIN_PROTOCOL, 3)
+  field(:PLUGIN_AUTH, 4)
 end
 
 defmodule Spiredb.Cluster.PluginState do
@@ -427,9 +427,9 @@ defmodule Spiredb.Cluster.PluginState do
     }
   end
 
-  field :PLUGIN_LOADED, 0
-  field :PLUGIN_ERROR, 1
-  field :PLUGIN_DISABLED, 2
+  field(:PLUGIN_LOADED, 0)
+  field(:PLUGIN_ERROR, 1)
+  field(:PLUGIN_DISABLED, 2)
 end
 
 defmodule Spiredb.Cluster.InternalMutationType do
@@ -466,8 +466,8 @@ defmodule Spiredb.Cluster.InternalMutationType do
     }
   end
 
-  field :INTERNAL_MUTATION_PUT, 0
-  field :INTERNAL_MUTATION_DELETE, 1
+  field(:INTERNAL_MUTATION_PUT, 0)
+  field(:INTERNAL_MUTATION_DELETE, 1)
 end
 
 defmodule Spiredb.Cluster.GetTimestampRequest do
@@ -510,7 +510,7 @@ defmodule Spiredb.Cluster.GetTimestampRequest do
     }
   end
 
-  field :count, 1, type: :uint32
+  field(:count, 1, type: :uint32)
 end
 
 defmodule Spiredb.Cluster.GetTimestampResponse do
@@ -567,8 +567,8 @@ defmodule Spiredb.Cluster.GetTimestampResponse do
     }
   end
 
-  field :start_ts, 1, type: :uint64, json_name: "startTs"
-  field :count, 2, type: :uint32
+  field(:start_ts, 1, type: :uint64, json_name: "startTs")
+  field(:count, 2, type: :uint32)
 end
 
 defmodule Spiredb.Cluster.ColumnDef do
@@ -709,14 +709,14 @@ defmodule Spiredb.Cluster.ColumnDef do
     }
   end
 
-  field :name, 1, type: :string
-  field :type, 2, type: Spiredb.Cluster.ColumnType, enum: true
-  field :nullable, 3, type: :bool
-  field :default_value, 4, type: :bytes, json_name: "defaultValue"
-  field :precision, 5, type: :uint32
-  field :scale, 6, type: :uint32
-  field :vector_dim, 7, type: :uint32, json_name: "vectorDim"
-  field :list_elem, 8, type: Spiredb.Cluster.ColumnType, json_name: "listElem", enum: true
+  field(:name, 1, type: :string)
+  field(:type, 2, type: Spiredb.Cluster.ColumnType, enum: true)
+  field(:nullable, 3, type: :bool)
+  field(:default_value, 4, type: :bytes, json_name: "defaultValue")
+  field(:precision, 5, type: :uint32)
+  field(:scale, 6, type: :uint32)
+  field(:vector_dim, 7, type: :uint32, json_name: "vectorDim")
+  field(:list_elem, 8, type: Spiredb.Cluster.ColumnType, json_name: "listElem", enum: true)
 end
 
 defmodule Spiredb.Cluster.CreateTableRequest do
@@ -787,9 +787,9 @@ defmodule Spiredb.Cluster.CreateTableRequest do
     }
   end
 
-  field :name, 1, type: :string
-  field :columns, 2, repeated: true, type: Spiredb.Cluster.ColumnDef
-  field :primary_key, 3, repeated: true, type: :string, json_name: "primaryKey"
+  field(:name, 1, type: :string)
+  field(:columns, 2, repeated: true, type: Spiredb.Cluster.ColumnDef)
+  field(:primary_key, 3, repeated: true, type: :string, json_name: "primaryKey")
 end
 
 defmodule Spiredb.Cluster.CreateTableResponse do
@@ -832,7 +832,7 @@ defmodule Spiredb.Cluster.CreateTableResponse do
     }
   end
 
-  field :table_id, 1, type: :uint64, json_name: "tableId"
+  field(:table_id, 1, type: :uint64, json_name: "tableId")
 end
 
 defmodule Spiredb.Cluster.DropTableRequest do
@@ -875,7 +875,7 @@ defmodule Spiredb.Cluster.DropTableRequest do
     }
   end
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Spiredb.Cluster.GetTableIdRequest do
@@ -918,7 +918,7 @@ defmodule Spiredb.Cluster.GetTableIdRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
+  field(:table_name, 1, type: :string, json_name: "tableName")
 end
 
 defmodule Spiredb.Cluster.GetTableIdResponse do
@@ -961,7 +961,7 @@ defmodule Spiredb.Cluster.GetTableIdResponse do
     }
   end
 
-  field :table_id, 1, type: :uint64, json_name: "tableId"
+  field(:table_id, 1, type: :uint64, json_name: "tableId")
 end
 
 defmodule Spiredb.Cluster.GetTableRequest do
@@ -1024,10 +1024,10 @@ defmodule Spiredb.Cluster.GetTableRequest do
     }
   end
 
-  oneof :identifier, 0
+  oneof(:identifier, 0)
 
-  field :id, 1, type: :uint64, oneof: 0
-  field :name, 2, type: :string, oneof: 0
+  field(:id, 1, type: :uint64, oneof: 0)
+  field(:name, 2, type: :string, oneof: 0)
 end
 
 defmodule Spiredb.Cluster.TableSchema do
@@ -1140,12 +1140,12 @@ defmodule Spiredb.Cluster.TableSchema do
     }
   end
 
-  field :id, 1, type: :uint64
-  field :name, 2, type: :string
-  field :columns, 3, repeated: true, type: Spiredb.Cluster.ColumnDef
-  field :primary_key, 4, repeated: true, type: :string, json_name: "primaryKey"
-  field :region_prefix, 5, type: :string, json_name: "regionPrefix"
-  field :created_at, 6, type: :uint64, json_name: "createdAt"
+  field(:id, 1, type: :uint64)
+  field(:name, 2, type: :string)
+  field(:columns, 3, repeated: true, type: Spiredb.Cluster.ColumnDef)
+  field(:primary_key, 4, repeated: true, type: :string, json_name: "primaryKey")
+  field(:region_prefix, 5, type: :string, json_name: "regionPrefix")
+  field(:created_at, 6, type: :uint64, json_name: "createdAt")
 end
 
 defmodule Spiredb.Cluster.TableList do
@@ -1188,7 +1188,7 @@ defmodule Spiredb.Cluster.TableList do
     }
   end
 
-  field :tables, 1, repeated: true, type: Spiredb.Cluster.TableSchema
+  field(:tables, 1, repeated: true, type: Spiredb.Cluster.TableSchema)
 end
 
 defmodule Spiredb.Cluster.CreateIndexRequest.ParamsEntry do
@@ -1256,8 +1256,8 @@ defmodule Spiredb.Cluster.CreateIndexRequest.ParamsEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Spiredb.Cluster.CreateIndexRequest do
@@ -1409,15 +1409,16 @@ defmodule Spiredb.Cluster.CreateIndexRequest do
     }
   end
 
-  field :name, 1, type: :string
-  field :table_name, 2, type: :string, json_name: "tableName"
-  field :type, 3, type: Spiredb.Cluster.IndexType, enum: true
-  field :columns, 4, repeated: true, type: :string
+  field(:name, 1, type: :string)
+  field(:table_name, 2, type: :string, json_name: "tableName")
+  field(:type, 3, type: Spiredb.Cluster.IndexType, enum: true)
+  field(:columns, 4, repeated: true, type: :string)
 
-  field :params, 5,
+  field(:params, 5,
     repeated: true,
     type: Spiredb.Cluster.CreateIndexRequest.ParamsEntry,
     map: true
+  )
 end
 
 defmodule Spiredb.Cluster.CreateIndexResponse do
@@ -1460,7 +1461,7 @@ defmodule Spiredb.Cluster.CreateIndexResponse do
     }
   end
 
-  field :index_id, 1, type: :uint64, json_name: "indexId"
+  field(:index_id, 1, type: :uint64, json_name: "indexId")
 end
 
 defmodule Spiredb.Cluster.DropIndexRequest do
@@ -1503,7 +1504,7 @@ defmodule Spiredb.Cluster.DropIndexRequest do
     }
   end
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Spiredb.Cluster.GetIndexRequest do
@@ -1546,7 +1547,7 @@ defmodule Spiredb.Cluster.GetIndexRequest do
     }
   end
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Spiredb.Cluster.IndexSchema.ParamsEntry do
@@ -1614,8 +1615,8 @@ defmodule Spiredb.Cluster.IndexSchema.ParamsEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Spiredb.Cluster.IndexSchema do
@@ -1781,12 +1782,12 @@ defmodule Spiredb.Cluster.IndexSchema do
     }
   end
 
-  field :id, 1, type: :uint64
-  field :name, 2, type: :string
-  field :table_id, 3, type: :uint64, json_name: "tableId"
-  field :type, 4, type: Spiredb.Cluster.IndexType, enum: true
-  field :columns, 5, repeated: true, type: :string
-  field :params, 6, repeated: true, type: Spiredb.Cluster.IndexSchema.ParamsEntry, map: true
+  field(:id, 1, type: :uint64)
+  field(:name, 2, type: :string)
+  field(:table_id, 3, type: :uint64, json_name: "tableId")
+  field(:type, 4, type: Spiredb.Cluster.IndexType, enum: true)
+  field(:columns, 5, repeated: true, type: :string)
+  field(:params, 6, repeated: true, type: Spiredb.Cluster.IndexSchema.ParamsEntry, map: true)
 end
 
 defmodule Spiredb.Cluster.ListIndexesRequest do
@@ -1829,7 +1830,7 @@ defmodule Spiredb.Cluster.ListIndexesRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
+  field(:table_name, 1, type: :string, json_name: "tableName")
 end
 
 defmodule Spiredb.Cluster.IndexList do
@@ -1872,7 +1873,7 @@ defmodule Spiredb.Cluster.IndexList do
     }
   end
 
-  field :indexes, 1, repeated: true, type: Spiredb.Cluster.IndexSchema
+  field(:indexes, 1, repeated: true, type: Spiredb.Cluster.IndexSchema)
 end
 
 defmodule Spiredb.Cluster.GetTableStatsRequest do
@@ -1915,7 +1916,7 @@ defmodule Spiredb.Cluster.GetTableStatsRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
+  field(:table_name, 1, type: :string, json_name: "tableName")
 end
 
 defmodule Spiredb.Cluster.TableStats.ColumnStatsEntry do
@@ -1983,8 +1984,8 @@ defmodule Spiredb.Cluster.TableStats.ColumnStatsEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: Spiredb.Cluster.ColumnStats
+  field(:key, 1, type: :string)
+  field(:value, 2, type: Spiredb.Cluster.ColumnStats)
 end
 
 defmodule Spiredb.Cluster.TableStats do
@@ -2122,15 +2123,16 @@ defmodule Spiredb.Cluster.TableStats do
     }
   end
 
-  field :row_count, 1, type: :uint64, json_name: "rowCount"
-  field :size_bytes, 2, type: :uint64, json_name: "sizeBytes"
-  field :last_updated, 3, type: :uint64, json_name: "lastUpdated"
+  field(:row_count, 1, type: :uint64, json_name: "rowCount")
+  field(:size_bytes, 2, type: :uint64, json_name: "sizeBytes")
+  field(:last_updated, 3, type: :uint64, json_name: "lastUpdated")
 
-  field :column_stats, 4,
+  field(:column_stats, 4,
     repeated: true,
     type: Spiredb.Cluster.TableStats.ColumnStatsEntry,
     json_name: "columnStats",
     map: true
+  )
 end
 
 defmodule Spiredb.Cluster.ColumnStats do
@@ -2243,12 +2245,12 @@ defmodule Spiredb.Cluster.ColumnStats do
     }
   end
 
-  field :distinct_count, 1, type: :uint64, json_name: "distinctCount"
-  field :min_value, 2, type: :bytes, json_name: "minValue"
-  field :max_value, 3, type: :bytes, json_name: "maxValue"
-  field :null_count, 4, type: :uint64, json_name: "nullCount"
-  field :sum_value, 5, type: :bytes, json_name: "sumValue"
-  field :byte_size, 6, type: :uint64, json_name: "byteSize"
+  field(:distinct_count, 1, type: :uint64, json_name: "distinctCount")
+  field(:min_value, 2, type: :bytes, json_name: "minValue")
+  field(:max_value, 3, type: :bytes, json_name: "maxValue")
+  field(:null_count, 4, type: :uint64, json_name: "nullCount")
+  field(:sum_value, 5, type: :bytes, json_name: "sumValue")
+  field(:byte_size, 6, type: :uint64, json_name: "byteSize")
 end
 
 defmodule Spiredb.Cluster.UpdateTableStatsRequest do
@@ -2319,9 +2321,9 @@ defmodule Spiredb.Cluster.UpdateTableStatsRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
-  field :row_count, 2, type: :uint64, json_name: "rowCount"
-  field :size_bytes, 3, type: :uint64, json_name: "sizeBytes"
+  field(:table_name, 1, type: :string, json_name: "tableName")
+  field(:row_count, 2, type: :uint64, json_name: "rowCount")
+  field(:size_bytes, 3, type: :uint64, json_name: "sizeBytes")
 end
 
 defmodule Spiredb.Cluster.GetRegionRequest do
@@ -2364,7 +2366,7 @@ defmodule Spiredb.Cluster.GetRegionRequest do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
 end
 
 defmodule Spiredb.Cluster.GetRegionByKeyRequest do
@@ -2407,7 +2409,7 @@ defmodule Spiredb.Cluster.GetRegionByKeyRequest do
     }
   end
 
-  field :key, 1, type: :bytes
+  field(:key, 1, type: :bytes)
 end
 
 defmodule Spiredb.Cluster.GetTableRegionsRequest do
@@ -2450,7 +2452,7 @@ defmodule Spiredb.Cluster.GetTableRegionsRequest do
     }
   end
 
-  field :table_name, 1, type: :string, json_name: "tableName"
+  field(:table_name, 1, type: :string, json_name: "tableName")
 end
 
 defmodule Spiredb.Cluster.Region do
@@ -2577,13 +2579,13 @@ defmodule Spiredb.Cluster.Region do
     }
   end
 
-  field :id, 1, type: :uint64
-  field :start_key, 2, type: :bytes, json_name: "startKey"
-  field :end_key, 3, type: :bytes, json_name: "endKey"
-  field :peers, 4, repeated: true, type: Spiredb.Cluster.Peer
-  field :leader_store_id, 5, type: :uint64, json_name: "leaderStoreId"
-  field :region_epoch, 6, type: :uint64, json_name: "regionEpoch"
-  field :state, 7, type: Spiredb.Cluster.RegionState, enum: true
+  field(:id, 1, type: :uint64)
+  field(:start_key, 2, type: :bytes, json_name: "startKey")
+  field(:end_key, 3, type: :bytes, json_name: "endKey")
+  field(:peers, 4, repeated: true, type: Spiredb.Cluster.Peer)
+  field(:leader_store_id, 5, type: :uint64, json_name: "leaderStoreId")
+  field(:region_epoch, 6, type: :uint64, json_name: "regionEpoch")
+  field(:state, 7, type: Spiredb.Cluster.RegionState, enum: true)
 end
 
 defmodule Spiredb.Cluster.Peer do
@@ -2640,8 +2642,8 @@ defmodule Spiredb.Cluster.Peer do
     }
   end
 
-  field :store_id, 1, type: :uint64, json_name: "storeId"
-  field :role, 2, type: Spiredb.Cluster.PeerRole, enum: true
+  field(:store_id, 1, type: :uint64, json_name: "storeId")
+  field(:role, 2, type: Spiredb.Cluster.PeerRole, enum: true)
 end
 
 defmodule Spiredb.Cluster.RegionList do
@@ -2684,7 +2686,7 @@ defmodule Spiredb.Cluster.RegionList do
     }
   end
 
-  field :regions, 1, repeated: true, type: Spiredb.Cluster.Region
+  field(:regions, 1, repeated: true, type: Spiredb.Cluster.Region)
 end
 
 defmodule Spiredb.Cluster.GetStoreRequest do
@@ -2727,7 +2729,7 @@ defmodule Spiredb.Cluster.GetStoreRequest do
     }
   end
 
-  field :store_id, 1, type: :uint64, json_name: "storeId"
+  field(:store_id, 1, type: :uint64, json_name: "storeId")
 end
 
 defmodule Spiredb.Cluster.Store.LabelsEntry do
@@ -2795,8 +2797,8 @@ defmodule Spiredb.Cluster.Store.LabelsEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Spiredb.Cluster.Store do
@@ -2990,14 +2992,14 @@ defmodule Spiredb.Cluster.Store do
     }
   end
 
-  field :id, 1, type: :uint64
-  field :address, 2, type: :string
-  field :state, 3, type: Spiredb.Cluster.StoreState, enum: true
-  field :capacity, 4, type: :uint64
-  field :available, 5, type: :uint64
-  field :region_count, 6, type: :uint32, json_name: "regionCount"
-  field :labels, 7, repeated: true, type: Spiredb.Cluster.Store.LabelsEntry, map: true
-  field :is_leader, 8, type: :bool, json_name: "isLeader"
+  field(:id, 1, type: :uint64)
+  field(:address, 2, type: :string)
+  field(:state, 3, type: Spiredb.Cluster.StoreState, enum: true)
+  field(:capacity, 4, type: :uint64)
+  field(:available, 5, type: :uint64)
+  field(:region_count, 6, type: :uint32, json_name: "regionCount")
+  field(:labels, 7, repeated: true, type: Spiredb.Cluster.Store.LabelsEntry, map: true)
+  field(:is_leader, 8, type: :bool, json_name: "isLeader")
 end
 
 defmodule Spiredb.Cluster.StoreList do
@@ -3040,7 +3042,7 @@ defmodule Spiredb.Cluster.StoreList do
     }
   end
 
-  field :stores, 1, repeated: true, type: Spiredb.Cluster.Store
+  field(:stores, 1, repeated: true, type: Spiredb.Cluster.Store)
 end
 
 defmodule Spiredb.Cluster.RegisterStoreRequest.LabelsEntry do
@@ -3108,8 +3110,8 @@ defmodule Spiredb.Cluster.RegisterStoreRequest.LabelsEntry do
     }
   end
 
-  field :key, 1, type: :string
-  field :value, 2, type: :string
+  field(:key, 1, type: :string)
+  field(:value, 2, type: :string)
 end
 
 defmodule Spiredb.Cluster.RegisterStoreRequest do
@@ -3233,13 +3235,14 @@ defmodule Spiredb.Cluster.RegisterStoreRequest do
     }
   end
 
-  field :address, 1, type: :string
-  field :capacity, 2, type: :uint64
+  field(:address, 1, type: :string)
+  field(:capacity, 2, type: :uint64)
 
-  field :labels, 3,
+  field(:labels, 3,
     repeated: true,
     type: Spiredb.Cluster.RegisterStoreRequest.LabelsEntry,
     map: true
+  )
 end
 
 defmodule Spiredb.Cluster.RegisterStoreResponse do
@@ -3282,7 +3285,7 @@ defmodule Spiredb.Cluster.RegisterStoreResponse do
     }
   end
 
-  field :store_id, 1, type: :uint64, json_name: "storeId"
+  field(:store_id, 1, type: :uint64, json_name: "storeId")
 end
 
 defmodule Spiredb.Cluster.StoreHeartbeat do
@@ -3381,15 +3384,16 @@ defmodule Spiredb.Cluster.StoreHeartbeat do
     }
   end
 
-  field :store_id, 1, type: :uint64, json_name: "storeId"
-  field :address, 2, type: :string
-  field :available, 3, type: :uint64
-  field :region_count, 4, type: :uint32, json_name: "regionCount"
+  field(:store_id, 1, type: :uint64, json_name: "storeId")
+  field(:address, 2, type: :string)
+  field(:available, 3, type: :uint64)
+  field(:region_count, 4, type: :uint32, json_name: "regionCount")
 
-  field :region_stats, 5,
+  field(:region_stats, 5,
     repeated: true,
     type: Spiredb.Cluster.RegionStats,
     json_name: "regionStats"
+  )
 end
 
 defmodule Spiredb.Cluster.RegionStats do
@@ -3474,10 +3478,10 @@ defmodule Spiredb.Cluster.RegionStats do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :approximate_size, 2, type: :uint64, json_name: "approximateSize"
-  field :approximate_keys, 3, type: :uint64, json_name: "approximateKeys"
-  field :qps, 4, type: :uint64
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:approximate_size, 2, type: :uint64, json_name: "approximateSize")
+  field(:approximate_keys, 3, type: :uint64, json_name: "approximateKeys")
+  field(:qps, 4, type: :uint64)
 end
 
 defmodule Spiredb.Cluster.StoreHeartbeatResponse do
@@ -3520,7 +3524,7 @@ defmodule Spiredb.Cluster.StoreHeartbeatResponse do
     }
   end
 
-  field :tasks, 1, repeated: true, type: Spiredb.Cluster.ScheduledTask
+  field(:tasks, 1, repeated: true, type: Spiredb.Cluster.ScheduledTask)
 end
 
 defmodule Spiredb.Cluster.ScheduledTask do
@@ -3663,21 +3667,22 @@ defmodule Spiredb.Cluster.ScheduledTask do
     }
   end
 
-  oneof :task, 0
+  oneof(:task, 0)
 
-  field :task_id, 7, type: :uint64, json_name: "taskId"
-  field :leader_epoch, 8, type: :uint64, json_name: "leaderEpoch"
-  field :split, 1, type: Spiredb.Cluster.SplitRegion, oneof: 0
-  field :merge, 2, type: Spiredb.Cluster.MergeRegions, oneof: 0
+  field(:task_id, 7, type: :uint64, json_name: "taskId")
+  field(:leader_epoch, 8, type: :uint64, json_name: "leaderEpoch")
+  field(:split, 1, type: Spiredb.Cluster.SplitRegion, oneof: 0)
+  field(:merge, 2, type: Spiredb.Cluster.MergeRegions, oneof: 0)
 
-  field :transfer_leader, 3,
+  field(:transfer_leader, 3,
     type: Spiredb.Cluster.TransferLeader,
     json_name: "transferLeader",
     oneof: 0
+  )
 
-  field :add_peer, 4, type: Spiredb.Cluster.AddPeer, json_name: "addPeer", oneof: 0
-  field :remove_peer, 5, type: Spiredb.Cluster.RemovePeer, json_name: "removePeer", oneof: 0
-  field :compact, 6, type: Spiredb.Cluster.CompactRegion, oneof: 0
+  field(:add_peer, 4, type: Spiredb.Cluster.AddPeer, json_name: "addPeer", oneof: 0)
+  field(:remove_peer, 5, type: Spiredb.Cluster.RemovePeer, json_name: "removePeer", oneof: 0)
+  field(:compact, 6, type: Spiredb.Cluster.CompactRegion, oneof: 0)
 end
 
 defmodule Spiredb.Cluster.SplitRegion do
@@ -3762,10 +3767,10 @@ defmodule Spiredb.Cluster.SplitRegion do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :split_key, 2, type: :bytes, json_name: "splitKey"
-  field :new_region_id, 3, type: :uint64, json_name: "newRegionId"
-  field :new_peer_id, 4, type: :uint64, json_name: "newPeerId"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:split_key, 2, type: :bytes, json_name: "splitKey")
+  field(:new_region_id, 3, type: :uint64, json_name: "newRegionId")
+  field(:new_peer_id, 4, type: :uint64, json_name: "newPeerId")
 end
 
 defmodule Spiredb.Cluster.MergeRegions do
@@ -3822,8 +3827,8 @@ defmodule Spiredb.Cluster.MergeRegions do
     }
   end
 
-  field :source_region_id, 1, type: :uint64, json_name: "sourceRegionId"
-  field :target_region_id, 2, type: :uint64, json_name: "targetRegionId"
+  field(:source_region_id, 1, type: :uint64, json_name: "sourceRegionId")
+  field(:target_region_id, 2, type: :uint64, json_name: "targetRegionId")
 end
 
 defmodule Spiredb.Cluster.TransferLeader do
@@ -3894,9 +3899,9 @@ defmodule Spiredb.Cluster.TransferLeader do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :from_store_id, 2, type: :uint64, json_name: "fromStoreId"
-  field :to_store_id, 3, type: :uint64, json_name: "toStoreId"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:from_store_id, 2, type: :uint64, json_name: "fromStoreId")
+  field(:to_store_id, 3, type: :uint64, json_name: "toStoreId")
 end
 
 defmodule Spiredb.Cluster.AddPeer do
@@ -3981,10 +3986,10 @@ defmodule Spiredb.Cluster.AddPeer do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :store_id, 2, type: :uint64, json_name: "storeId"
-  field :peer_id, 3, type: :uint64, json_name: "peerId"
-  field :is_learner, 4, type: :bool, json_name: "isLearner"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:store_id, 2, type: :uint64, json_name: "storeId")
+  field(:peer_id, 3, type: :uint64, json_name: "peerId")
+  field(:is_learner, 4, type: :bool, json_name: "isLearner")
 end
 
 defmodule Spiredb.Cluster.RemovePeer do
@@ -4055,9 +4060,9 @@ defmodule Spiredb.Cluster.RemovePeer do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :store_id, 2, type: :uint64, json_name: "storeId"
-  field :peer_id, 3, type: :uint64, json_name: "peerId"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:store_id, 2, type: :uint64, json_name: "storeId")
+  field(:peer_id, 3, type: :uint64, json_name: "peerId")
 end
 
 defmodule Spiredb.Cluster.CompactRegion do
@@ -4128,9 +4133,9 @@ defmodule Spiredb.Cluster.CompactRegion do
     }
   end
 
-  field :region_id, 1, type: :uint64, json_name: "regionId"
-  field :start_key, 2, type: :bytes, json_name: "startKey"
-  field :end_key, 3, type: :bytes, json_name: "endKey"
+  field(:region_id, 1, type: :uint64, json_name: "regionId")
+  field(:start_key, 2, type: :bytes, json_name: "startKey")
+  field(:end_key, 3, type: :bytes, json_name: "endKey")
 end
 
 defmodule Spiredb.Cluster.InstallPluginRequest do
@@ -4207,11 +4212,11 @@ defmodule Spiredb.Cluster.InstallPluginRequest do
     }
   end
 
-  oneof :source, 0
+  oneof(:source, 0)
 
-  field :hex_package, 1, type: :string, json_name: "hexPackage", oneof: 0
-  field :github_repo, 2, type: :string, json_name: "githubRepo", oneof: 0
-  field :tarball, 3, type: :bytes, oneof: 0
+  field(:hex_package, 1, type: :string, json_name: "hexPackage", oneof: 0)
+  field(:github_repo, 2, type: :string, json_name: "githubRepo", oneof: 0)
+  field(:tarball, 3, type: :bytes, oneof: 0)
 end
 
 defmodule Spiredb.Cluster.InstallPluginResponse do
@@ -4268,8 +4273,8 @@ defmodule Spiredb.Cluster.InstallPluginResponse do
     }
   end
 
-  field :name, 1, type: :string
-  field :version, 2, type: :string
+  field(:name, 1, type: :string)
+  field(:version, 2, type: :string)
 end
 
 defmodule Spiredb.Cluster.UninstallPluginRequest do
@@ -4312,7 +4317,7 @@ defmodule Spiredb.Cluster.UninstallPluginRequest do
     }
   end
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Spiredb.Cluster.PluginInfo do
@@ -4411,11 +4416,11 @@ defmodule Spiredb.Cluster.PluginInfo do
     }
   end
 
-  field :name, 1, type: :string
-  field :version, 2, type: :string
-  field :type, 3, type: Spiredb.Cluster.PluginType, enum: true
-  field :has_nif, 4, type: :bool, json_name: "hasNif"
-  field :state, 5, type: Spiredb.Cluster.PluginState, enum: true
+  field(:name, 1, type: :string)
+  field(:version, 2, type: :string)
+  field(:type, 3, type: Spiredb.Cluster.PluginType, enum: true)
+  field(:has_nif, 4, type: :bool, json_name: "hasNif")
+  field(:state, 5, type: Spiredb.Cluster.PluginState, enum: true)
 end
 
 defmodule Spiredb.Cluster.PluginList do
@@ -4458,7 +4463,7 @@ defmodule Spiredb.Cluster.PluginList do
     }
   end
 
-  field :plugins, 1, repeated: true, type: Spiredb.Cluster.PluginInfo
+  field(:plugins, 1, repeated: true, type: Spiredb.Cluster.PluginInfo)
 end
 
 defmodule Spiredb.Cluster.ReloadPluginRequest do
@@ -4501,7 +4506,7 @@ defmodule Spiredb.Cluster.ReloadPluginRequest do
     }
   end
 
-  field :name, 1, type: :string
+  field(:name, 1, type: :string)
 end
 
 defmodule Spiredb.Cluster.AsyncPrewriteRequest do
@@ -4628,13 +4633,13 @@ defmodule Spiredb.Cluster.AsyncPrewriteRequest do
     }
   end
 
-  field :mutations, 1, repeated: true, type: Spiredb.Cluster.InternalMutation
-  field :primary_key, 2, type: :bytes, json_name: "primaryKey"
-  field :secondary_keys, 3, repeated: true, type: :bytes, json_name: "secondaryKeys"
-  field :start_ts, 4, type: :uint64, json_name: "startTs"
-  field :min_commit_ts, 5, type: :uint64, json_name: "minCommitTs"
-  field :lock_ttl, 6, type: :uint64, json_name: "lockTtl"
-  field :txn_id, 7, type: :bytes, json_name: "txnId"
+  field(:mutations, 1, repeated: true, type: Spiredb.Cluster.InternalMutation)
+  field(:primary_key, 2, type: :bytes, json_name: "primaryKey")
+  field(:secondary_keys, 3, repeated: true, type: :bytes, json_name: "secondaryKeys")
+  field(:start_ts, 4, type: :uint64, json_name: "startTs")
+  field(:min_commit_ts, 5, type: :uint64, json_name: "minCommitTs")
+  field(:lock_ttl, 6, type: :uint64, json_name: "lockTtl")
+  field(:txn_id, 7, type: :bytes, json_name: "txnId")
 end
 
 defmodule Spiredb.Cluster.InternalMutation do
@@ -4705,9 +4710,9 @@ defmodule Spiredb.Cluster.InternalMutation do
     }
   end
 
-  field :type, 1, type: Spiredb.Cluster.InternalMutationType, enum: true
-  field :key, 2, type: :bytes
-  field :value, 3, type: :bytes
+  field(:type, 1, type: Spiredb.Cluster.InternalMutationType, enum: true)
+  field(:key, 2, type: :bytes)
+  field(:value, 3, type: :bytes)
 end
 
 defmodule Spiredb.Cluster.AsyncPrewriteResponse do
@@ -4778,9 +4783,9 @@ defmodule Spiredb.Cluster.AsyncPrewriteResponse do
     }
   end
 
-  field :success, 1, type: :bool
-  field :errors, 2, repeated: true, type: Spiredb.Cluster.InternalKeyError
-  field :actual_min_commit_ts, 3, type: :uint64, json_name: "actualMinCommitTs"
+  field(:success, 1, type: :bool)
+  field(:errors, 2, repeated: true, type: Spiredb.Cluster.InternalKeyError)
+  field(:actual_min_commit_ts, 3, type: :uint64, json_name: "actualMinCommitTs")
 end
 
 defmodule Spiredb.Cluster.InternalKeyError do
@@ -4851,9 +4856,9 @@ defmodule Spiredb.Cluster.InternalKeyError do
     }
   end
 
-  field :key, 1, type: :bytes
-  field :error, 2, type: :string
-  field :lock_info, 3, type: Spiredb.Cluster.InternalLockInfo, json_name: "lockInfo"
+  field(:key, 1, type: :bytes)
+  field(:error, 2, type: :string)
+  field(:lock_info, 3, type: Spiredb.Cluster.InternalLockInfo, json_name: "lockInfo")
 end
 
 defmodule Spiredb.Cluster.InternalLockInfo do
@@ -4924,9 +4929,9 @@ defmodule Spiredb.Cluster.InternalLockInfo do
     }
   end
 
-  field :primary_key, 1, type: :bytes, json_name: "primaryKey"
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :ttl, 3, type: :uint64
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:ttl, 3, type: :uint64)
 end
 
 defmodule Spiredb.Cluster.CheckSecondaryLocksRequest do
@@ -4997,9 +5002,9 @@ defmodule Spiredb.Cluster.CheckSecondaryLocksRequest do
     }
   end
 
-  field :primary_key, 1, type: :bytes, json_name: "primaryKey"
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :secondary_keys, 3, repeated: true, type: :bytes, json_name: "secondaryKeys"
+  field(:primary_key, 1, type: :bytes, json_name: "primaryKey")
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:secondary_keys, 3, repeated: true, type: :bytes, json_name: "secondaryKeys")
 end
 
 defmodule Spiredb.Cluster.CheckSecondaryLocksResponse do
@@ -5042,7 +5047,7 @@ defmodule Spiredb.Cluster.CheckSecondaryLocksResponse do
     }
   end
 
-  field :statuses, 1, repeated: true, type: Spiredb.Cluster.SecondaryLockStatus
+  field(:statuses, 1, repeated: true, type: Spiredb.Cluster.SecondaryLockStatus)
 end
 
 defmodule Spiredb.Cluster.SecondaryLockStatus do
@@ -5127,10 +5132,10 @@ defmodule Spiredb.Cluster.SecondaryLockStatus do
     }
   end
 
-  field :key, 1, type: :bytes
-  field :locked, 2, type: :bool
-  field :committed, 3, type: :bool
-  field :commit_ts, 4, type: :uint64, json_name: "commitTs"
+  field(:key, 1, type: :bytes)
+  field(:locked, 2, type: :bool)
+  field(:committed, 3, type: :bool)
+  field(:commit_ts, 4, type: :uint64, json_name: "commitTs")
 end
 
 defmodule Spiredb.Cluster.InternalResolveLockRequest do
@@ -5201,9 +5206,9 @@ defmodule Spiredb.Cluster.InternalResolveLockRequest do
     }
   end
 
-  field :key, 1, type: :bytes
-  field :start_ts, 2, type: :uint64, json_name: "startTs"
-  field :commit_ts, 3, type: :uint64, json_name: "commitTs"
+  field(:key, 1, type: :bytes)
+  field(:start_ts, 2, type: :uint64, json_name: "startTs")
+  field(:commit_ts, 3, type: :uint64, json_name: "commitTs")
 end
 
 defmodule Spiredb.Cluster.Empty do
@@ -5257,7 +5262,7 @@ defmodule Spiredb.Cluster.TSOService.Service do
     }
   end
 
-  rpc :GetTimestamp, Spiredb.Cluster.GetTimestampRequest, Spiredb.Cluster.GetTimestampResponse
+  rpc(:GetTimestamp, Spiredb.Cluster.GetTimestampRequest, Spiredb.Cluster.GetTimestampResponse)
 end
 
 defmodule Spiredb.Cluster.TSOService.Stub do
@@ -5381,27 +5386,27 @@ defmodule Spiredb.Cluster.SchemaService.Service do
     }
   end
 
-  rpc :CreateTable, Spiredb.Cluster.CreateTableRequest, Spiredb.Cluster.CreateTableResponse
+  rpc(:CreateTable, Spiredb.Cluster.CreateTableRequest, Spiredb.Cluster.CreateTableResponse)
 
-  rpc :DropTable, Spiredb.Cluster.DropTableRequest, Spiredb.Cluster.Empty
+  rpc(:DropTable, Spiredb.Cluster.DropTableRequest, Spiredb.Cluster.Empty)
 
-  rpc :GetTable, Spiredb.Cluster.GetTableRequest, Spiredb.Cluster.TableSchema
+  rpc(:GetTable, Spiredb.Cluster.GetTableRequest, Spiredb.Cluster.TableSchema)
 
-  rpc :ListTables, Spiredb.Cluster.Empty, Spiredb.Cluster.TableList
+  rpc(:ListTables, Spiredb.Cluster.Empty, Spiredb.Cluster.TableList)
 
-  rpc :GetTableId, Spiredb.Cluster.GetTableIdRequest, Spiredb.Cluster.GetTableIdResponse
+  rpc(:GetTableId, Spiredb.Cluster.GetTableIdRequest, Spiredb.Cluster.GetTableIdResponse)
 
-  rpc :CreateIndex, Spiredb.Cluster.CreateIndexRequest, Spiredb.Cluster.CreateIndexResponse
+  rpc(:CreateIndex, Spiredb.Cluster.CreateIndexRequest, Spiredb.Cluster.CreateIndexResponse)
 
-  rpc :DropIndex, Spiredb.Cluster.DropIndexRequest, Spiredb.Cluster.Empty
+  rpc(:DropIndex, Spiredb.Cluster.DropIndexRequest, Spiredb.Cluster.Empty)
 
-  rpc :GetIndex, Spiredb.Cluster.GetIndexRequest, Spiredb.Cluster.IndexSchema
+  rpc(:GetIndex, Spiredb.Cluster.GetIndexRequest, Spiredb.Cluster.IndexSchema)
 
-  rpc :ListIndexes, Spiredb.Cluster.ListIndexesRequest, Spiredb.Cluster.IndexList
+  rpc(:ListIndexes, Spiredb.Cluster.ListIndexesRequest, Spiredb.Cluster.IndexList)
 
-  rpc :GetTableStats, Spiredb.Cluster.GetTableStatsRequest, Spiredb.Cluster.TableStats
+  rpc(:GetTableStats, Spiredb.Cluster.GetTableStatsRequest, Spiredb.Cluster.TableStats)
 
-  rpc :UpdateTableStats, Spiredb.Cluster.UpdateTableStatsRequest, Spiredb.Cluster.Empty
+  rpc(:UpdateTableStats, Spiredb.Cluster.UpdateTableStatsRequest, Spiredb.Cluster.Empty)
 end
 
 defmodule Spiredb.Cluster.SchemaService.Stub do
@@ -5489,19 +5494,19 @@ defmodule Spiredb.Cluster.ClusterService.Service do
     }
   end
 
-  rpc :GetRegion, Spiredb.Cluster.GetRegionRequest, Spiredb.Cluster.Region
+  rpc(:GetRegion, Spiredb.Cluster.GetRegionRequest, Spiredb.Cluster.Region)
 
-  rpc :GetRegionByKey, Spiredb.Cluster.GetRegionByKeyRequest, Spiredb.Cluster.Region
+  rpc(:GetRegionByKey, Spiredb.Cluster.GetRegionByKeyRequest, Spiredb.Cluster.Region)
 
-  rpc :GetTableRegions, Spiredb.Cluster.GetTableRegionsRequest, Spiredb.Cluster.RegionList
+  rpc(:GetTableRegions, Spiredb.Cluster.GetTableRegionsRequest, Spiredb.Cluster.RegionList)
 
-  rpc :GetStore, Spiredb.Cluster.GetStoreRequest, Spiredb.Cluster.Store
+  rpc(:GetStore, Spiredb.Cluster.GetStoreRequest, Spiredb.Cluster.Store)
 
-  rpc :ListStores, Spiredb.Cluster.Empty, Spiredb.Cluster.StoreList
+  rpc(:ListStores, Spiredb.Cluster.Empty, Spiredb.Cluster.StoreList)
 
-  rpc :RegisterStore, Spiredb.Cluster.RegisterStoreRequest, Spiredb.Cluster.RegisterStoreResponse
+  rpc(:RegisterStore, Spiredb.Cluster.RegisterStoreRequest, Spiredb.Cluster.RegisterStoreResponse)
 
-  rpc :Heartbeat, Spiredb.Cluster.StoreHeartbeat, Spiredb.Cluster.StoreHeartbeatResponse
+  rpc(:Heartbeat, Spiredb.Cluster.StoreHeartbeat, Spiredb.Cluster.StoreHeartbeatResponse)
 end
 
 defmodule Spiredb.Cluster.ClusterService.Stub do
@@ -5562,13 +5567,13 @@ defmodule Spiredb.Cluster.PluginService.Service do
     }
   end
 
-  rpc :InstallPlugin, Spiredb.Cluster.InstallPluginRequest, Spiredb.Cluster.InstallPluginResponse
+  rpc(:InstallPlugin, Spiredb.Cluster.InstallPluginRequest, Spiredb.Cluster.InstallPluginResponse)
 
-  rpc :UninstallPlugin, Spiredb.Cluster.UninstallPluginRequest, Spiredb.Cluster.Empty
+  rpc(:UninstallPlugin, Spiredb.Cluster.UninstallPluginRequest, Spiredb.Cluster.Empty)
 
-  rpc :ListPlugins, Spiredb.Cluster.Empty, Spiredb.Cluster.PluginList
+  rpc(:ListPlugins, Spiredb.Cluster.Empty, Spiredb.Cluster.PluginList)
 
-  rpc :ReloadPlugin, Spiredb.Cluster.ReloadPluginRequest, Spiredb.Cluster.Empty
+  rpc(:ReloadPlugin, Spiredb.Cluster.ReloadPluginRequest, Spiredb.Cluster.Empty)
 end
 
 defmodule Spiredb.Cluster.PluginService.Stub do
@@ -5622,13 +5627,15 @@ defmodule Spiredb.Cluster.InternalTransactionService.Service do
     }
   end
 
-  rpc :AsyncPrewrite, Spiredb.Cluster.AsyncPrewriteRequest, Spiredb.Cluster.AsyncPrewriteResponse
+  rpc(:AsyncPrewrite, Spiredb.Cluster.AsyncPrewriteRequest, Spiredb.Cluster.AsyncPrewriteResponse)
 
-  rpc :CheckSecondaryLocks,
-      Spiredb.Cluster.CheckSecondaryLocksRequest,
-      Spiredb.Cluster.CheckSecondaryLocksResponse
+  rpc(
+    :CheckSecondaryLocks,
+    Spiredb.Cluster.CheckSecondaryLocksRequest,
+    Spiredb.Cluster.CheckSecondaryLocksResponse
+  )
 
-  rpc :ResolveLock, Spiredb.Cluster.InternalResolveLockRequest, Spiredb.Cluster.Empty
+  rpc(:ResolveLock, Spiredb.Cluster.InternalResolveLockRequest, Spiredb.Cluster.Empty)
 end
 
 defmodule Spiredb.Cluster.InternalTransactionService.Stub do
