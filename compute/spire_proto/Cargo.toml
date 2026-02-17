@@ -1,6 +1,6 @@
 [package]
 name = "spire_proto"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2024"
 description = "Protocol buffer definitions for SpireDB"
 license = "AGPL-3.0-only"
