@@ -5,13 +5,17 @@ use std::marker::PhantomData;
 use spire_proto::spiredb::cluster::{
     ColumnDef, ColumnType, CreateTableRequest, schema_service_client::SchemaServiceClient,
 };
-use spiresql::vector::types::{Algorithm, IndexParams, SearchOptions};
+use spiresql::vector::types::{Algorithm, IndexParams};
 
 use crate::client::Spire;
 use crate::document::Doc;
 use crate::error::{Error, Result};
 use crate::search::{Filter, Search};
 use crate::watch::WatchStream;
+
+fn doc_cache_key(collection: &str, id: &str) -> u64 {
+    ahash::RandomState::with_seeds(0, 0, 0, 0).hash_one((collection, id))
+}
 
 /// A typed document collection stored in SpireDB.
 ///
@@ -127,6 +131,13 @@ impl<T: Doc> Collection<T> {
         let doc_json = serde_json::to_vec(doc)?;
         let embed_text = doc.embed_text();
 
+        // Cache the doc for later get() lookups
+        let cache_key = doc_cache_key(&self.name, &id);
+        self.spire
+            .inner
+            .doc_cache
+            .insert(cache_key, doc_json.clone());
+
         // Generate embedding if text is non-empty
         let embedding = if !embed_text.is_empty() {
             Some(self.spire.inner.embedder.embed(&embed_text).await?)
@@ -170,6 +181,14 @@ impl<T: Doc> Collection<T> {
 
         for (i, doc) in docs.iter().enumerate() {
             let doc_json = serde_json::to_vec(doc)?;
+
+            // Cache the doc
+            let cache_key = doc_cache_key(&self.name, &ids[i]);
+            self.spire
+                .inner
+                .doc_cache
+                .insert(cache_key, doc_json.clone());
+
             if !texts[i].is_empty()
                 && let Some(vec) = embed_iter.next()
             {
@@ -202,6 +221,10 @@ impl<T: Doc> Collection<T> {
 
     /// Delete a document by ID.
     pub async fn delete(&self, id: &str) -> Result<bool> {
+        // Remove from cache
+        let cache_key = doc_cache_key(&self.name, id);
+        self.spire.inner.doc_cache.remove(&cache_key);
+
         match self
             .spire
             .inner
@@ -215,30 +238,39 @@ impl<T: Doc> Collection<T> {
         }
     }
 
-    /// Get a document by ID from the vector payload.
-    pub async fn get(&self, _id: &str) -> Result<Option<T>> {
-        // Search for the exact doc by doing a vector lookup
-        // Since we store the full doc JSON as payload, we can retrieve it
-        let results = self
+    /// Get a document by ID.
+    ///
+    /// Checks the in-memory cache first, then falls back to a VectorGet RPC
+    /// to retrieve the payload from SpireDB.
+    pub async fn get(&self, id: &str) -> Result<Option<T>> {
+        // Fast path: check in-memory cache
+        let cache_key = doc_cache_key(&self.name, id);
+        if let Some(bytes) = self.spire.inner.doc_cache.get(&cache_key)
+            && let Ok(doc) = serde_json::from_slice::<T>(&bytes)
+        {
+            return Ok(Some(doc));
+        }
+
+        // Slow path: fetch from SpireDB via VectorGet RPC
+        match self
             .spire
             .inner
             .vector
-            .search(
-                &self.index_name(),
-                &[], // empty query — we use filter
-                SearchOptions::default().k(1).with_payload(),
-            )
-            .await;
-
-        // For now, get uses a search with return_payload. A proper implementation
-        // would use the DataAccess TableGet RPC.
-        // TODO: Implement direct table get via DataAccessClient
-        match results {
-            Ok(_results) => {
-                // We can't do point-lookup via vector search. For now, return None.
-                // This will be implemented properly with the DataAccess gRPC client.
-                Ok(None)
+            .get(&self.index_name(), id.as_bytes())
+            .await
+        {
+            Ok(Some(payload)) => {
+                // Cache for next time
+                self.spire
+                    .inner
+                    .doc_cache
+                    .insert(cache_key, payload.clone());
+                match serde_json::from_slice::<T>(&payload) {
+                    Ok(doc) => Ok(Some(doc)),
+                    Err(_) => Ok(None),
+                }
             }
+            Ok(None) => Ok(None),
             Err(_) => Ok(None),
         }
     }

@@ -4025,7 +4025,7 @@ dependencies = [
 
 [[package]]
 name = "spire-ai"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ahash 0.8.12",
  "async-stream",
@@ -4070,7 +4070,7 @@ dependencies = [
 
 [[package]]
 name = "spire-ai-macros"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -4079,7 +4079,7 @@ dependencies = [
 
 [[package]]
 name = "spire-cli"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "clap",
@@ -4094,7 +4094,7 @@ dependencies = [
 
 [[package]]
 name = "spire_common"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "anyhow",
  "config",
@@ -4107,7 +4107,7 @@ dependencies = [
 
 [[package]]
 name = "spire_proto"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "prost",
  "prost-types",
@@ -4119,7 +4119,7 @@ dependencies = [
 
 [[package]]
 name = "spiresql"
-version = "0.1.1"
+version = "0.1.2"
 dependencies = [
  "ahash 0.8.12",
  "anyhow",

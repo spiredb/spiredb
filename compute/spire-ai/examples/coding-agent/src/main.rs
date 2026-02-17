@@ -123,6 +123,7 @@ struct Agent {
     session: Session,
     project_dir: String,
     file_cache: FileCache,
+    last_plan_id: Option<String>,
 }
 
 impl Agent {
@@ -138,12 +139,16 @@ impl Agent {
 
         let agent_id = "coding-agent";
 
-        // Set up collections
-        let code_index = spire.code("project");
-        let memory = spire.memory(agent_id);
-        let sessions: Collection<Session> = spire.collection("sessions");
-        let turns: Collection<ConversationTurn> = spire.collection("turns");
-        let plans: Collection<Plan> = spire.collection("plans");
+        // Derive a project key for per-project isolation
+        let project_key = project_key(&cli.project);
+        println!("Project key: {}", project_key);
+
+        // Set up collections — namespaced per project
+        let code_index = spire.code(&format!("{project_key}_code"));
+        let memory = spire.memory(&format!("{project_key}_{agent_id}"));
+        let sessions: Collection<Session> = spire.collection(&format!("{project_key}_sessions"));
+        let turns: Collection<ConversationTurn> = spire.collection(&format!("{project_key}_turns"));
+        let plans: Collection<Plan> = spire.collection(&format!("{project_key}_plans"));
 
         // Ensure backing storage exists
         code_index.ensure().await?;
@@ -187,6 +192,7 @@ impl Agent {
             session,
             project_dir: cli.project.clone(),
             file_cache: FileCache::new(),
+            last_plan_id: None,
         })
     }
 
@@ -393,18 +399,28 @@ Commands:
 
         println!("Analyzing codebase for: {}...", task);
 
-        // Step 1: Search for relevant code
-        let hits = self.code_index.search(task).await?;
-        let context = self
-            .code_index
-            .context(task)
-            .max_tokens(6000)
-            .max_chunks(15)
-            .build()
-            .await?;
+        // Step 1: Search for relevant code (graceful if index not built yet)
+        let (hits, context_text) = match self.code_index.search(task).await {
+            Ok(h) => {
+                let ctx = self
+                    .code_index
+                    .context(task)
+                    .max_tokens(6000)
+                    .max_chunks(15)
+                    .build()
+                    .await
+                    .map(|c| c.text)
+                    .unwrap_or_default();
+                (h, ctx)
+            }
+            Err(_) => {
+                println!("(code index not built — run /index first for better plans)");
+                (vec![], String::new())
+            }
+        };
 
-        // Step 2: Recall relevant memories
-        let memories = self.memory.recall_limit(task, 5).await?;
+        // Step 2: Recall relevant memories (graceful if collection not ready)
+        let memories = self.memory.recall_limit(task, 5).await.unwrap_or_default();
         let memory_ctx = if memories.is_empty() {
             String::new()
         } else {
@@ -412,25 +428,31 @@ Commands:
             format!("\n\nRelevant memories:\n{}", items.join("\n"))
         };
 
-        // Step 3: Ask LLM to create plan
+        // Step 3: Detect project type
+        let project_type = detect_project_type(&self.project_dir);
+
+        // Step 4: Ask LLM to create plan
         let llm = self.spire.llm().ok_or(spire_ai::Error::NoLlm)?;
 
-        let system = "You are a senior software engineer creating an implementation plan. \
-                       Analyze the code context and create a detailed step-by-step plan. \
-                       For each step, specify:\n\
-                       - description: what to do\n\
-                       - file: which file to modify (relative path)\n\
-                       - action: one of ReadFile, EditFile, CreateFile, DeleteLines, SearchCode\n\
-                       - detail: specific changes (old code -> new code, or what to add)\n\n\
-                       Return the plan as a JSON array of steps:\n\
-                       [{\"description\": \"...\", \"file\": \"...\", \"action\": \"...\", \"detail\": \"...\"}]\n\n\
-                       ONLY return the JSON array, no other text.";
+        let system = format!(
+            "You are a senior software engineer creating an implementation plan.\n\
+             This is a {project_type} project. All code you generate MUST use {project_type} conventions.\n\n\
+             Analyze the code context and create a detailed step-by-step plan.\n\
+             For each step, specify:\n\
+             - description: what to do\n\
+             - file: which file to modify (relative path, using correct extensions for {project_type})\n\
+             - action: one of ReadFile, EditFile, CreateFile, DeleteLines, SearchCode\n\
+             - detail: specific changes (old code -> new code, or what to add)\n\n\
+             Return the plan as a JSON array of steps:\n\
+             [{{\"description\": \"...\", \"file\": \"...\", \"action\": \"...\", \"detail\": \"...\"}}]\n\n\
+             ONLY return the JSON array, no other text."
+        );
 
         let user = format!(
-            "Task: {task}\n\nCode context:\n{}{memory_ctx}\n\n\
+            "Project type: {project_type}\nTask: {task}\n\nCode context:\n{}{memory_ctx}\n\n\
              Files found:\n{}\n\n\
              Create a step-by-step implementation plan (JSON array):",
-            context.text,
+            context_text,
             hits.iter()
                 .map(|h| format!("  - {} ({}:{}-{})", h.chunk.file, h.chunk.name.as_deref().unwrap_or("?"), h.chunk.start_line, h.chunk.end_line))
                 .collect::<Vec<_>>()
@@ -438,7 +460,7 @@ Commands:
         );
 
         println!("Generating plan...");
-        let response = llm.generate_with_system(system, &user).await?;
+        let response = llm.generate_with_system(&system, &user).await?;
 
         // Parse steps from LLM response
         let steps: Vec<PlanStep> = match serde_json::from_str(&response) {
@@ -497,62 +519,50 @@ Commands:
             created_at: Utc::now().to_rfc3339(),
         };
 
-        // Print plan
-        println!("\n--- Plan: {} ---", plan.id);
-        println!("Task: {}\n", plan.task);
-        for (i, step) in steps.iter().enumerate() {
-            println!(
-                "  Step {}: [{}] {}",
-                i + 1,
-                step.action,
-                step.description
-            );
-            if !step.file.is_empty() {
-                println!("    File: {}", step.file);
-            }
-            if !step.detail.is_empty() {
-                let detail_preview = if step.detail.len() > 120 {
-                    format!("{}...", &step.detail[..120])
-                } else {
-                    step.detail.clone()
-                };
-                println!("    Detail: {}", detail_preview);
-            }
-        }
-        println!("---\n");
-
         // Store plan
         self.plans.insert(&plan).await?;
+        self.last_plan_id = Some(plan.id.clone());
         self.memory
             .remember(&format!("Created plan '{}' for task: {}", plan.id, task))
             .await?;
 
+        // Render plan as TODO list
+        print_plan_todo(&plan, &steps);
         println!("Plan saved. Use /execute to run it.");
 
         Ok(())
     }
 
     async fn cmd_plans(&self) -> spire_ai::Result<()> {
-        let results = self
-            .plans
-            .search(&self.session.id)
-            .limit(20)
-            .run()
-            .await?;
+        // Search broadly and filter by session_id
+        let results = match self.plans.search("plan").limit(50).run().await {
+            Ok(r) => r,
+            Err(_) => {
+                println!("No plans for this session.");
+                return Ok(());
+            }
+        };
 
-        if results.is_empty() {
+        let session_plans: Vec<_> = results
+            .into_iter()
+            .filter(|hit| hit.doc.session_id == self.session.id)
+            .collect();
+
+        if session_plans.is_empty() {
             println!("No plans for this session.");
             return Ok(());
         }
 
         println!("Plans:\n");
-        for hit in &results {
-            let step_count: usize = serde_json::from_str::<Vec<PlanStep>>(&hit.doc.steps)
-                .map(|s| s.len())
-                .unwrap_or(0);
+        for hit in &session_plans {
+            let steps: Vec<PlanStep> =
+                serde_json::from_str(&hit.doc.steps).unwrap_or_default();
+            let done = steps.iter().filter(|s| s.status == "done").count();
+            let total = steps.len();
+            let marker = if done == total && total > 0 { "done" } else { &hit.doc.status };
             println!(
-                "  [{}] {} — {} ({} steps)",
-                hit.doc.status, hit.doc.id, hit.doc.task, step_count
+                "  [{}] {} — {} ({}/{} steps done)",
+                marker, &hit.doc.id[..8], hit.doc.task, done, total
             );
         }
         println!();
@@ -561,30 +571,24 @@ Commands:
     }
 
     async fn cmd_execute(&mut self, plan_id: &str) -> spire_ai::Result<()> {
-        // Find the plan
-        let plan = if plan_id.is_empty() {
-            // Get latest plan for session
-            let results = self
-                .plans
-                .search(&self.session.id)
-                .limit(1)
-                .first()
-                .await?;
-            match results {
-                Some(hit) => hit.doc,
+        // Find the plan by ID (direct lookup) or use last plan
+        let id = if plan_id.is_empty() {
+            match &self.last_plan_id {
+                Some(id) => id.clone(),
                 None => {
-                    println!("No plans found. Use /plan <task> to create one.");
+                    println!("No recent plan. Use /plan <task> to create one, or /execute <plan_id>.");
                     return Ok(());
                 }
             }
         } else {
-            let results = self.plans.search(plan_id).limit(1).first().await?;
-            match results {
-                Some(hit) if hit.doc.id == plan_id => hit.doc,
-                _ => {
-                    println!("Plan not found: {}", plan_id);
-                    return Ok(());
-                }
+            plan_id.to_string()
+        };
+
+        let plan = match self.plans.get(&id).await? {
+            Some(p) => p,
+            None => {
+                println!("Plan not found: {}", id);
+                return Ok(());
             }
         };
 
@@ -596,8 +600,8 @@ Commands:
             return Ok(());
         }
 
-        println!("Executing plan: {}", plan.task);
-        println!("Steps: {}\n", steps.len());
+        print_plan_todo(&plan, &steps);
+        println!("Executing...\n");
 
         let stdin = io::stdin();
         let mut reader = stdin.lock();
@@ -931,6 +935,23 @@ Commands:
 // Helpers
 // ---------------------------------------------------------------------------
 
+/// Derive a short stable key from the project directory path.
+/// This ensures each project gets its own isolated vector databases.
+fn project_key(project_dir: &str) -> String {
+    use std::hash::{Hash, Hasher};
+    let canonical = std::fs::canonicalize(project_dir)
+        .unwrap_or_else(|_| Path::new(project_dir).to_path_buf());
+    let mut hasher = std::hash::DefaultHasher::new();
+    canonical.hash(&mut hasher);
+    let hash = hasher.finish();
+    // Use last component + short hash for readability
+    let name = canonical
+        .file_name()
+        .map(|n| n.to_string_lossy().to_string())
+        .unwrap_or_else(|| "project".to_string());
+    format!("{}_{:08x}", name, hash as u32)
+}
+
 fn create_session(agent_id: &str, project_dir: &str, id: Option<String>) -> Session {
     let now = Utc::now().to_rfc3339();
     Session {
@@ -949,6 +970,63 @@ fn split_command(input: &str) -> (&str, &str) {
         Some(pos) => (&input[..pos], input[pos + 1..].trim()),
         None => (input, ""),
     }
+}
+
+fn detect_project_type(project_dir: &str) -> String {
+    let dir = Path::new(project_dir);
+    let checks: &[(&str, &str)] = &[
+        ("Cargo.toml", "Rust"),
+        ("package.json", "JavaScript/TypeScript"),
+        ("tsconfig.json", "TypeScript"),
+        ("go.mod", "Go"),
+        ("pyproject.toml", "Python"),
+        ("setup.py", "Python"),
+        ("requirements.txt", "Python"),
+        ("Gemfile", "Ruby"),
+        ("pom.xml", "Java (Maven)"),
+        ("build.gradle", "Java/Kotlin (Gradle)"),
+        ("mix.exs", "Elixir"),
+        ("CMakeLists.txt", "C/C++ (CMake)"),
+        ("Makefile", "C/C++ (Make)"),
+        ("composer.json", "PHP"),
+        ("pubspec.yaml", "Dart/Flutter"),
+        ("Package.swift", "Swift"),
+        ("Dockerfile", "Docker"),
+    ];
+    let mut types = Vec::new();
+    for (file, lang) in checks {
+        if dir.join(file).exists() {
+            types.push(*lang);
+        }
+    }
+    if types.is_empty() {
+        "unknown".to_string()
+    } else {
+        types.join(" + ")
+    }
+}
+
+fn print_plan_todo(plan: &Plan, steps: &[PlanStep]) {
+    println!();
+    println!("Plan: {} ({})", &plan.id[..8], plan.status);
+    println!("Task: {}", plan.task);
+    println!("{}", "-".repeat(60));
+    for (i, step) in steps.iter().enumerate() {
+        let checkbox = if step.status == "done" { "[x]" } else { "[ ]" };
+        let action = if step.action.is_empty() {
+            String::new()
+        } else {
+            format!(" ({})", step.action)
+        };
+        println!("  {} {}. {}{}", checkbox, i + 1, step.description, action);
+        if !step.file.is_empty() {
+            println!("       -> {}", step.file);
+        }
+    }
+    let done = steps.iter().filter(|s| s.status == "done").count();
+    println!("{}", "-".repeat(60));
+    println!("  Progress: {}/{} steps", done, steps.len());
+    println!();
 }
 
 fn resolve_path(project_dir: &str, file: &str) -> String {

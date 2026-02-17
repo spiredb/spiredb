@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use kovan_map::HashMap;
 use spiresql::vector::client::{SpireVector, VectorService};
 use tonic::transport::Channel;
 
@@ -31,6 +32,9 @@ pub(crate) struct SpireInner {
     pub(crate) llm: Option<Arc<dyn Llm>>,
     pub(crate) pd_channel: Channel,
     pub(crate) data_channel: Channel,
+    /// In-memory document cache: hash(collection_name + doc_id) -> serialized doc bytes.
+    /// Used by Collection::get() until DataAccess TableGet is implemented.
+    pub(crate) doc_cache: HashMap<u64, Vec<u8>>,
 }
 
 impl Spire {
@@ -257,6 +261,7 @@ impl SpireBuilder {
                 llm: self.llm,
                 pd_channel,
                 data_channel,
+                doc_cache: HashMap::new(),
             }),
         })
     }
