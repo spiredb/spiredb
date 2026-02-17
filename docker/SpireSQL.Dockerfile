@@ -21,11 +21,14 @@ COPY compute /spiredb/compute
 
 WORKDIR /spiredb/compute
 
-# Target x86-64-v3 (AVX2, BMI2, etc.)
-ENV RUSTFLAGS="-C target-cpu=x86-64-v3"
-
-# Build spiresql binary
-RUN cargo build --bin spiresql --release
+# Optimize for the target architecture
+ARG TARGETARCH
+RUN if [ "$TARGETARCH" = "arm64" ]; then \
+      export RUSTFLAGS="-C target-cpu=neoverse-n1"; \
+    else \
+      export RUSTFLAGS="-C target-cpu=x86-64-v3"; \
+    fi && \
+    cargo build --bin spiresql --release
 
 # Create lib directory and copy dynamic libraries
 RUN mkdir -p /spiredb/lib && \
@@ -41,7 +44,7 @@ LABEL org.opencontainers.image.title="SpireSQL - Spire Compute Layer"
 LABEL org.opencontainers.image.description="Distributed SQL query engine for SpireDB"
 LABEL org.opencontainers.image.vendor="SpireDB"
 LABEL org.opencontainers.image.source="https://github.com/spiredb/spiredb"
-LABEL com.spiredb.arch="x86_64-v3"
+LABEL com.spiredb.arch="multi"
 
 # Copy binary
 COPY --from=build /spiredb/compute/target/release/spiresql /spiresql
