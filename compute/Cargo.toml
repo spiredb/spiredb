@@ -1,11 +1,11 @@
 [workspace]
 members = [
-    "spire-cli",
-    "spiresql",
     "spire_common",
     "spire_proto",
-    "spire-ai",
     "spire-ai-macros",
+    "spire-ai",
+    "spiresql",
+    "spire-cli",
 ]
 resolver = "2"
 

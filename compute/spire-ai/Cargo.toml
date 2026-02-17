@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2024"
 description = "AI-native SDK for SpireDB — RAG, code search, agents"
 license = "AGPL-3.0-only"
+repository = "https://github.com/spiredb/spiredb/"
+readme = "../../README.md"
 keywords = ["rag", "vector-search", "code-assistant", "ai", "llm"]
 categories = ["database"]
 
@@ -65,7 +67,7 @@ kovan-map = { workspace = true }
 ahash = { workspace = true }
 
 # Derive macro
-spire-ai-macros = { path = "../spire-ai-macros", optional = true }
+spire-ai-macros = { path = "../spire-ai-macros", version = "0.1.0", optional = true }
 
 [features]
 default = ["full"]
