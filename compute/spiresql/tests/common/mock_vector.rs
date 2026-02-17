@@ -100,7 +100,7 @@ impl VectorService for MockVectorService {
         Ok(())
     }
 
-    async fn get(&self, index: &str, doc_id: &[u8]) -> VectorResult<Option<Vec<u8>>> {
+    async fn get_payload(&self, index: &str, doc_id: &[u8]) -> VectorResult<Option<Vec<u8>>> {
         let store = self.store.read().unwrap();
         let vectors = store
             .vectors

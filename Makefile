@@ -1,6 +1,6 @@
 # SpireDB Makefile
 
-.PHONY: setup build test test-unit test-raft clean proto deps format docker-build build-rust test-rust clean-rust
+.PHONY: setup build test test-unit test-raft clean proto deps format docker-build build-rust test-rust clean-rust agent
 
 setup: deps
 	@echo "Setup complete."
@@ -80,6 +80,9 @@ check-fmt-rust:
 	cd compute && cargo fmt --all -- --check
 
 fullchecks: build format lint clippy-fix-rust clippy-rust fmt-rust test-rust
+
+agent:
+	./tools/run-agent.sh $(ARGS)
 
 pf:
 	kubectl port-forward svc/spiredb 6379:6379

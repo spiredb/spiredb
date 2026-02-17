@@ -61,8 +61,8 @@ defmodule Store.VectorIndex do
   @doc """
   Get payload by document ID.
   """
-  def get(pid \\ __MODULE__, index_name, doc_id) do
-    GenServer.call(pid, {:get, index_name, doc_id})
+  def get_payload(pid \\ __MODULE__, index_name, doc_id) do
+    GenServer.call(pid, {:get_payload, index_name, doc_id})
   end
 
   @doc """
@@ -195,9 +195,9 @@ defmodule Store.VectorIndex do
   end
 
   @impl true
-  def handle_call({:get, index_name, doc_id}, _from, state) do
+  def handle_call({:get_payload, index_name, doc_id}, _from, state) do
     with {:ok, info} <- get_index(state, index_name) do
-      case get_payload(info.id, doc_id) do
+      case read_payload(info.id, doc_id) do
         nil -> {:reply, {:ok, nil}, state}
         payload -> {:reply, {:ok, payload}, state}
       end
@@ -238,7 +238,7 @@ defmodule Store.VectorIndex do
           results_with_payload =
             Enum.map(results, fn {distance, int_id} ->
               doc_id = Map.get(index_mapping, int_id, int_id)
-              payload = if return_payload, do: get_payload(info.id, doc_id), else: nil
+              payload = if return_payload, do: read_payload(info.id, doc_id), else: nil
               {doc_id, distance, payload}
             end)
 
@@ -384,7 +384,7 @@ defmodule Store.VectorIndex do
     end
   end
 
-  defp get_payload(index_id, doc_id) do
+  defp read_payload(index_id, doc_id) do
     key = Encoder.encode_vector_key(index_id, doc_id)
 
     case {get_db_ref(), get_vectors_cf()} do

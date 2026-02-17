@@ -12,7 +12,7 @@ defmodule Store.API.GRPC.Vector do
 
   alias Spiredb.Data.{
     VectorInsertResponse,
-    VectorGetResponse,
+    VectorGetPayloadResponse,
     VectorSearchResponse,
     BatchVectorSearchResponse,
     VectorResult,
@@ -95,15 +95,15 @@ defmodule Store.API.GRPC.Vector do
   @doc """
   Get a vector's payload by document ID.
   """
-  def get(request, _stream) do
-    Logger.debug("Get: #{request.index_name}, doc=#{inspect(request.doc_id)}")
+  def get_payload(request, _stream) do
+    Logger.debug("GetPayload: #{request.index_name}, doc=#{inspect(request.doc_id)}")
 
-    case VectorIndex.get(VectorIndex, request.index_name, request.doc_id) do
+    case VectorIndex.get_payload(VectorIndex, request.index_name, request.doc_id) do
       {:ok, nil} ->
-        %VectorGetResponse{found: false, payload: <<>>}
+        %VectorGetPayloadResponse{found: false, payload: <<>>}
 
       {:ok, payload} ->
-        %VectorGetResponse{found: true, payload: payload}
+        %VectorGetPayloadResponse{found: true, payload: payload}
 
       {:error, :index_not_found} ->
         raise GRPC.RPCError, status: :not_found, message: "Index not found"

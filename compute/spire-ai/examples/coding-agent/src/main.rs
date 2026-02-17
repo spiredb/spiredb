@@ -160,13 +160,13 @@ impl Agent {
         // Create or resume session
         let session = match &cli.session {
             Some(id) => {
-                // Try to find existing session
-                match sessions.search(id).limit(1).first().await? {
-                    Some(hit) if hit.doc.id == *id => {
+                // Look up session by ID via GetPayload
+                match sessions.get(id).await? {
+                    Some(s) => {
                         println!("Resumed session: {}", id);
-                        hit.doc
+                        s
                     }
-                    _ => {
+                    None => {
                         println!("Session {} not found, creating new.", id);
                         create_session(agent_id, &cli.project, Some(id.clone()))
                     }
@@ -875,14 +875,13 @@ Commands:
             return Ok(());
         }
 
-        // Switch session
-        let results = self.sessions.search(id).limit(1).first().await?;
-        match results {
-            Some(hit) if hit.doc.id == id => {
-                self.session = hit.doc;
+        // Switch session — look up by ID via GetPayload
+        match self.sessions.get(id).await? {
+            Some(s) => {
+                self.session = s;
                 println!("Switched to session: {}", id);
             }
-            _ => {
+            None => {
                 let s = create_session("coding-agent", &self.project_dir, Some(id.to_string()));
                 self.sessions.upsert(&s).await?;
                 self.session = s;

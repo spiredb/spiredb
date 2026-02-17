@@ -240,7 +240,7 @@ impl<T: Doc> Collection<T> {
 
     /// Get a document by ID.
     ///
-    /// Checks the in-memory cache first, then falls back to a VectorGet RPC
+    /// Checks the in-memory cache first, then falls back to a GetPayload RPC
     /// to retrieve the payload from SpireDB.
     pub async fn get(&self, id: &str) -> Result<Option<T>> {
         // Fast path: check in-memory cache
@@ -251,12 +251,12 @@ impl<T: Doc> Collection<T> {
             return Ok(Some(doc));
         }
 
-        // Slow path: fetch from SpireDB via VectorGet RPC
+        // Slow path: fetch from SpireDB via GetPayload RPC
         match self
             .spire
             .inner
             .vector
-            .get(&self.index_name(), id.as_bytes())
+            .get_payload(&self.index_name(), id.as_bytes())
             .await
         {
             Ok(Some(payload)) => {

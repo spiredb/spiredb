@@ -3116,18 +3116,18 @@ defmodule Spiredb.Data.VectorDeleteRequest do
   field(:doc_id, 2, type: :bytes, json_name: "docId")
 end
 
-defmodule Spiredb.Data.VectorGetRequest do
+defmodule Spiredb.Data.VectorGetPayloadRequest do
   @moduledoc false
 
   use Protobuf,
-    full_name: "spiredb.data.VectorGetRequest",
+    full_name: "spiredb.data.VectorGetPayloadRequest",
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "VectorGetRequest",
+      name: "VectorGetPayloadRequest",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
           name: "index_name",
@@ -3174,18 +3174,18 @@ defmodule Spiredb.Data.VectorGetRequest do
   field(:doc_id, 2, type: :bytes, json_name: "docId")
 end
 
-defmodule Spiredb.Data.VectorGetResponse do
+defmodule Spiredb.Data.VectorGetPayloadResponse do
   @moduledoc false
 
   use Protobuf,
-    full_name: "spiredb.data.VectorGetResponse",
+    full_name: "spiredb.data.VectorGetPayloadResponse",
     protoc_gen_elixir_version: "0.16.0",
     syntax: :proto3
 
   def descriptor do
     # credo:disable-for-next-line
     %Google.Protobuf.DescriptorProto{
-      name: "VectorGetResponse",
+      name: "VectorGetPayloadResponse",
       field: [
         %Google.Protobuf.FieldDescriptorProto{
           name: "found",
@@ -3896,9 +3896,9 @@ defmodule Spiredb.Data.VectorService.Service do
           __unknown_fields__: []
         },
         %Google.Protobuf.MethodDescriptorProto{
-          name: "Get",
-          input_type: ".spiredb.data.VectorGetRequest",
-          output_type: ".spiredb.data.VectorGetResponse",
+          name: "GetPayload",
+          input_type: ".spiredb.data.VectorGetPayloadRequest",
+          output_type: ".spiredb.data.VectorGetPayloadResponse",
           options: nil,
           client_streaming: false,
           server_streaming: false,
@@ -3936,7 +3936,7 @@ defmodule Spiredb.Data.VectorService.Service do
 
   rpc(:Delete, Spiredb.Data.VectorDeleteRequest, Spiredb.Data.Empty)
 
-  rpc(:Get, Spiredb.Data.VectorGetRequest, Spiredb.Data.VectorGetResponse)
+  rpc(:GetPayload, Spiredb.Data.VectorGetPayloadRequest, Spiredb.Data.VectorGetPayloadResponse)
 
   rpc(:Search, Spiredb.Data.VectorSearchRequest, Spiredb.Data.VectorSearchResponse)
 
