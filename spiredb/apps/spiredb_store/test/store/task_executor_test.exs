@@ -14,7 +14,17 @@ defmodule Store.TaskExecutorTest do
 
   setup do
     {:ok, pid} = TaskExecutor.start_link(name: nil)
-    on_exit(fn -> if Process.alive?(pid), do: GenServer.stop(pid) end)
+
+    on_exit(fn ->
+      if Process.alive?(pid) do
+        try do
+          GenServer.stop(pid, :normal, 5_000)
+        catch
+          :exit, _ -> :ok
+        end
+      end
+    end)
+
     {:ok, executor: pid}
   end
 
