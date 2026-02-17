@@ -82,7 +82,14 @@ defmodule PD.API.GRPC.Schema do
     type = proto_to_index_type(request.type)
     params = Map.new(request.params)
 
-    case Registry.create_index(request.name, request.table_name, type, request.columns, params) do
+    case Registry.create_index(
+           Registry,
+           request.name,
+           request.table_name,
+           type,
+           request.columns,
+           params
+         ) do
       {:ok, index_id} ->
         %CreateIndexResponse{index_id: index_id}
 
@@ -148,7 +155,7 @@ defmodule PD.API.GRPC.Schema do
   def list_indexes(request, _stream) do
     table_name = if request.table_name == "", do: nil, else: request.table_name
 
-    case Registry.list_indexes(table_name) do
+    case Registry.list_indexes(Registry, table_name) do
       {:ok, indexes} ->
         %IndexList{indexes: Enum.map(indexes, &index_to_proto/1)}
 

@@ -43,7 +43,7 @@ defmodule Store.VectorSearch.Distributed do
         Logger.warning("Distributed search fallback to local: #{inspect(err)}")
 
         try do
-          VectorIndex.search(index_name, query_vector, k, opts)
+          VectorIndex.search(VectorIndex, index_name, query_vector, k, opts)
         catch
           :exit, reason -> {:error, {:local_search_failed, reason}}
         end
@@ -100,7 +100,7 @@ defmodule Store.VectorSearch.Distributed do
     if store_node == node() do
       # Local query
       try do
-        VectorIndex.search(index_name, query_vector, k, opts)
+        VectorIndex.search(VectorIndex, index_name, query_vector, k, opts)
       rescue
         e -> {:error, {:exception, Exception.message(e)}}
       catch

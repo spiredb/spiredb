@@ -112,7 +112,7 @@ defmodule Store.API.RESP.VectorCommands do
   defp parse_and_add_vector([index_name, doc_id, vector_data | rest]) do
     payload = extract_payload(rest)
 
-    case VectorIndex.insert(index_name, doc_id, vector_data, payload) do
+    case VectorIndex.insert(VectorIndex, index_name, doc_id, vector_data, payload) do
       {:ok, _id} -> 1
       {:error, :index_not_found} -> {:error, "ERR index not found"}
       {:error, reason} -> {:error, "ERR #{inspect(reason)}"}
@@ -130,7 +130,7 @@ defmodule Store.API.RESP.VectorCommands do
   defp parse_and_search([index_name, query | rest]) do
     with {:ok, k, _column} <- parse_knn_query(query),
          {:ok, vector, opts} <- extract_search_params(rest) do
-      case VectorIndex.search(index_name, vector, k, opts) do
+      case VectorIndex.search(VectorIndex, index_name, vector, k, opts) do
         {:ok, results} ->
           format_search_results(results, Keyword.get(opts, :return_payload, false))
 

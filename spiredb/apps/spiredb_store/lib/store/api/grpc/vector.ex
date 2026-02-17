@@ -73,7 +73,13 @@ defmodule Store.API.GRPC.Vector do
 
     payload = if request.payload == <<>>, do: nil, else: request.payload
 
-    case VectorIndex.insert(request.index_name, request.doc_id, request.vector, payload) do
+    case VectorIndex.insert(
+           VectorIndex,
+           request.index_name,
+           request.doc_id,
+           request.vector,
+           payload
+         ) do
       {:ok, internal_id} ->
         %VectorInsertResponse{internal_id: internal_id}
 
@@ -108,7 +114,13 @@ defmodule Store.API.GRPC.Vector do
 
     opts = [return_payload: request.return_payload]
 
-    case VectorIndex.search(request.index_name, request.query_vector, request.k, opts) do
+    case VectorIndex.search(
+           VectorIndex,
+           request.index_name,
+           request.query_vector,
+           request.k,
+           opts
+         ) do
       {:ok, results} ->
         %VectorSearchResponse{
           results:
@@ -140,7 +152,7 @@ defmodule Store.API.GRPC.Vector do
     results =
       request.query_vectors
       |> Enum.map(fn query_vector ->
-        case VectorIndex.search(request.index_name, query_vector, request.k, opts) do
+        case VectorIndex.search(VectorIndex, request.index_name, query_vector, request.k, opts) do
           {:ok, results} ->
             %VectorSearchResponse{
               results:
