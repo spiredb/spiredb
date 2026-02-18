@@ -4031,6 +4031,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "futures",
+ "glob",
  "ignore",
  "kovan-map",
  "parking_lot",

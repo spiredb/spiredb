@@ -38,6 +38,7 @@ regex = { version = "1", optional = true }
 # File system
 walkdir = { version = "2", optional = true }
 ignore = { version = "0.4", optional = true }
+glob = { version = "0.3", optional = true }
 
 # Code parsing (behind feature flag)
 tree-sitter = { version = "0.24", optional = true }
@@ -82,5 +83,5 @@ code = ["dep:tree-sitter", "dep:tree-sitter-rust", "dep:tree-sitter-python",
         "dep:tree-sitter-ruby", "dep:tree-sitter-c-sharp", "dep:tree-sitter-bash",
         "dep:tree-sitter-html", "dep:tree-sitter-css", "dep:tree-sitter-json",
         "dep:tree-sitter-scala", "dep:tree-sitter-haskell", "dep:tree-sitter-php",
-        "dep:walkdir", "dep:ignore", "dep:regex"]
+        "dep:walkdir", "dep:ignore", "dep:regex", "dep:glob"]
 full = ["macros", "ollama", "openai", "anthropic", "voyage", "code"]

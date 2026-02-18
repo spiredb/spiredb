@@ -87,6 +87,11 @@ impl Spire {
     pub fn llm(&self) -> Option<&dyn Llm> {
         self.inner.llm.as_deref()
     }
+
+    /// Get an owned Arc to the configured LLM (needed by AgentLoop).
+    pub fn llm_arc(&self) -> Option<Arc<dyn Llm>> {
+        self.inner.llm.clone()
+    }
 }
 
 /// Builder for configuring a [`Spire`] client.
