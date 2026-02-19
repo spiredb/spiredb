@@ -49,7 +49,7 @@ struct Cli {
     ollama_url: String,
 
     /// Ollama embedding model
-    #[arg(long, default_value = "nomic-embed-text", global = true)]
+    #[arg(long, default_value = "qwen3-embedding", global = true)]
     embed_model: String,
 
     /// SpireDB PD address

@@ -11,7 +11,10 @@ use clap::Parser;
 use display::*;
 
 #[derive(Parser)]
-#[command(name = "coding-agent", about = "Agentic coding assistant powered by SpireAI")]
+#[command(
+    name = "coding-agent",
+    about = "Agentic coding assistant powered by SpireAI"
+)]
 pub(crate) struct Cli {
     /// Project directory to work with
     #[arg(short, long, default_value = ".")]
@@ -22,7 +25,7 @@ pub(crate) struct Cli {
     pub ollama_url: String,
 
     /// Ollama embedding model
-    #[arg(long, default_value = "nomic-embed-text")]
+    #[arg(long, default_value = "qwen3-embedding")]
     pub embed_model: String,
 
     /// Ollama LLM model
