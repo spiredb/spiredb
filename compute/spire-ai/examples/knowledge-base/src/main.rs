@@ -190,24 +190,23 @@ async fn cmd_search(kb: &Collection<Article>, query: &str, limit: usize) -> spir
 }
 
 async fn cmd_list(kb: &Collection<Article>) -> spire_ai::Result<()> {
-    // Use a broad search to get all articles
-    let hits = kb.search("article").limit(100).run().await?;
+    let articles = kb.all().await?;
 
-    if hits.is_empty() {
+    if articles.is_empty() {
         println!("No articles in the knowledge base.");
         return Ok(());
     }
 
-    println!("Articles ({}):\n", hits.len());
-    for hit in &hits {
-        let status = if hit.doc.published == "true" {
+    println!("Articles ({}):\n", articles.len());
+    for article in &articles {
+        let status = if article.published == "true" {
             "published"
         } else {
             "draft"
         };
         println!(
             "  [{}] {} — {} ({})",
-            hit.doc.slug, hit.doc.title, hit.doc.category, status
+            article.slug, article.title, article.category, status
         );
     }
     println!();

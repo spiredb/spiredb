@@ -97,13 +97,27 @@ impl<T: Doc> Search<T> {
         let index_name = self.collection.index_name();
         let opts = SearchOptions::default().k(self.limit as u32).with_payload();
 
-        let results = self
+        let results = match self
             .collection
             .spire
             .inner
             .vector
-            .search(&index_name, &query_vec, opts)
-            .await?;
+            .search(&index_name, &query_vec, opts.clone())
+            .await
+        {
+            Ok(r) => r,
+            Err(spiresql::vector::error::VectorError::IndexNotFound(_)) => {
+                // Index was lost, recreate and retry once.
+                self.collection.ensure().await?;
+                self.collection
+                    .spire
+                    .inner
+                    .vector
+                    .search(&index_name, &query_vec, opts)
+                    .await?
+            }
+            Err(e) => return Err(Error::Vector(e)),
+        };
 
         let mut hits = Vec::with_capacity(results.len());
         for result in results {

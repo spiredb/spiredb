@@ -27,7 +27,11 @@ defmodule Store.Supervisor do
       {Store.Plugin.Registry, []},
 
       # Vector Index (for FT.* commands)
-      {Store.VectorIndex, []},
+      {Store.VectorIndex,
+       [
+         data_dir:
+           Application.get_env(:spiredb_store, :vector_data_dir, "/var/lib/spiredb/vectors")
+       ]},
 
       # gRPC Connection Pool (for internal transaction client)
       {Store.Transaction.ConnectionPool, []},

@@ -147,11 +147,7 @@ impl<T: Doc> Collection<T> {
 
         // Insert vector with doc JSON as payload
         if let Some(ref vec) = embedding {
-            self.spire
-                .inner
-                .vector
-                .insert(&self.index_name(), id.as_bytes(), vec, Some(&doc_json))
-                .await?;
+            self.vector_insert(id.as_bytes(), vec, &doc_json).await?;
         }
 
         Ok(id)
@@ -177,7 +173,6 @@ impl<T: Doc> Collection<T> {
 
         // Map embeddings back to docs
         let mut embed_iter = embeddings.into_iter();
-        let index_name = self.index_name();
 
         for (i, doc) in docs.iter().enumerate() {
             let doc_json = serde_json::to_vec(doc)?;
@@ -192,15 +187,37 @@ impl<T: Doc> Collection<T> {
             if !texts[i].is_empty()
                 && let Some(vec) = embed_iter.next()
             {
-                self.spire
-                    .inner
-                    .vector
-                    .insert(&index_name, ids[i].as_bytes(), &vec, Some(&doc_json))
+                self.vector_insert(ids[i].as_bytes(), &vec, &doc_json)
                     .await?;
             }
         }
 
         Ok(ids)
+    }
+
+    /// Insert into the vector index, re-creating it on `IndexNotFound`
+    async fn vector_insert(&self, doc_id: &[u8], vec: &[f32], payload: &[u8]) -> Result<u64> {
+        let index_name = self.index_name();
+        match self
+            .spire
+            .inner
+            .vector
+            .insert(&index_name, doc_id, vec, Some(payload))
+            .await
+        {
+            Ok(id) => Ok(id),
+            Err(spiresql::vector::error::VectorError::IndexNotFound(_)) => {
+                // Index was lost, recreate and retry once.
+                self.ensure().await?;
+                Ok(self
+                    .spire
+                    .inner
+                    .vector
+                    .insert(&index_name, doc_id, vec, Some(payload))
+                    .await?)
+            }
+            Err(e) => Err(Error::Vector(e)),
+        }
     }
 
     /// Upsert a document (insert or replace).
@@ -283,6 +300,57 @@ impl<T: Doc> Collection<T> {
                 docs.push(doc);
             }
         }
+        Ok(docs)
+    }
+
+    /// List all documents in the collection.
+    ///
+    /// Performs a broad vector search to retrieve all stored documents.
+    /// Use [`filter`](Self::filter) for SQL-based filtering once implemented.
+    pub async fn all(&self) -> Result<Vec<T>> {
+        let dims = self.spire.inner.embedder.dimensions();
+        if dims == 0 {
+            return Ok(Vec::new());
+        }
+
+        // Use a uniform normalized vector — equal components in all dimensions
+        // gives an unbiased search that returns all docs by proximity.
+        let val = 1.0 / (dims as f32).sqrt();
+        let query_vec = vec![val; dims];
+
+        let index_name = self.index_name();
+        let opts = spiresql::vector::types::SearchOptions::default()
+            .k(10_000)
+            .with_payload();
+
+        let results = match self
+            .spire
+            .inner
+            .vector
+            .search(&index_name, &query_vec, opts.clone())
+            .await
+        {
+            Ok(r) => r,
+            Err(spiresql::vector::error::VectorError::IndexNotFound(_)) => {
+                self.ensure().await?;
+                self.spire
+                    .inner
+                    .vector
+                    .search(&index_name, &query_vec, opts)
+                    .await?
+            }
+            Err(e) => return Err(Error::Vector(e)),
+        };
+
+        let mut docs = Vec::with_capacity(results.len());
+        for result in results {
+            if let Some(payload) = &result.payload
+                && let Ok(doc) = serde_json::from_slice::<T>(payload)
+            {
+                docs.push(doc);
+            }
+        }
+
         Ok(docs)
     }
 

@@ -90,11 +90,36 @@ defmodule Store.VectorIndex do
 
   @impl true
   def init(opts) do
-    data_dir = opts[:data_dir] || "/tmp/spiredb/vectors"
+    data_dir = opts[:data_dir] || "/var/lib/spiredb/vectors"
     File.mkdir_p!(data_dir)
 
     Logger.info("VectorIndex started, data_dir=#{data_dir}")
+
+    # Recover indexes after restart: restore from persisted metadata on disk.
+    # Deferred to allow RocksDB to finish starting (started before us, but async).
+    Process.send_after(self(), {:recover_indexes, data_dir}, 500)
+
     {:ok, %__MODULE__{}}
+  end
+
+  @impl true
+  def handle_info({:recover_indexes, data_dir}, state) do
+    case recover_persisted_indexes(data_dir) do
+      {:ok, new_state} ->
+        Logger.info("VectorIndex recovered #{map_size(new_state.indexes)} indexes from disk")
+
+        {:noreply, new_state}
+
+      {:error, reason} ->
+        Logger.warning("VectorIndex recovery failed: #{inspect(reason)}")
+        {:noreply, state}
+    end
+  end
+
+  @impl true
+  def handle_info(msg, state) do
+    Logger.debug("VectorIndex received unexpected message: #{inspect(msg)}")
+    {:noreply, state}
   end
 
   @impl true
@@ -116,11 +141,14 @@ defmodule Store.VectorIndex do
         params: %{shards: shards}
       }
 
-      # Initialize Anodex index
+      # Initialize Anodex index (loads existing data from disk if present)
       case init_anodex_index(name, algorithm, dimensions, shards) do
         {:ok, ref} ->
           # Load any existing id mappings from persistence
           existing_mappings = load_id_mappings(name)
+
+          # Persist index metadata so we can recover after restart
+          persist_index_meta(name, index_info)
 
           new_state = %{
             state
@@ -154,10 +182,14 @@ defmodule Store.VectorIndex do
           ref -> shutdown_anodex_index(ref)
         end
 
+        # Remove persisted metadata
+        delete_index_meta(name)
+
         new_state = %{
           state
           | indexes: Map.delete(state.indexes, name),
-            anodex_refs: Map.delete(state.anodex_refs, name)
+            anodex_refs: Map.delete(state.anodex_refs, name),
+            id_mappings: Map.delete(state.id_mappings, name)
         }
 
         Logger.info("Dropped vector index #{name}")
@@ -231,21 +263,31 @@ defmodule Store.VectorIndex do
       query_list = normalize_vector(query_vector)
       index_mapping = Map.get(state.id_mappings, index_name, %{})
 
-      case search_anodex(ref, query_list, k) do
-        {:ok, results} ->
-          # Map int_ids back to doc_ids and optionally fetch payloads
-          # Note: Anodex returns {distance, id} tuples
-          results_with_payload =
-            Enum.map(results, fn {distance, int_id} ->
-              doc_id = Map.get(index_mapping, int_id, int_id)
-              payload = if return_payload, do: read_payload(info.id, doc_id), else: nil
-              {doc_id, distance, payload}
-            end)
+      # Clamp k to the number of vectors in the index to avoid
+      # assertion failure in Anodex (builder_l >= k).
+      num_vectors = map_size(index_mapping)
 
-          {:reply, {:ok, results_with_payload}, state}
+      if num_vectors == 0 do
+        {:reply, {:ok, []}, state}
+      else
+        effective_k = min(k, num_vectors)
 
-        {:error, reason} ->
-          {:reply, {:error, reason}, state}
+        case search_anodex(ref, query_list, effective_k) do
+          {:ok, results} ->
+            # Map int_ids back to doc_ids and optionally fetch payloads
+            # Note: Anodex returns {distance, id} tuples
+            results_with_payload =
+              Enum.map(results, fn {distance, int_id} ->
+                doc_id = Map.get(index_mapping, int_id, int_id)
+                payload = if return_payload, do: read_payload(info.id, doc_id), else: nil
+                {doc_id, distance, payload}
+              end)
+
+            {:reply, {:ok, results_with_payload}, state}
+
+          {:error, reason} ->
+            {:reply, {:error, reason}, state}
+        end
       end
     else
       {:error, reason} -> {:reply, {:error, reason}, state}
@@ -255,6 +297,135 @@ defmodule Store.VectorIndex do
   @impl true
   def handle_call(:list_indexes, _from, state) do
     {:reply, {:ok, Map.values(state.indexes)}, state}
+  end
+
+  # --- Index metadata persistence (for restart recovery) ---
+
+  @meta_prefix "vec_meta:"
+
+  defp persist_index_meta(name, info) do
+    key = @meta_prefix <> to_string(name)
+    value = :erlang.term_to_binary(info)
+
+    case {get_db_ref(), get_vectors_cf()} do
+      {nil, _} ->
+        Logger.warning("Cannot persist index meta: RocksDB not ready")
+
+      {db_ref, cf} when not is_nil(cf) ->
+        :rocksdb.put(db_ref, cf, key, value, [])
+
+      {db_ref, nil} ->
+        :rocksdb.put(db_ref, key, value, [])
+    end
+  end
+
+  defp delete_index_meta(name) do
+    key = @meta_prefix <> to_string(name)
+
+    case {get_db_ref(), get_vectors_cf()} do
+      {nil, _} -> :ok
+      {db_ref, cf} when not is_nil(cf) -> :rocksdb.delete(db_ref, cf, key, [])
+      {db_ref, nil} -> :rocksdb.delete(db_ref, key, [])
+    end
+  end
+
+  defp load_all_index_meta do
+    case {get_db_ref(), get_vectors_cf()} do
+      {nil, _} ->
+        []
+
+      {db_ref, cf} when not is_nil(cf) ->
+        case :rocksdb.iterator(db_ref, cf, [{:prefix_same_as_start, true}]) do
+          {:ok, iter} ->
+            result = scan_index_meta(iter, @meta_prefix, [])
+            :rocksdb.iterator_close(iter)
+            result
+
+          {:error, _} ->
+            []
+        end
+
+      {db_ref, nil} ->
+        case :rocksdb.iterator(db_ref, [{:prefix_same_as_start, true}]) do
+          {:ok, iter} ->
+            result = scan_index_meta(iter, @meta_prefix, [])
+            :rocksdb.iterator_close(iter)
+            result
+
+          {:error, _} ->
+            []
+        end
+    end
+  end
+
+  defp scan_index_meta(iter, prefix, acc) do
+    case :rocksdb.iterator_move(iter, {:seek, prefix}) do
+      {:ok, key, value} when is_binary(key) ->
+        if String.starts_with?(key, prefix) do
+          info = :erlang.binary_to_term(value)
+          scan_next_index_meta(iter, prefix, [info | acc])
+        else
+          acc
+        end
+
+      _ ->
+        acc
+    end
+  end
+
+  defp scan_next_index_meta(iter, prefix, acc) do
+    case :rocksdb.iterator_move(iter, :next) do
+      {:ok, key, value} when is_binary(key) ->
+        if String.starts_with?(key, prefix) do
+          info = :erlang.binary_to_term(value)
+          scan_next_index_meta(iter, prefix, [info | acc])
+        else
+          acc
+        end
+
+      _ ->
+        acc
+    end
+  end
+
+  defp recover_persisted_indexes(data_dir) do
+    metas = load_all_index_meta()
+
+    if metas == [] do
+      {:ok, %__MODULE__{}}
+    else
+      Enum.reduce_while(metas, {:ok, %__MODULE__{}}, fn info, {:ok, state} ->
+        name = info.name
+        algorithm = info.algorithm
+        dimensions = info.dimensions
+        shards = Map.get(info.params, :shards, 4)
+
+        # Point Anodex at the persistent data_dir
+        Application.put_env(:spiredb_store, :vector_data_dir, data_dir)
+
+        case init_anodex_index(name, algorithm, dimensions, shards) do
+          {:ok, ref} ->
+            existing_mappings = load_id_mappings(name)
+
+            new_state = %{
+              state
+              | indexes: Map.put(state.indexes, name, info),
+                anodex_refs: Map.put(state.anodex_refs, name, ref),
+                id_mappings: Map.put(state.id_mappings, name, existing_mappings)
+            }
+
+            Logger.info(
+              "Recovered vector index #{name} (#{algorithm}, dim=#{dimensions}), #{map_size(existing_mappings)} mappings"
+            )
+
+            {:cont, {:ok, new_state}}
+
+          {:error, reason} ->
+            Logger.error("Failed to recover vector index #{name}: #{inspect(reason)}")
+            {:cont, {:ok, state}}
+        end
+      end)
+    end
   end
 
   # Private helpers
@@ -276,8 +447,8 @@ defmodule Store.VectorIndex do
   # Anodex operations
 
   defp init_anodex_index(name, _algorithm, dimensions, _shards) do
-    # Create index-specific directory
-    base_dir = Application.get_env(:spiredb_store, :vector_data_dir, "/tmp/spiredb/vectors")
+    # Create index-specific directory under the persistent volume
+    base_dir = Application.get_env(:spiredb_store, :vector_data_dir, "/var/lib/spiredb/vectors")
     index_dir = Path.join(base_dir, to_string(name))
     File.mkdir_p!(index_dir)
 
@@ -509,11 +680,5 @@ defmodule Store.VectorIndex do
       _ ->
         acc
     end
-  end
-
-  @impl true
-  def handle_info(msg, state) do
-    Logger.warning("VectorIndex received unexpected message: #{inspect(msg)}")
-    {:noreply, state}
   end
 end
