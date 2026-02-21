@@ -19,6 +19,7 @@ use crate::error::Result;
 use crate::types::IndexResult;
 
 /// Index and search a codebase.
+#[derive(Clone)]
 #[allow(dead_code)] // spire, name used by index_dir/index_file/search methods
 pub struct CodeIndex {
     spire: Spire,

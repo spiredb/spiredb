@@ -1,6 +1,7 @@
 # SpireDB Makefile
 
-.PHONY: setup build test test-unit test-raft clean proto deps format docker-build build-rust test-rust clean-rust agent
+.PHONY: setup build test test-unit test-raft clean proto deps format docker-build build-rust test-rust clean-rust \
+       agent code-search doc-qa knowledge-base offline-search
 
 setup: deps
 	@echo "Setup complete."
@@ -83,6 +84,38 @@ fullchecks: build format lint clippy-fix-rust clippy-rust fmt-rust test-rust
 
 agent:
 	./tools/run-agent.sh $(ARGS)
+
+# make agent ARGS="-p /path/to/project"
+
+code-search:
+	./tools/run-example.sh code-search -- $(ARGS)
+
+# make code-search ARGS="index ./src"
+# make code-search ARGS="search 'error handling'"
+# make code-search ARGS="symbol MyStruct"
+# make code-search ARGS="interactive"
+
+doc-qa:
+	./tools/run-example.sh doc-qa -- $(ARGS)
+
+# make doc-qa ARGS="ingest ./docs"
+# make doc-qa ARGS="ask 'how does authentication work?'"
+# make doc-qa ARGS="interactive"
+
+knowledge-base:
+	./tools/run-example.sh knowledge-base -- $(ARGS)
+
+# make knowledge-base ARGS="seed"
+# make knowledge-base ARGS="search 'billing'"
+# make knowledge-base ARGS="watch"
+# make knowledge-base ARGS="interactive"
+
+offline-search:
+	./tools/run-example.sh offline-search -- $(ARGS)
+
+# make offline-search ARGS="index ./docs"
+# make offline-search ARGS="search 'database migration'"
+# make offline-search ARGS="interactive"
 
 pf:
 	kubectl port-forward svc/spiredb 6379:6379

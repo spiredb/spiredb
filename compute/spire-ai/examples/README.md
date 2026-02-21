@@ -11,7 +11,7 @@ All examples require a running **SpireDB** cluster and **Ollama** instance:
 # See the main SpireDB README for setup instructions
 
 # Start Ollama and pull the default models
-ollama pull nomic-embed-text
+ollama pull qwen3-embedding
 ollama pull qwen3-coder:30b
 ```
 
@@ -98,7 +98,7 @@ All examples share these connection flags:
 | Flag | Default | Description |
 |------|---------|-------------|
 | `--ollama-url` | `http://localhost:11434` | Ollama server URL |
-| `--embed-model` | `nomic-embed-text` | Embedding model |
+| `--embed-model` | `qwen3-embedding` | Embedding model |
 | `--pd-addr` | `http://127.0.0.1:50051` | SpireDB PD gRPC |
 | `--data-addr` | `http://127.0.0.1:50052` | SpireDB DataAccess gRPC |
 

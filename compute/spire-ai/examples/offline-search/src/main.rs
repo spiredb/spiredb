@@ -37,7 +37,10 @@ struct LocalDoc {
 // ---------------------------------------------------------------------------
 
 #[derive(Parser)]
-#[command(name = "offline-search", about = "Offline semantic search over local documents")]
+#[command(
+    name = "offline-search",
+    about = "Offline semantic search over local documents"
+)]
 struct Cli {
     #[command(subcommand)]
     command: Command,
@@ -47,7 +50,7 @@ struct Cli {
     ollama_url: String,
 
     /// Ollama embedding model
-    #[arg(long, default_value = "nomic-embed-text", global = true)]
+    #[arg(long, default_value = "qwen3-embedding", global = true)]
     embed_model: String,
 
     /// SpireDB PD address
@@ -70,7 +73,10 @@ enum Command {
         /// Directory to scan
         dir: String,
         /// File extensions to include (comma-separated, e.g. "txt,md,rs")
-        #[arg(long, default_value = "txt,md,rst,org,adoc,rs,py,js,ts,go,java,c,cpp,h,toml,yaml,yml,json")]
+        #[arg(
+            long,
+            default_value = "txt,md,rst,org,adoc,rs,py,js,ts,go,java,c,cpp,h,toml,yaml,yml,json"
+        )]
         extensions: String,
         /// Maximum file size in KB (skip larger files)
         #[arg(long, default_value_t = 512)]
@@ -168,10 +174,7 @@ async fn cmd_index(
         }
 
         // Check extension
-        let ext = path
-            .extension()
-            .and_then(|e| e.to_str())
-            .unwrap_or("");
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
         if !allowed_exts.contains(&ext) {
             continue;
         }
@@ -254,12 +257,7 @@ async fn cmd_search(
 
     println!("Results for \"{}\":\n", query);
     for (i, hit) in hits.iter().enumerate() {
-        println!(
-            "{}. [{:.3}] {}",
-            i + 1,
-            hit.score,
-            hit.doc.path
-        );
+        println!("{}. [{:.3}] {}", i + 1, hit.score, hit.doc.path);
         println!(
             "   {} — {} bytes, modified {}",
             hit.doc.filename, hit.doc.size_bytes, hit.doc.modified
@@ -283,9 +281,9 @@ async fn cmd_similar(
     path: &str,
 ) -> spire_ai::Result<()> {
     // Read the target file
-    let content = tokio::fs::read_to_string(path).await.map_err(|e| {
-        spire_ai::Error::Other(format!("Cannot read {}: {}", path, e))
-    })?;
+    let content = tokio::fs::read_to_string(path)
+        .await
+        .map_err(|e| spire_ai::Error::Other(format!("Cannot read {}: {}", path, e)))?;
 
     // Embed it
     let embedding = spire.embedder().embed(&content).await?;
@@ -304,12 +302,7 @@ async fn cmd_similar(
         if hit.doc.path == path {
             continue;
         }
-        println!(
-            "{}. [{:.3}] {}",
-            i + 1,
-            hit.score,
-            hit.doc.path
-        );
+        println!("{}. [{:.3}] {}", i + 1, hit.score, hit.doc.path);
         println!("   {} bytes\n", hit.doc.size_bytes);
     }
 

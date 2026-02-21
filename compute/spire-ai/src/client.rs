@@ -38,7 +38,7 @@ pub(crate) struct SpireInner {
 }
 
 impl Spire {
-    /// Connect with Ollama defaults (nomic-embed-text at localhost:11434).
+    /// Connect with Ollama defaults (qwen3-embedding at localhost:11434).
     ///
     /// Expects SpireDB at default addresses:
     /// - PD: `http://127.0.0.1:50051`
@@ -47,7 +47,7 @@ impl Spire {
     #[cfg(feature = "ollama")]
     pub async fn connect(ollama_url: &str) -> Result<Self> {
         SpireBuilder::new()
-            .ollama(ollama_url, "nomic-embed-text")
+            .ollama(ollama_url, "qwen3-embedding")
             .build()
             .await
     }
@@ -86,6 +86,11 @@ impl Spire {
     /// Get a reference to the configured LLM (if any).
     pub fn llm(&self) -> Option<&dyn Llm> {
         self.inner.llm.as_deref()
+    }
+
+    /// Get an owned Arc to the configured LLM (needed by AgentLoop).
+    pub fn llm_arc(&self) -> Option<Arc<dyn Llm>> {
+        self.inner.llm.clone()
     }
 }
 
@@ -141,10 +146,10 @@ impl SpireBuilder {
         self
     }
 
-    /// Use Ollama with default model (nomic-embed-text at localhost:11434).
+    /// Use Ollama with default model (qwen3-embedding at localhost:11434).
     #[cfg(feature = "ollama")]
     pub fn ollama_default(self) -> Self {
-        self.ollama("http://localhost:11434", "nomic-embed-text")
+        self.ollama("http://localhost:11434", "qwen3-embedding")
     }
 
     /// Use OpenAI with default model (text-embedding-3-small).

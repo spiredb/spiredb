@@ -53,6 +53,7 @@ pub mod code;
 pub mod filecache;
 
 pub mod agent;
+pub mod tool;
 
 // Re-exports
 pub use client::{Spire, SpireBuilder};
@@ -84,7 +85,9 @@ pub mod prelude {
 
     pub use crate::filecache::{CacheStats, FileCache, ReadResult};
 
-    pub use crate::agent::AgentMemory;
+    pub use crate::agent::{AgentLoop, AgentLoopConfig, AgentMemory};
+    pub use crate::llm::{ChatMessage, ChatResponse, ToolDef};
+    pub use crate::tool::{Tool, ToolRegistry, ToolResult};
 
     #[cfg(feature = "macros")]
     pub use spire_ai_macros::Doc;

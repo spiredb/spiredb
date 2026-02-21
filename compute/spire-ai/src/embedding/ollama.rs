@@ -15,9 +15,9 @@ pub struct OllamaEmbedder {
 }
 
 impl OllamaEmbedder {
-    /// Create with default model (`nomic-embed-text`, 768 dimensions).
+    /// Create with default model (`qwen3-embedding`, 768 dimensions).
     pub fn new(url: impl Into<String>) -> Self {
-        Self::with_model(url, "nomic-embed-text")
+        Self::with_model(url, "qwen3-embedding")
     }
 
     /// Create with a specific model.
@@ -110,7 +110,7 @@ struct OllamaEmbedResponse {
 
 fn known_dimensions(model: &str) -> usize {
     match model {
-        "nomic-embed-text" => 768,
+        "qwen3-embedding" => 768,
         "mxbai-embed-large" => 1024,
         "all-minilm" => 384,
         "snowflake-arctic-embed" => 1024,

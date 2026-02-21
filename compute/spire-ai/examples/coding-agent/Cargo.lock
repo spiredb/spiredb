@@ -4069,6 +4069,7 @@ dependencies = [
  "async-stream",
  "async-trait",
  "futures",
+ "glob",
  "ignore",
  "kovan-map",
  "parking_lot",
@@ -4112,6 +4113,7 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "clap",
+ "libc",
  "serde",
  "serde_json",
  "spire-ai",

@@ -3,8 +3,10 @@
 //! Provides long-term memory that agents can use to store and recall
 //! information across conversations.
 
+pub mod r#loop;
 mod types;
 
+pub use r#loop::{AgentLoop, AgentLoopConfig, ConfirmFn};
 pub use types::{Importance, Memory};
 
 use crate::client::Spire;
