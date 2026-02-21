@@ -6,7 +6,8 @@ config :spiredb_store,
   resp_max_connections: 100,
   resp_connection_timeout: 30_000,
   rocksdb_path: "/tmp/spiredb/test/data",
-  raft_data_dir: "/tmp/spiredb/test/raft"
+  raft_data_dir: "/tmp/spiredb/test/raft",
+  vector_data_dir: "/tmp/spiredb/test/vectors"
 
 # PD configuration - allow enabling Raft for integration tests
 config :spiredb_pd,

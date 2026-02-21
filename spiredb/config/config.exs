@@ -30,7 +30,7 @@ config :spiredb_store,
     String.to_integer(System.get_env("SPIRE_RAFT_HEARTBEAT_INTERVAL", "150")),
   raft_wal_max_size:
     String.to_integer(System.get_env("SPIRE_RAFT_WAL_MAX_SIZE", "#{64 * 1024 * 1024}")),
-  vector_data_dir: System.get_env("SPIRE_VECTOR_DATA_DIR", "/var/lib/spiredb/vectors")
+  vector_data_dir: System.get_env("SPIRE_VECTOR_DATA_DIR", "/tmp/spiredb/vectors")
 
 # Logger configuration
 config :logger,
