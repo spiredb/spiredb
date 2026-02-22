@@ -1,6 +1,6 @@
 [package]
 name = "spire-ai"
-version = "0.1.3"
+version.workspace = true
 edition = "2024"
 description = "AI-native SDK for SpireDB — RAG, code search, agents"
 license = "AGPL-3.0-only"
@@ -72,7 +72,7 @@ kovan-map = { workspace = true }
 ahash = { workspace = true }
 
 # Derive macro
-spire-ai-macros = { path = "../spire-ai-macros", version = "0.1.3", optional = true }
+spire-ai-macros = { workspace = true, optional = true }
 
 [features]
 default = ["full"]
